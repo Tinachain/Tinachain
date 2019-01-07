@@ -11,28 +11,15 @@ import (
 
 //播客链定义的接口
 type Api interface {
-	GetAccount(account common.Address) ([]protocol.TxType, error)                                                //得到账号级别
-	GetContract(address common.Address) (protocol.ContractType, error)                                           //得到合约级别
-	SetContract(address common.Address, contractType protocol.ContractType, isCancel bool, abiJson string) error //设置合约级别
-	GetContractAddr(protocol.ContractType) (common.Address, error)                                               //得到合约帐号
-	SubmitBokerTransaction(ctx context.Context, txType protocol.TxType, to common.Address, extra string) error   //产生一个设置验证者交易
-	IsValidator(address common.Address) bool                                                                     //必须是特殊账号
-	GetContractTrie() (*trie.Trie, *trie.Trie, *trie.Trie)                                                       //得到合约树
-	GetMethodName(txType protocol.TxType) (string, string, error)                                                //根据交易类型得到方法名称（只适用于基础合约）
-}
-
-func ExistsTxType(txType protocol.TxType, txTypes []protocol.TxType) bool {
-
-	if len(txTypes) <= 0 {
-		return false
-	}
-
-	for _, v := range txTypes {
-		if v == txType {
-			return true
-		}
-	}
-	return false
+	//查询帐号得到此账号可以进行的主交易类型
+	GetAccount(address common.Address) (protocol.TxMajor, error)
+	SetContract(address common.Address, contractType protocol.ContractType, isCancel bool, abiJson string) error                           //设置合约级别
+	SubmitBokerTransaction(ctx context.Context, txMajor protocol.TxMajor, txMinor protocol.TxMinor, to common.Address, extra string) error //产生一个设置验证者交易
+	IsSystemAccount(address common.Address) bool                                                                                           //必须是特殊账号
+	IsLocalValidator(address common.Address) bool
+	GetContractTrie() (*trie.Trie, *trie.Trie, *trie.Trie)          //得到合约树
+	GetMethodName(txMinor protocol.TxMinor) (string, string, error) //根据交易类型得到方法名称（只适用于基础合约）
+	GetContract(address common.Address) (protocol.TxMajor, error)
 }
 
 type SortableAddress struct {

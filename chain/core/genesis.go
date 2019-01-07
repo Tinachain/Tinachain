@@ -254,10 +254,9 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB, *trie.Trie, *trie.Tri
 	log.Info("ToBokerProto", "root", bokerProto.Root().String())
 
 	head := &types.Header{
-		Number: new(big.Int).SetUint64(g.Number),
-		Nonce:  types.EncodeNonce(g.Nonce),
-		Time:   new(big.Int).SetUint64(g.Timestamp),
-		//Time:       new(big.Int).SetInt64(time.Now().Unix()),
+		Number:     new(big.Int).SetUint64(g.Number),
+		Nonce:      types.EncodeNonce(g.Nonce),
+		Time:       new(big.Int).SetUint64(g.Timestamp),
 		ParentHash: g.ParentHash,
 		Extra:      g.ExtraData,
 		GasLimit:   new(big.Int).SetUint64(g.GasLimit),

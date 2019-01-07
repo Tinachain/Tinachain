@@ -12,7 +12,7 @@ import (
 
 	"github.com/Tinachain/Tina/chain/accounts"
 	"github.com/Tinachain/Tina/chain/accounts/keystore"
-	"github.com/Tinachain/Tina/chain/boker/api"
+	_ "github.com/Tinachain/Tina/chain/boker/api"
 	"github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/common/hexutil"
@@ -636,11 +636,8 @@ func (s *PublicBlockChainAPI) SetBaseContracts(ctx context.Context, address comm
 		return err
 	}
 
-	//类型转换
-	txType := s.txTypeRotate(contractType, false)
-
 	//产生一个交易
-	return s.b.Boker().SubmitBokerTransaction(ctx, txType, address, abiJson)
+	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetSystemContract, address, abiJson)
 }
 
 //播客链新增函数处理，取消一个基础合约
@@ -660,14 +657,11 @@ func (s *PublicBlockChainAPI) CancelBaseContracts(ctx context.Context, address c
 		return err
 	}
 
-	//类型转换
-	txType := s.txTypeRotate(contractType, true)
-
 	//产生一个交易
-	return s.b.Boker().SubmitBokerTransaction(ctx, txType, address, "")
+	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.CancelSystemContract, address, "")
 }
 
-func (s *PublicBlockChainAPI) txTypeRotate(contractType protocol.ContractType, isCancel bool) protocol.TxType {
+/*func (s *PublicBlockChainAPI) txTypeRotate(contractType protocol.ContractType, isCancel bool) protocol.TxType {
 
 	if isCancel {
 
@@ -686,7 +680,7 @@ func (s *PublicBlockChainAPI) txTypeRotate(contractType protocol.ContractType, i
 		}
 		return protocol.Binary
 	}
-}
+}*/
 
 func (s *PublicBlockChainAPI) isExitsTxType(contractType protocol.ContractType, needTypes ...protocol.ContractType) error {
 
@@ -801,8 +795,6 @@ func (s *PublicBlockChainAPI) checkContract() error {
 //播客链新增函数处理，添加一个验证者信息
 func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.Address, votes *big.Int) error {
 
-	//log.Info("****AddValidator****", "address", address.String(), "votes", votes.Int64())
-
 	block, err := s.b.BlockByNumber(ctx, 0)
 	if err != nil {
 		return err
@@ -821,30 +813,51 @@ func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.A
 			return nil
 		}
 
-		txLevel, err := s.b.Boker().GetAccount(coinbase)
-		if err != nil {
-			return err
+		const (
+			genesisNumber uint64 = 0 //创世区块
+			firstNumber   uint64 = 1 //首区块
+		)
+
+		//判断当前区块数量是否为0，并且判断coinbase账号是否为已经设置的本地验证者
+		number := s.BlockNumber()
+		if number.Uint64() != genesisNumber {
+
+			return errors.New("AddValidator Failed Current Number not is Zero")
 		}
 
-		//判断此账号是否具有设置验证者权限
-		if !bokerapi.ExistsTxType(protocol.SetValidator, txLevel) {
-			return errors.New("CoinBase Not`s Add Validator")
+		localCoinbase := s.b.GetLocalValidator()
+		if localCoinbase == coinbase {
+
+			//产生一个设置验证者的交易
+			s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetValidator, address, "")
+			return nil
+
+		} else {
+
+			txMajor, err := s.b.Boker().GetAccount(coinbase)
+			if err != nil {
+				return err
+			}
+
+			//判断此账号是否具有设置验证者权限
+			if txMajor != protocol.Base {
+				return errors.New("CoinBase Not`s Add Validator")
+			}
+
+			//判断此账号是否已经是验证者
+			if block.DposContext.IsValidator(address) {
+				return errors.New("Account has Validator")
+			}
+
+			//判断当前是否验证者已满
+			if block.DposContext.IsValidatorFull() {
+				return errors.New("Validator has Full")
+			}
+
+			//产生一个设置验证者的交易
+			s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetValidator, address, "")
+			return nil
 		}
-
-		//判断此账号是否已经是验证者
-		if block.DposContext.IsValidator(address) {
-			return errors.New("Account has Validator")
-		}
-
-		//判断当前是否验证者已满
-		if block.DposContext.IsValidatorFull() {
-			return errors.New("Validator has Full")
-		}
-
-		//产生一个设置验证者的交易
-		s.b.Boker().SubmitBokerTransaction(ctx, protocol.SetValidator, address, "")
-
-		return nil
 	}
 	return errors.New("failed AddValidator")
 }
@@ -864,14 +877,15 @@ func (s *PublicBlockChainAPI) DecodeAbi(ctx context.Context, abiJson string, met
 
 // CallArgs represents the arguments for a call.
 type CallArgs struct {
-	From     common.Address  `json:"from"`
-	To       *common.Address `json:"to"`
-	Gas      hexutil.Big     `json:"gas"`
-	GasPrice hexutil.Big     `json:"gasPrice"`
-	Value    hexutil.Big     `json:"value"`
-	Data     hexutil.Bytes   `json:"data"`
-	Extra    hexutil.Bytes   `json:"extra"`
-	TxType   protocol.TxType `json:"txType"`
+	From     common.Address   `json:"from"`
+	To       *common.Address  `json:"to"`
+	Gas      hexutil.Big      `json:"gas"`
+	GasPrice hexutil.Big      `json:"gasPrice"`
+	Value    hexutil.Big      `json:"value"`
+	Data     hexutil.Bytes    `json:"data"`
+	Extra    hexutil.Bytes    `json:"extra"`
+	Major    protocol.TxMajor `json:"txMajor"`
+	Minor    protocol.TxMinor `json:"txMinor"`
 }
 
 func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config) ([]byte, *big.Int, bool, error) {
@@ -902,7 +916,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	}
 
 	// Create new call message
-	msg := types.NewMessage(addr, args.To, 0, args.Value.ToInt(), gas, gasPrice, args.Data, args.Extra, false, args.TxType)
+	msg := types.NewMessage(addr, args.To, 0, args.Value.ToInt(), gas, gasPrice, args.Data, args.Extra, false, args.Major, args.Minor)
 
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.
@@ -1157,22 +1171,23 @@ func (s *PublicBlockChainAPI) GetCurrentValidator(ctx context.Context, blockNr r
 
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
 type RPCTransaction struct {
-	Type             protocol.TxType `json:"type"`
-	BlockHash        common.Hash     `json:"blockHash"`
-	BlockNumber      *hexutil.Big    `json:"blockNumber"`
-	From             common.Address  `json:"from"`
-	Gas              *hexutil.Big    `json:"gas"`
-	GasPrice         *hexutil.Big    `json:"gasPrice"`
-	Hash             common.Hash     `json:"hash"`
-	Input            hexutil.Bytes   `json:"input"`
-	Extra            hexutil.Bytes   `json:"extra"`
-	Nonce            hexutil.Uint64  `json:"nonce"`
-	To               *common.Address `json:"to"`
-	TransactionIndex hexutil.Uint    `json:"transactionIndex"`
-	Value            *hexutil.Big    `json:"value"`
-	V                *hexutil.Big    `json:"v"`
-	R                *hexutil.Big    `json:"r"`
-	S                *hexutil.Big    `json:"s"`
+	Major            protocol.TxMajor `json:"major"`
+	Minor            protocol.TxMinor `json:"minor"`
+	BlockHash        common.Hash      `json:"blockHash"`
+	BlockNumber      *hexutil.Big     `json:"blockNumber"`
+	From             common.Address   `json:"from"`
+	Gas              *hexutil.Big     `json:"gas"`
+	GasPrice         *hexutil.Big     `json:"gasPrice"`
+	Hash             common.Hash      `json:"hash"`
+	Input            hexutil.Bytes    `json:"input"`
+	Extra            hexutil.Bytes    `json:"extra"`
+	Nonce            hexutil.Uint64   `json:"nonce"`
+	To               *common.Address  `json:"to"`
+	TransactionIndex hexutil.Uint     `json:"transactionIndex"`
+	Value            *hexutil.Big     `json:"value"`
+	V                *hexutil.Big     `json:"v"`
+	R                *hexutil.Big     `json:"r"`
+	S                *hexutil.Big     `json:"s"`
 }
 
 func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) *RPCTransaction {
@@ -1181,7 +1196,8 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	v, r, s := tx.RawSignatureValues()
 
 	result := &RPCTransaction{
-		Type:     tx.Type(),
+		Major:    tx.Major(),
+		Minor:    tx.Minor(),
 		From:     from,
 		Gas:      (*hexutil.Big)(tx.Gas()),
 		GasPrice: (*hexutil.Big)(tx.GasPrice()),
@@ -1350,7 +1366,8 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(hash common.Hash) (map[
 		"blockNumber":       hexutil.Uint64(blockNumber),
 		"transactionHash":   hash,
 		"transactionIndex":  hexutil.Uint64(index),
-		"type":              tx.Type(),
+		"major":             tx.Major(),
+		"minor":             tx.Minor(),
 		"from":              from,
 		"to":                tx.To(),
 		"extra":             hexutil.Bytes(tx.Extra()),
@@ -1401,15 +1418,16 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 type SendTxArgs struct {
-	From     common.Address  `json:"from"`
-	To       *common.Address `json:"to"`
-	Gas      *hexutil.Big    `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Value    *hexutil.Big    `json:"value"`
-	Data     hexutil.Bytes   `json:"data"`
-	//Extra    hexutil.Bytes   `json:"extra"`
-	Nonce *hexutil.Uint64 `json:"nonce"`
-	Type  protocol.TxType `json:"type"`
+	From     common.Address   `json:"from"`
+	To       *common.Address  `json:"to"`
+	Gas      *hexutil.Big     `json:"gas"`
+	GasPrice *hexutil.Big     `json:"gasPrice"`
+	Value    *hexutil.Big     `json:"value"`
+	Data     hexutil.Bytes    `json:"data"`
+	Extra    hexutil.Bytes    `json:"extra"`
+	Nonce    *hexutil.Uint64  `json:"nonce"`
+	Major    protocol.TxMajor `json:"major"`
+	Minor    protocol.TxMinor `json:"minor"`
 }
 
 // prepareSendTxArgs is a helper function that fills in default values for unspecified tx fields.
@@ -1453,15 +1471,19 @@ func (args *SendTxArgs) ToTransaction() (*types.Transaction, error) {
 	//判断交易地址是否为空
 	if args.To == nil {
 
-		if (args.Type >= protocol.SetValidator) && (args.Type <= protocol.AssignToken) {
+		if args.Major == protocol.Base {
 
-			//return types.NewBaseContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), args.Data), nil
-			return nil, errors.New("base contract transaction type not found contract address")
-		} else if types.IsBinary(args.Type) {
+			if (args.Minor >= protocol.MinMinor) && (args.Minor <= protocol.MaxMinor) {
+				return nil, errors.New("base contract transaction type not found contract address")
+			}
+		} else if args.Major == protocol.Normal {
 
 			return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data), nil
+		} else if args.Major == protocol.Extra {
+			return nil, nil
+		} else {
+			return nil, errors.New("unknown transaction type")
 		}
-		return nil, errors.New("unknown transaction type")
 	}
 
 	//设置交易地址
@@ -1469,13 +1491,11 @@ func (args *SendTxArgs) ToTransaction() (*types.Transaction, error) {
 	if args.To != nil {
 		to = *args.To
 	}
-	return types.NewTransaction(args.Type, uint64(*args.Nonce), to, (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data), nil
+	return types.NewTransaction(args.Major, args.Minor, uint64(*args.Nonce), to, (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data), nil
 }
 
 //submitTransaction是一个辅助函数，它将tx提交给txPool并记录消息。
 func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
-
-	//log.Info("****SubmitTransaction****", "gas", tx.Gas(), "gasprice", tx.GasPrice(), "hash", tx.Hash().String())
 
 	//判断交易类型是否是限定的类型
 	if err := tx.Validate(); err != nil {
@@ -1485,7 +1505,7 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 
 	//发送交易
 	if err := b.SendTx(ctx, tx); err != nil {
-		log.Error("SubmitTransaction SendTx", "error", err, "txType", tx.Type())
+		log.Error("SubmitTransaction SendTx", "error", err, "Major", tx.Major(), "Minor", tx.Minor())
 		return common.Hash{}, err
 	}
 

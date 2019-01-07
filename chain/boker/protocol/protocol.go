@@ -32,31 +32,36 @@ const (
 	AssignTimer        = 5
 )
 
-//新增多个交易类型
-type TxType uint8
+//主要交易类型
+type TxMajor uint8
 
 const (
-	Binary TxType = iota //原来的转账或者合约调用交易
+	Normal TxMajor = iota //普通交易类型
+	Base                  //基础交易类型（不使用Gas的交易）
+	Extra                 //扩展交易类型（可以在区块中存放文件类型的）
+)
 
-	//设置验证者
-	SetValidator
+//次要交易类型
+type TxMinor uint8
 
-	/****设置和取消用户基础合约交易类型****/
-	SetPersonalContract
-	CancelPersonalContract
+//基础交易的次要类型
+const (
+	MinMinor             TxMinor = iota
+	SetValidator                 //设置验证者
+	SetSystemContract            //设置基础合约
+	CancelSystemContract         //取消设置基础合约
+	RegisterCandidate            //注册成为候选人(用户注册为候选人)
+	VoteUser                     //用户投票
+	VoteCancel                   //用户取消投票
+	VoteEpoch                    //产生当前的出块节点(在每次周期产生的时候触发)
+	MaxMinor
+)
 
-	/****设置和取消系统基础合约交易类型****/
-	SetSystemContract
-	CancelSystemContract
-
-	/****用户基础合约交易类型****/
-	RegisterCandidate //注册成为候选人(用户注册为候选人)
-	VoteUser          //用户投票
-	VoteCancel        //用户取消投票
-	VoteEpoch         //产生当前的出块节点(在每次周期产生的时候触发)
-
-	/****系统基础合约交易类型****/
-	AssignToken //分配通证(每次分配通证的时候触发)
+//扩展交易的次要类型
+const (
+	Word    TxMinor = iota //交易中扩展字段为文字
+	Picture                //交易中扩展字段为图片
+	File                   //交易中扩展字段为文件
 )
 
 //新增合约类型
@@ -68,18 +73,8 @@ const (
 	PersonalContract                     //个人基础合约
 )
 
-//分币年限情况
-/*type YearType uint8
-
-const (
-	FirstYear  YearType = iota //普通合约类型
-	MiddleYear                 //系统基础合约
-	LastYear
-)*/
-
 var (
-	TinaUnit *big.Int = big.NewInt(1e+12) //Tina的单位
-
+	TinaUnit           *big.Int = big.NewInt(1e+12) //Tina的单位
 	TransferUnit       *big.Int = big.NewInt(1e+17) //转账单位(这个数值仅用于每次给指定账号，方便指定账号给用户分配通证)
 	TransferMultiple   *big.Int = big.NewInt(165)   //转账倍数
 	SetValidatorVotes  *big.Int = big.NewInt(10000)
@@ -213,7 +208,6 @@ func getInterface(input abi.Argument) reflect.Value {
 		param = reflect.New(reflect.TypeOf(paramType))
 	case abi.IntTy:
 
-		//log.Info("DecodeAbi abi.IntTy", "input.Type.Type", input.Type.Type)
 		switch input.Type.Type {
 
 		case reflect.TypeOf(int8(0)):

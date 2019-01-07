@@ -166,7 +166,7 @@ func contractSetTransaction(config *params.ChainConfig,
 
 	context := NewEVMContext(msg, header, bc, author)
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
-	_, extra, gas, failed, err := contractMessage(vmenv, msg, gp, msg.TxType(), boker)
+	_, extra, gas, failed, err := contractMessage(vmenv, msg, gp, msg.Major(), msg.Minor(), boker)
 	if err != nil {
 		log.Error("contractSetTransaction contractMessage", "extra", extra, "gas", gas, "failed", failed, "err", err)
 		return nil, nil, err
@@ -211,10 +211,10 @@ func baseTransaction(config *params.ChainConfig,
 		log.Error("baseTransaction AsMessage", "err", err)
 		return nil, nil, err
 	}
-	log.Info("baseTransaction", "Type", tx.Type(), "Time", header.Time.Int64())
+	log.Info("baseTransaction", "Major", tx.Major(), "Minor", tx.Minor(), "Time", header.Time.Int64())
 
 	//判断是否是分配通证合约
-	if tx.Type() == protocol.AssignToken {
+	/*if tx.Minor() == protocol.AssignToken {
 
 		firstBlock := bc.GetBlockByNumber(0)
 		if firstBlock == nil {
@@ -233,7 +233,7 @@ func baseTransaction(config *params.ChainConfig,
 			log.Error("baseTransaction failed tokenNoder != msg.From()", "tokenNoder", tokenNoder, "msg.From()", msg.From())
 			return nil, nil, errors.New("from address not assign token producer")
 		}
-	}
+	}*/
 
 	context := NewEVMContext(msg, header, bc, author)
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
@@ -297,7 +297,7 @@ func validatorTransaction(config *params.ChainConfig,
 		log.Info("validatorTransaction", "Number", bc.CurrentBlock().Number().Int64())
 		if bc.CurrentBlock().Number().Int64() == 0 {
 
-			_, extra, gas, failed, err := validatorMessage(vmenv, msg, gp, msg.TxType(), boker)
+			_, extra, gas, failed, err := validatorMessage(vmenv, msg, gp, msg.Major(), msg.Minor(), boker)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -325,7 +325,7 @@ func validatorTransaction(config *params.ChainConfig,
 		return nil, nil, errors.New("from address not assign token producer")
 	}
 
-	_, extra, gas, failed, err := validatorMessage(vmenv, msg, gp, msg.TxType(), boker)
+	_, extra, gas, failed, err := validatorMessage(vmenv, msg, gp, msg.Major(), msg.Minor(), boker)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -368,9 +368,9 @@ func ApplyTransaction(config *params.ChainConfig,
 	if err != nil {
 		return nil, nil, err
 	}
-	log.Info("****ApplyTransaction****", "Number", header.Number.String(), "txType", msg.TxType(), "from", msg.From())
+	log.Info("****ApplyTransaction****", "Number", header.Number.String(), "Major", msg.Major(), "Minor", msg.Minor(), "from", msg.From())
 
-	if msg.TxType() == protocol.Binary {
+	if msg.Major() == protocol.Normal {
 
 		return binaryTransaction(config, dposContext, bc, author, gp, statedb, header, tx, usedGas, cfg, msg, boker)
 	} else {
@@ -380,12 +380,12 @@ func ApplyTransaction(config *params.ChainConfig,
 		}
 
 		//根据交易类型来区分
-		switch msg.TxType() {
+		switch msg.Minor() {
 
-		case protocol.SetPersonalContract, protocol.CancelPersonalContract, protocol.SetSystemContract, protocol.CancelSystemContract:
+		case protocol.SetSystemContract, protocol.CancelSystemContract:
 			//设置合约(已经测试)
 			return contractSetTransaction(config, dposContext, bc, author, gp, statedb, header, tx, usedGas, cfg, msg, boker)
-		case protocol.VoteUser, protocol.VoteEpoch, protocol.AssignToken, protocol.RegisterCandidate: //基础交易(已经测试)
+		case protocol.VoteUser, protocol.VoteEpoch, protocol.RegisterCandidate: //基础交易(已经测试)
 
 			return baseTransaction(config, dposContext, bc, author, gp, statedb, header, tx, usedGas, cfg, msg, boker)
 		case protocol.SetValidator: //设置验证人(已经测试)

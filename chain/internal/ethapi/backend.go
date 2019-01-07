@@ -76,6 +76,7 @@ type Backend interface {
 	SetPassword(password string)
 	Boker() bokerapi.Api
 	DecodeParams(code []byte) ([]byte, error)
+	GetLocalValidator() common.Address
 }
 
 func GetAPIs(apiBackend Backend, boker bokerapi.Api) []rpc.API {

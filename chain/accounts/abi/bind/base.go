@@ -74,7 +74,7 @@ func DeployContract(opts *TransactOpts, abi abi.ABI, bytecode []byte, backend Co
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
-	tx, err := c.transact(opts, nil, append(bytecode, input...), []byte(""), protocol.Binary)
+	tx, err := c.transact(opts, nil, append(bytecode, input...), []byte(""), protocol.Normal, 0)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -205,41 +205,26 @@ func (c *BoundContract) Transact(opts *TransactOpts, method string, params ...in
 		}
 
 		//得到合约类型
-		contractType, err := e.Boker().GetContract(c.address)
+		txMajor, err := e.Boker().GetContract(c.address)
 		if err != nil {
 			return nil, err
 		}
 
 		//判断合约类型是否是基础合约
 		extra := []byte("")
-		log.Info("Create Transact", "protocol.PersonalContract", protocol.PersonalContract)
-		if contractType == protocol.PersonalContract {
+		if txMajor == protocol.Normal {
+
+			return c.transact(opts, &c.address, input, []byte(""), protocol.Normal, 0)
+
+		} else if txMajor == protocol.Base {
 
 			//用户触发的基础合约（用户触发，但是不收取Gas费用）
 			if method == protocol.RegisterCandidateMethod {
-				return c.transact(opts, &c.address, input, extra, protocol.RegisterCandidate)
+				return c.transact(opts, &c.address, input, extra, protocol.Base, protocol.RegisterCandidate)
 			} else if method == protocol.VoteCandidateMethod {
-				return c.transact(opts, &c.address, input, extra, protocol.VoteUser)
+				return c.transact(opts, &c.address, input, extra, protocol.Base, protocol.VoteUser)
 			} else if method == protocol.CancelVoteMethod {
-				return c.transact(opts, &c.address, input, extra, protocol.VoteCancel)
-			}
-			return nil, errors.New("unknown personal contract method name")
-
-		} else if contractType == protocol.SystemContract {
-
-			//由基础链触发的基础合约，不收取Gas费用
-			if method == protocol.AssignTokenMethod {
-
-				//得到当前的分币节点
-				tokenNoder, err := c.getTokenNoder(opts)
-				if err != nil {
-					return nil, errors.New("get assign token error")
-				}
-				if tokenNoder != opts.From {
-					return nil, errors.New("current assign token not is from account")
-				}
-				return c.transact(opts, &c.address, input, extra, protocol.AssignToken)
-
+				return c.transact(opts, &c.address, input, extra, protocol.Base, protocol.VoteCancel)
 			} else if method == protocol.RotateVoteMethod {
 
 				//得到当前的分币节点
@@ -250,12 +235,12 @@ func (c *BoundContract) Transact(opts *TransactOpts, method string, params ...in
 				if tokenNoder != opts.From {
 					return nil, errors.New("current rotate vote not is from account")
 				}
-				return c.transact(opts, &c.address, input, extra, protocol.VoteEpoch)
+				return c.transact(opts, &c.address, input, extra, protocol.Base, protocol.VoteEpoch)
 			}
 			return nil, errors.New("unknown system contract method name")
 		}
 	}
-	return c.transact(opts, &c.address, input, []byte(""), protocol.Binary)
+	return nil, errors.New("unknown system contract method name")
 }
 
 func (c *BoundContract) Transfer(opts *TransactOpts) (*types.Transaction, error) {
@@ -267,15 +252,20 @@ func (c *BoundContract) Transfer(opts *TransactOpts) (*types.Transaction, error)
 		return nil, err
 	}
 
-	txType, err := e.Boker().GetContract(c.address)
+	txMajor, err := e.Boker().GetContract(c.address)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.transact(opts, &c.address, nil, []byte(""), protocol.TxType(txType))
+	return c.transact(opts, &c.address, nil, []byte(""), txMajor, 0)
 }
 
-func (c *BoundContract) baseTransact(opts *TransactOpts, contract *common.Address, payload []byte, extra []byte, transactTypes protocol.TxType) (*types.Transaction, error) {
+func (c *BoundContract) baseTransact(opts *TransactOpts,
+	contract *common.Address,
+	payload []byte,
+	extra []byte,
+	txMajor protocol.TxMajor,
+	txMinor protocol.TxMinor) (*types.Transaction, error) {
 
 	//判断Value值是否为空
 	var err error
@@ -308,7 +298,7 @@ func (c *BoundContract) baseTransact(opts *TransactOpts, contract *common.Addres
 	} else {
 
 		//合约已经创建，则创建一个交易
-		rawTx = types.NewBaseTransaction(transactTypes, nonce, c.address, value, payload)
+		rawTx = types.NewBaseTransaction(txMajor, txMinor, nonce, c.address, value, payload)
 	}
 
 	//判断交易是否有签名者
@@ -329,7 +319,12 @@ func (c *BoundContract) baseTransact(opts *TransactOpts, contract *common.Addres
 	return signedTx, nil
 }
 
-func (c *BoundContract) normalTransact(opts *TransactOpts, contract *common.Address, payload []byte, extra []byte, transactTypes protocol.TxType) (*types.Transaction, error) {
+func (c *BoundContract) normalTransact(opts *TransactOpts,
+	contract *common.Address,
+	payload []byte,
+	extra []byte,
+	txMajor protocol.TxMajor,
+	txMinor protocol.TxMinor) (*types.Transaction, error) {
 
 	//log.Info("****normalTransact****", "from", opts.From)
 
@@ -391,7 +386,7 @@ func (c *BoundContract) normalTransact(opts *TransactOpts, contract *common.Addr
 		rawTx = types.NewContractCreation(nonce, value, gasLimit, gasPrice, payload)
 	} else {
 		//合约已经创建，则创建一个交易
-		rawTx = types.NewTransaction(transactTypes, nonce, c.address, value, gasLimit, gasPrice, payload)
+		rawTx = types.NewTransaction(txMajor, txMinor, nonce, c.address, value, gasLimit, gasPrice, payload)
 	}
 
 	//判断交易是否有签名者
@@ -413,23 +408,29 @@ func (c *BoundContract) normalTransact(opts *TransactOpts, contract *common.Addr
 	return signedTx, nil
 }
 
-func (c *BoundContract) transact(opts *TransactOpts, contract *common.Address, payload []byte, extra []byte, transactTypes protocol.TxType) (*types.Transaction, error) {
+func (c *BoundContract) transact(opts *TransactOpts,
+	contract *common.Address,
+	payload []byte,
+	extra []byte,
+	txMajor protocol.TxMajor,
+	txMinor protocol.TxMinor) (*types.Transaction, error) {
 
 	/*根据不同类型计算使用的Gas信息*/
-	if transactTypes == protocol.Binary {
+	if txMajor == protocol.Normal {
 
 		//普通交易
-		return c.normalTransact(opts, contract, payload, extra, transactTypes)
-	} else if (transactTypes >= protocol.SetValidator) && (transactTypes <= protocol.AssignToken) {
+		return c.normalTransact(opts, contract, payload, extra, protocol.Normal, 0)
+	} else if txMajor == protocol.Base {
 
-		//基础合约交易
-		return c.baseTransact(opts, contract, payload, extra, transactTypes)
-	} else {
-
-		//未知的类型
-		log.Error("transact", "transactTypes", transactTypes)
+		if (txMinor >= protocol.MinMinor) && (txMinor <= protocol.MaxMinor) {
+			return c.baseTransact(opts, contract, payload, extra, txMajor, txMinor)
+		}
+		log.Error("transact", "major", txMajor, "minor", txMinor)
+		return nil, errors.New("unknown transaction type")
+	} else if txMajor == protocol.Extra {
 		return nil, errors.New("unknown transaction type")
 	}
+	return nil, errors.New("unknown transaction type")
 }
 
 //

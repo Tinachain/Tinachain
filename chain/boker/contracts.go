@@ -175,7 +175,7 @@ func (c *BokerContracts) CancelContract(address common.Address) error {
 
 	//检测合约是否存在
 	log.Info("****CancelContract****")
-	contractType, err := c.GetContract(address)
+	_, err := c.GetContract(address)
 	if err != nil {
 		return err
 	}
@@ -191,14 +191,6 @@ func (c *BokerContracts) CancelContract(address common.Address) error {
 		return protocol.ErrSaveContractTrie
 	}
 
-	//终止合约运行
-	if contractType == protocol.SystemContract {
-
-		if (c.services.contract != nil) && c.services.contract.IsStart() {
-
-			//终止
-		}
-	}
 	return nil
 }
 
@@ -317,15 +309,15 @@ func (c *BokerContracts) loadTrieContract() error {
 }
 
 //查找合约账户
-func (c *BokerContracts) GetContract(address common.Address) (protocol.ContractType, error) {
+func (c *BokerContracts) GetContract(address common.Address) (protocol.TxMajor, error) {
 
 	if len(c.contracts) > 0 {
-		value, exist := c.contracts[address]
+		_, exist := c.contracts[address]
 		if exist {
-			return value, nil
+			return protocol.Base, nil
 		}
 	}
-	return protocol.BinaryContract, nil
+	return protocol.Normal, nil
 }
 
 //判断此合约是否已经存在

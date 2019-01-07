@@ -27,9 +27,12 @@ func NewTransaction(ethereum *eth.Ethereum) *BokerTransaction {
 	}
 }
 
-func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context, txType protocol.TxType, to common.Address, extra string) error {
+func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
+	txMajor protocol.TxMajor,
+	txMinor protocol.TxMinor,
+	to common.Address,
+	extra string) error {
 
-	//log.Info("****SubmitBokerTransaction****", "txType", txType, "to", to.String())
 	if t.ethereum != nil {
 
 		//得到From账号
@@ -38,19 +41,19 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context, txType pr
 			log.Error("bokerTransaction CoinBase", "error", err)
 			return err
 		}
-		//log.Info("SubmitBokerTransaction CoinBase", "from", from.String())
 
 		//设置参数（其中有些参数可以通过调用设置默认设置来进行获取）
 		args := ethapi.SendTxArgs{
 			From:     from,
-			Type:     txType,
+			Major:    txMajor,
+			Minor:    txMinor,
 			Nonce:    nil,
 			To:       &to,
 			Gas:      nil,
 			GasPrice: nil,
 			Value:    nil,
 			Data:     hexutil.Bytes([]byte(extra)),
-			//Extra:    hexutil.Bytes([]byte(extra)),
+			Extra:    hexutil.Bytes([]byte(extra)),
 		}
 
 		//查找包含所请求签名者的钱包
@@ -68,10 +71,10 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context, txType pr
 			log.Error("SubmitBokerTransaction SetDefaults", "error", err)
 			return err
 		}
-		log.Info("SubmitBokerTransaction SetDefaults", "Nonce", args.Nonce.String(), "txType", args.Type)
+		log.Info("SubmitBokerTransaction SetDefaults", "Nonce", args.Nonce.String(), "Major", args.Major, "Minor", args.Minor)
 
 		input := []byte("")
-		tx := types.NewBaseTransaction(args.Type, (uint64)(*args.Nonce), (common.Address)(*args.To), (*big.Int)(args.Value), input)
+		tx := types.NewBaseTransaction(args.Major, args.Minor, (uint64)(*args.Nonce), (common.Address)(*args.To), (*big.Int)(args.Value), input)
 
 		var chainID *big.Int
 		if config := t.ethereum.ApiBackend.ChainConfig(); config.IsEIP155(t.ethereum.ApiBackend.CurrentBlock().Number()) {

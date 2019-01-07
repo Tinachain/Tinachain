@@ -169,7 +169,6 @@ func (api *PrivateMinerAPI) SetLocalValidator() bool {
 		return false
 	}
 
-	//log.Info("SetLocalValidator", "coinbase", coinbase.String())
 	api.e.SetLocalValidator(coinbase)
 	return true
 }

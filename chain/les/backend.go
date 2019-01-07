@@ -212,6 +212,11 @@ func (s *LightEthereum) DecodeParams(code []byte) ([]byte, error) {
 	return []byte(""), nil
 }
 
+func (s *LightEthereum) GetLocalValidator() common.Address {
+
+	return common.Address{}
+}
+
 func (s *LightEthereum) BlockChain() *light.LightChain      { return s.blockchain }
 func (s *LightEthereum) TxPool() *light.TxPool              { return s.txPool }
 func (s *LightEthereum) Engine() consensus.Engine           { return s.engine }

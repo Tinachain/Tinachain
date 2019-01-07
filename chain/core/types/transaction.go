@@ -56,15 +56,16 @@ type Transaction struct {
 
 //这里注意算法 交易费 = gasUsed * gasPrice
 type txdata struct {
-	Type         protocol.TxType `json:"type"   gencodec:"required"`           //交易类型
-	AccountNonce uint64          `json:"nonce"    gencodec:"required"`         //交易Nonce
-	Price        *big.Int        `json:"gasPrice" gencodec:"required"`         //Gas单价
-	GasLimit     *big.Int        `json:"gas"      gencodec:"required"`         //GasLimit
-	Time         *big.Int        `json:"timestamp"        gencodec:"required"` //交易发起时间
-	Recipient    *common.Address `json:"to"       rlp:"nil"`                   //接收地址，可以为nil
-	Amount       *big.Int        `json:"value"    gencodec:"required"`         //交易使用的数量
-	Payload      []byte          `json:"input"    gencodec:"required"`         //交易可以携带的数据，在不同类型的交易中有不同的含义(这个字段在eth.sendTransaction()中对应的是data字段，在eth.getTransaction()中对应的是input字段)
-	Extra        []byte          `json:"extra"    gencodec:"required"`         //扩展数据
+	Major        protocol.TxMajor `json:"major"   gencodec:"required"`          //主交易类型
+	Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          //次交易类型
+	AccountNonce uint64           `json:"nonce"    gencodec:"required"`         //交易Nonce
+	Price        *big.Int         `json:"gasPrice" gencodec:"required"`         //Gas单价
+	GasLimit     *big.Int         `json:"gas"      gencodec:"required"`         //GasLimit
+	Time         *big.Int         `json:"timestamp"        gencodec:"required"` //交易发起时间
+	Recipient    *common.Address  `json:"to"       rlp:"nil"`                   //接收地址，可以为nil
+	Amount       *big.Int         `json:"value"    gencodec:"required"`         //交易使用的数量
+	Payload      []byte           `json:"input"    gencodec:"required"`         //交易可以携带的数据，在不同类型的交易中有不同的含义(这个字段在eth.sendTransaction()中对应的是data字段，在eth.getTransaction()中对应的是input字段)
+	Extra        []byte           `json:"extra"    gencodec:"required"`         //扩展数据
 
 	//交易的签名数据
 	V *big.Int `json:"v" gencodec:"required"`
@@ -82,28 +83,29 @@ type txdataMarshaling struct {
 	Amount       *hexutil.Big
 	Payload      hexutil.Bytes
 	Extra        hexutil.Bytes
-	Type         protocol.TxType
+	Major        protocol.TxMajor
+	Minor        protocol.TxMinor
 	V            *hexutil.Big
 	R            *hexutil.Big
 	S            *hexutil.Big
 }
 
 //创建交易
-func NewTransaction(txType protocol.TxType, nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, payload []byte) *Transaction {
-	return newTransaction(txType, nonce, &to, amount, gasLimit, gasPrice, payload)
+func NewTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, payload []byte) *Transaction {
+	return newTransaction(txMajor, txMinor, nonce, &to, amount, gasLimit, gasPrice, payload)
 }
 
 //创建基础交易
-func NewBaseTransaction(txType protocol.TxType, nonce uint64, to common.Address, amount *big.Int, payload []byte) *Transaction {
-	return newTransaction(txType, nonce, &to, amount, protocol.MaxGasLimit, protocol.MaxGasPrice, payload)
+func NewBaseTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, nonce uint64, to common.Address, amount *big.Int, payload []byte) *Transaction {
+	return newTransaction(txMajor, txMinor, nonce, &to, amount, protocol.MaxGasLimit, protocol.MaxGasPrice, payload)
 }
 
 //创建合约
 func NewContractCreation(nonce uint64, amount, gasLimit, gasPrice *big.Int, payload []byte) *Transaction {
-	return newTransaction(protocol.Binary, nonce, nil, amount, gasLimit, gasPrice, payload)
+	return newTransaction(protocol.Normal, 0, nonce, nil, amount, gasLimit, gasPrice, payload)
 }
 
-func newTransaction(txType protocol.TxType, nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, payload []byte) *Transaction {
+func newTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, payload []byte) *Transaction {
 
 	//判断数据是否长度大于0
 	if len(payload) > 0 {
@@ -115,15 +117,15 @@ func newTransaction(txType protocol.TxType, nonce uint64, to *common.Address, am
 		AccountNonce: nonce,
 		Recipient:    to,
 		Payload:      payload,
-		//Extra:        extra,
-		Amount:   new(big.Int),
-		GasLimit: new(big.Int),
-		Time:     new(big.Int),
-		Price:    new(big.Int),
-		Type:     txType,
-		V:        new(big.Int),
-		R:        new(big.Int),
-		S:        new(big.Int),
+		Amount:       new(big.Int),
+		GasLimit:     new(big.Int),
+		Time:         new(big.Int),
+		Price:        new(big.Int),
+		Major:        txMajor,
+		Minor:        txMinor,
+		V:            new(big.Int),
+		R:            new(big.Int),
+		S:            new(big.Int),
 	}
 
 	//设置交易时间
@@ -147,72 +149,78 @@ func (tx *Transaction) ChainId() *big.Int {
 	return deriveChainId(tx.data.V)
 }
 
-func IsSetPersonalContract(txType protocol.TxType) bool {
-	if txType == protocol.SetPersonalContract {
+func IsSetSystemContract(txMajor protocol.TxMajor, txMinor protocol.TxMinor) bool {
+
+	if txMajor != protocol.Base {
+		return false
+	}
+
+	if txMinor == protocol.SetSystemContract {
 		return true
 	} else {
 		return false
 	}
 }
 
-func IsCancelPersonalContract(txType protocol.TxType) bool {
-	if txType == protocol.CancelPersonalContract {
+func IsCancelSystemContract(txMajor protocol.TxMajor, txMinor protocol.TxMinor) bool {
+
+	if txMajor != protocol.Base {
+		return false
+	}
+
+	if txMinor == protocol.CancelSystemContract {
 		return true
 	} else {
 		return false
 	}
 }
 
-func IsSetSystemContract(txType protocol.TxType) bool {
-	if txType == protocol.SetSystemContract {
+func IsVoteUser(txMajor protocol.TxMajor, txMinor protocol.TxMinor) bool {
+
+	if txMajor != protocol.Base {
+		return false
+	}
+
+	if txMinor == protocol.VoteUser {
 		return true
 	} else {
 		return false
 	}
 }
 
-func IsCancelSystemContract(txType protocol.TxType) bool {
-	if txType == protocol.CancelSystemContract {
+func IsVoteEpoch(txMajor protocol.TxMajor, txMinor protocol.TxMinor) bool {
+
+	if txMajor != protocol.Base {
+		return false
+	}
+
+	if txMinor == protocol.VoteEpoch {
 		return true
 	} else {
 		return false
 	}
 }
 
-func IsVoteUser(txType protocol.TxType) bool {
-	if txType == protocol.VoteUser {
+func IsRegisterCandidate(txMajor protocol.TxMajor, txMinor protocol.TxMinor) bool {
+
+	if txMajor != protocol.Base {
+		return false
+	}
+
+	if txMinor == protocol.RegisterCandidate {
 		return true
 	} else {
 		return false
 	}
 }
 
-func IsVoteEpoch(txType protocol.TxType) bool {
-	if txType == protocol.VoteEpoch {
-		return true
-	} else {
+func IsSetValidator(txMajor protocol.TxMajor, txMinor protocol.TxMinor) bool {
+
+	if txMajor != protocol.Base {
 		return false
 	}
-}
 
-func IsAssignToken(txType protocol.TxType) bool {
-	if txType == protocol.AssignToken {
-		return true
-	} else {
-		return false
-	}
-}
-
-func IsRegisterCandidate(txType protocol.TxType) bool {
-	if txType == protocol.RegisterCandidate {
-		return true
-	} else {
-		return false
-	}
-}
-
-func IsSetValidator(txType protocol.TxType) bool {
-	if txType == protocol.SetValidator {
+	if txMinor == protocol.SetValidator {
 		return true
 	} else {
 		return false
@@ -220,19 +228,36 @@ func IsSetValidator(txType protocol.TxType) bool {
 }
 
 //判断是否是各种类型的合约
-func IsBinary(txType protocol.TxType) bool {
-	if txType == protocol.Binary {
+func IsNormal(txMajor protocol.TxMajor) bool {
+
+	if txMajor == protocol.Normal {
 		return true
 	} else {
 		return false
 	}
 }
 
-//当当前交易不是普通类型是进行校验(这里进行了修改，交易非普通类型时也应该继续处理)
+//验证交易类型是否可知
 func (tx *Transaction) Validate() error {
 
-	if tx.Type() < protocol.Binary || tx.Type() > protocol.AssignToken {
-		return errors.New("unknown transaction type")
+	if tx.Major() < protocol.Normal || tx.Major() > protocol.Extra {
+		return errors.New("unknown major transaction type")
+	}
+
+	switch tx.Major() {
+
+	case protocol.Base:
+		{
+			if tx.Minor() < protocol.MinMinor || tx.Minor() > protocol.MaxMinor {
+				return errors.New("base transaction unknown minor transaction type")
+			}
+		}
+	case protocol.Extra:
+		{
+			if tx.Minor() < protocol.Picture || tx.Minor() > protocol.File {
+				return errors.New("extra transaction unknown minor transaction type")
+			}
+		}
 	}
 	return nil
 }
@@ -294,16 +319,17 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (tx *Transaction) Data() []byte          { return common.CopyBytes(tx.data.Payload) }
-func (tx *Transaction) Extra() []byte         { return common.CopyBytes(tx.data.Extra) }
-func (tx *Transaction) SetExtra(extra []byte) { tx.data.Extra = extra }
-func (tx *Transaction) Gas() *big.Int         { return new(big.Int).Set(tx.data.GasLimit) }
-func (tx *Transaction) GasPrice() *big.Int    { return new(big.Int).Set(tx.data.Price) }
-func (tx *Transaction) Value() *big.Int       { return new(big.Int).Set(tx.data.Amount) }
-func (tx *Transaction) Nonce() uint64         { return tx.data.AccountNonce }
-func (tx *Transaction) CheckNonce() bool      { return true }
-func (tx *Transaction) Type() protocol.TxType { return tx.data.Type }
-func (tx *Transaction) Time() *big.Int        { return tx.data.Time }
+func (tx *Transaction) Data() []byte            { return common.CopyBytes(tx.data.Payload) }
+func (tx *Transaction) Extra() []byte           { return common.CopyBytes(tx.data.Extra) }
+func (tx *Transaction) SetExtra(extra []byte)   { tx.data.Extra = extra }
+func (tx *Transaction) Gas() *big.Int           { return new(big.Int).Set(tx.data.GasLimit) }
+func (tx *Transaction) GasPrice() *big.Int      { return new(big.Int).Set(tx.data.Price) }
+func (tx *Transaction) Value() *big.Int         { return new(big.Int).Set(tx.data.Amount) }
+func (tx *Transaction) Nonce() uint64           { return tx.data.AccountNonce }
+func (tx *Transaction) CheckNonce() bool        { return true }
+func (tx *Transaction) Major() protocol.TxMajor { return tx.data.Major }
+func (tx *Transaction) Minor() protocol.TxMinor { return tx.data.Minor }
+func (tx *Transaction) Time() *big.Int          { return tx.data.Time }
 
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
@@ -351,7 +377,8 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
 		extra:      tx.data.Extra,
-		txType:     tx.data.Type,
+		major:      tx.data.Major,
+		minor:      tx.data.Minor,
 		checkNonce: true,
 	}
 
@@ -406,7 +433,8 @@ func (tx *Transaction) String() string {
 	enc, _ := rlp.EncodeToBytes(&tx.data)
 	return fmt.Sprintf(`
 	TX(%x)
-	Type:	  %d
+	Major:	  %d
+	Minor: 	%d
 	Contract: %v
 	From:     %s
 	To:       %s
@@ -422,7 +450,8 @@ func (tx *Transaction) String() string {
 	Hex:      %x
 `,
 		tx.Hash(),
-		tx.Type(),
+		tx.Major(),
+		tx.Minor(),
 		tx.data.Recipient == nil,
 		from,
 		to,
@@ -568,10 +597,19 @@ type Message struct {
 	data                    []byte
 	extra                   []byte
 	checkNonce              bool
-	txType                  protocol.TxType
+	major                   protocol.TxMajor
+	minor                   protocol.TxMinor
 }
 
-func NewMessage(from common.Address, to *common.Address, nonce uint64, amount, gasLimit, price *big.Int, data []byte, extra []byte, checkNonce bool, txType protocol.TxType) Message {
+func NewMessage(from common.Address,
+	to *common.Address,
+	nonce uint64,
+	amount, gasLimit, price *big.Int,
+	data []byte,
+	extra []byte,
+	checkNonce bool,
+	major protocol.TxMajor,
+	minor protocol.TxMinor) Message {
 	return Message{
 		from:       from,
 		to:         to,
@@ -582,7 +620,8 @@ func NewMessage(from common.Address, to *common.Address, nonce uint64, amount, g
 		data:       data,
 		extra:      extra,
 		checkNonce: checkNonce,
-		txType:     txType,
+		major:      major,
+		minor:      minor,
 	}
 }
 
@@ -595,4 +634,5 @@ func (m Message) Nonce() uint64           { return m.nonce }
 func (m Message) Data() []byte            { return m.data }
 func (m Message) Extra() []byte           { return m.extra }
 func (m Message) CheckNonce() bool        { return m.checkNonce }
-func (m Message) TxType() protocol.TxType { return m.txType }
+func (m Message) Major() protocol.TxMajor { return m.major }
+func (m Message) Minor() protocol.TxMinor { return m.minor }

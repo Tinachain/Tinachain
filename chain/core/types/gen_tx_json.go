@@ -17,21 +17,23 @@ var _ = (*txdataMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (t txdata) MarshalJSON() ([]byte, error) {
 	type txdata struct {
-		Type         protocol.TxType `json:"type"   gencodec:"required"`
-		AccountNonce hexutil.Uint64  `json:"nonce"    gencodec:"required"`
-		Price        *hexutil.Big    `json:"gasPrice" gencodec:"required"`
-		GasLimit     *hexutil.Big    `json:"gas"      gencodec:"required"`
-		Recipient    *common.Address `json:"to"       rlp:"nil"`
-		Amount       *hexutil.Big    `json:"value"    gencodec:"required"`
-		Payload      hexutil.Bytes   `json:"input"    gencodec:"required"`
-		Extra        hexutil.Bytes   `json:"extra"    gencodec:"required"`
-		V            *hexutil.Big    `json:"v" gencodec:"required"`
-		R            *hexutil.Big    `json:"r" gencodec:"required"`
-		S            *hexutil.Big    `json:"s" gencodec:"required"`
-		Hash         *common.Hash    `json:"hash" rlp:"-"`
+		Major        protocol.TxMajor `json:"major"   gencodec:"required"`
+		Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`
+		AccountNonce hexutil.Uint64   `json:"nonce"    gencodec:"required"`
+		Price        *hexutil.Big     `json:"gasPrice" gencodec:"required"`
+		GasLimit     *hexutil.Big     `json:"gas"      gencodec:"required"`
+		Recipient    *common.Address  `json:"to"       rlp:"nil"`
+		Amount       *hexutil.Big     `json:"value"    gencodec:"required"`
+		Payload      hexutil.Bytes    `json:"input"    gencodec:"required"`
+		Extra        hexutil.Bytes    `json:"extra"    gencodec:"required"`
+		V            *hexutil.Big     `json:"v" gencodec:"required"`
+		R            *hexutil.Big     `json:"r" gencodec:"required"`
+		S            *hexutil.Big     `json:"s" gencodec:"required"`
+		Hash         *common.Hash     `json:"hash" rlp:"-"`
 	}
 	var enc txdata
-	enc.Type = t.Type
+	enc.Major = t.Major
+	enc.Minor = t.Minor
 	enc.AccountNonce = hexutil.Uint64(t.AccountNonce)
 	enc.Price = (*hexutil.Big)(t.Price)
 	enc.GasLimit = (*hexutil.Big)(t.GasLimit)
@@ -49,27 +51,33 @@ func (t txdata) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (t *txdata) UnmarshalJSON(input []byte) error {
 	type txdata struct {
-		Type         *protocol.TxType `json:"type"   gencodec:"required"`
-		AccountNonce *hexutil.Uint64  `json:"nonce"    gencodec:"required"`
-		Price        *hexutil.Big     `json:"gasPrice" gencodec:"required"`
-		GasLimit     *hexutil.Big     `json:"gas"      gencodec:"required"`
-		Recipient    *common.Address  `json:"to"       rlp:"nil"`
-		Amount       *hexutil.Big     `json:"value"    gencodec:"required"`
-		Payload      *hexutil.Bytes   `json:"input"    gencodec:"required"`
-		Extra        *hexutil.Bytes   `json:"extra"    gencodec:"required"`
-		V            *hexutil.Big     `json:"v" gencodec:"required"`
-		R            *hexutil.Big     `json:"r" gencodec:"required"`
-		S            *hexutil.Big     `json:"s" gencodec:"required"`
-		Hash         *common.Hash     `json:"hash" rlp:"-"`
+		Major        *protocol.TxMajor `json:"major"   gencodec:"required"`
+		Minor        *protocol.TxMinor `json:"minor"   gencodec:"required"`
+		AccountNonce *hexutil.Uint64   `json:"nonce"    gencodec:"required"`
+		Price        *hexutil.Big      `json:"gasPrice" gencodec:"required"`
+		GasLimit     *hexutil.Big      `json:"gas"      gencodec:"required"`
+		Recipient    *common.Address   `json:"to"       rlp:"nil"`
+		Amount       *hexutil.Big      `json:"value"    gencodec:"required"`
+		Payload      *hexutil.Bytes    `json:"input"    gencodec:"required"`
+		Extra        *hexutil.Bytes    `json:"extra"    gencodec:"required"`
+		V            *hexutil.Big      `json:"v" gencodec:"required"`
+		R            *hexutil.Big      `json:"r" gencodec:"required"`
+		S            *hexutil.Big      `json:"s" gencodec:"required"`
+		Hash         *common.Hash      `json:"hash" rlp:"-"`
 	}
 	var dec txdata
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
-	if dec.Type == nil {
-		return errors.New("missing required field 'type' for txdata")
+	if dec.Major == nil {
+		return errors.New("missing required field 'major' for txdata")
 	}
-	t.Type = *dec.Type
+	t.Major = *dec.Major
+	if dec.Minor == nil {
+		return errors.New("missing required field 'minor' for txdata")
+	}
+	t.Minor = *dec.Minor
+
 	if dec.AccountNonce == nil {
 		return errors.New("missing required field 'nonce' for txdata")
 	}

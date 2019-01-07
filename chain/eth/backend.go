@@ -293,6 +293,12 @@ func (self *Ethereum) SetCoinbase(coinbase common.Address) {
 }
 
 //设置当前本地的验证者
+func (self *Ethereum) GetLocalValidator() common.Address {
+
+	return self.selfValidator
+}
+
+//设置当前本地的验证者
 func (self *Ethereum) SetLocalValidator(validator common.Address) error {
 
 	self.lock.Lock()
@@ -314,11 +320,6 @@ func (self *Ethereum) SetLocalValidator(validator common.Address) error {
 
 			//设置当前出块节点为当前节点
 			self.selfValidator = validator
-
-			/*producerErr := engine.SelfProducer(self.BlockChain().CurrentBlock(), validator)
-			if producerErr != nil {
-				return producerErr
-			}*/
 		} else {
 			log.Error("current Block Number is`t 0", "number", self.BlockChain().CurrentBlock().Number())
 			return protocol.ErrGenesisBlock

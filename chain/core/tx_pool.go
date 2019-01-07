@@ -604,26 +604,25 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		return ErrNegativeValue
 	}
 
-	if types.IsBinary(tx.Type()) {
+	if protocol.Normal == tx.Major() {
 
-		//普通交易类型
 		return pool.normalValidateTx(tx, local)
-	} else if (tx.Type() >= protocol.SetValidator) && (tx.Type() <= protocol.AssignToken) {
+	} else if protocol.Base == tx.Major() {
 
-		//基础合约交易类型
-		return pool.baseValidateTx(tx, local)
-	} else {
+		if (tx.Minor() >= protocol.MinMinor) && (tx.Minor() <= protocol.MaxMinor) {
 
-		//未知的交易类型
-		return ErrInvalidType
+			//基础合约交易类型
+			return pool.baseValidateTx(tx, local)
+		}
+	} else if protocol.Extra == tx.Major() {
+
 	}
+	return ErrInvalidType
 }
 
 //验证交易并将其插入到future queue. 如果这个交易是替换了当前存在的某个交易,那么会返回之前的那个交易,这样外部就不用调用promote方法.
 //如果某个新增加的交易被标记为local, 那么它的发送账户会进入白名单,这个账户的关联的交易将不会因为价格的限制或者其他的一些限制被删除.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
-
-	//log.Info("****add****", "gas", tx.Gas(), "gasprice", tx.GasPrice(), "hash", tx.Hash().String())
 
 	//检测此交易的Hash是否存在，如果存在，则表明是已经存在的交易，将其丢弃
 	hash := tx.Hash()

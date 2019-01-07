@@ -133,20 +133,19 @@ func (boker *BokerBackend) loadConfig() error {
 }
 
 //GetAccount 根据账号地址，得到账号等级
-func (boker *BokerBackend) GetAccount(account common.Address) ([]protocol.TxType, error) {
+func (boker *BokerBackend) GetAccount(address common.Address) (protocol.TxMajor, error) {
 
-	//log.Info("****GetAccount****", "account", account.String())
 	if boker.accounts == nil {
 
 		log.Error("Boker GetAccount function accounts Objects is nil")
-		return []protocol.TxType{protocol.Binary}, nil
+		return protocol.Normal, nil
 	}
 
-	return boker.accounts.GetAccount(account)
+	return boker.accounts.GetAccount(address)
 }
 
 //GetContract 根据合约地址，得到合约等级
-func (boker *BokerBackend) GetContract(address common.Address) (protocol.ContractType, error) {
+func (boker *BokerBackend) GetContract(address common.Address) (protocol.TxMajor, error) {
 	return boker.contracts.GetContract(address)
 }
 
@@ -159,17 +158,23 @@ func (boker *BokerBackend) GetContractAddr(contractType protocol.ContractType) (
 	return boker.contracts.GetContractAddr(contractType)
 }
 
-func (boker *BokerBackend) IsValidator(address common.Address) bool {
+func (boker *BokerBackend) IsSystemAccount(address common.Address) bool {
 
-	//return boker.accounts.IsValidator(address)
+	return boker.accounts.IsSystemAccount(address)
+}
 
-	//测试使用
-	return true
+func (boker *BokerBackend) IsLocalValidator(address common.Address) bool {
+
+	if boker.ethereum.GetLocalValidator() == address {
+		return true
+	} else {
+		return false
+	}
 }
 
 //SubmitBokerTransaction 设置一个播客链交易
-func (boker *BokerBackend) SubmitBokerTransaction(ctx context.Context, txType protocol.TxType, to common.Address, extra string) error {
-	return boker.transactions.SubmitBokerTransaction(ctx, txType, to, extra)
+func (boker *BokerBackend) SubmitBokerTransaction(ctx context.Context, txMajor protocol.TxMajor, txMinor protocol.TxMinor, to common.Address, extra string) error {
+	return boker.transactions.SubmitBokerTransaction(ctx, txMajor, txMinor, to, extra)
 }
 
 func (boker *BokerBackend) CommitTrie() (*protocol.BokerBackendProto, error) {
@@ -190,13 +195,13 @@ func (boker *BokerBackend) GetContractTrie() (*trie.Trie, *trie.Trie, *trie.Trie
 	return boker.contracts.GetContractTrie()
 }
 
-func (boker *BokerBackend) GetMethodName(txType protocol.TxType) (string, string, error) {
+func (boker *BokerBackend) GetMethodName(txMinor protocol.TxMinor) (string, string, error) {
 
-	if txType < protocol.SetValidator {
+	if txMinor < protocol.SetValidator {
 		return "", "", protocol.ErrTxType
 	}
 
-	switch txType {
+	switch txMinor {
 
 	case protocol.SetValidator: //设置验证者
 		return "", "", nil
@@ -209,9 +214,6 @@ func (boker *BokerBackend) GetMethodName(txType protocol.TxType) (string, string
 
 	case protocol.VoteEpoch: //产生当前的出块节点
 		return "", protocol.RotateVoteMethod, nil
-
-	case protocol.AssignToken: //分配通证
-		return "", protocol.AssignTokenMethod, nil
 
 	default:
 		return "", "", protocol.ErrTxType

@@ -213,3 +213,8 @@ func (b *LesApiBackend) DecodeParams(code []byte) ([]byte, error) {
 
 	return b.eth.DecodeParams(code)
 }
+
+func (b *LesApiBackend) GetLocalValidator() common.Address {
+
+	return b.eth.GetLocalValidator()
+}
