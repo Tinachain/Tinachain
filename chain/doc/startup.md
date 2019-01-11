@@ -1,4 +1,4 @@
-## 播客链超级节点运行流程
+## Tina链超级节点运行流程
 
 ## 准备流程
 # 同步时间：
@@ -13,7 +13,7 @@
 # 第二步：启动geth
 	nohup geth --nodiscover \
 	--maxpeers 3 \
-	--identity "bokerchain" \
+	--identity "tinachain" \
 	--rpc \
 	--rpcaddr 0.0.0.0 \
 	--rpccorsdomain "*" \

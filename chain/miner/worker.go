@@ -214,7 +214,7 @@ func (self *worker) mintBlock(now int64) {
 		}
 
 		//判断当前账号是否是设置的账号
-		if self.chain.Boker().IsSystemAccount(self.coinbase) || self.chain.Boker().IsLocalValidator(self.coinbase) {
+		if self.chain.Boker().IsLocalValidator(self.coinbase) {
 
 			log.Info("mintBlock")
 

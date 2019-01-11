@@ -3,6 +3,7 @@ package boker
 
 import (
 	"context"
+	"errors"
 	"math/big"
 
 	"github.com/Tinachain/Tina/chain/accounts"
@@ -13,6 +14,12 @@ import (
 	"github.com/Tinachain/Tina/chain/eth"
 	"github.com/Tinachain/Tina/chain/internal/ethapi"
 	"github.com/Tinachain/Tina/chain/log"
+	"github.com/Tinachain/Tina/chain/params"
+)
+
+const (
+	defaultGas      = 90000
+	defaultGasPrice = 50 * params.Shannon
 )
 
 //播客链的基础合约管理
@@ -31,7 +38,7 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 	txMajor protocol.TxMajor,
 	txMinor protocol.TxMinor,
 	to common.Address,
-	extra string) error {
+	extra []byte) error {
 
 	if t.ethereum != nil {
 
@@ -52,8 +59,8 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 			Gas:      nil,
 			GasPrice: nil,
 			Value:    nil,
-			Data:     hexutil.Bytes([]byte(extra)),
-			Extra:    hexutil.Bytes([]byte(extra)),
+			Data:     hexutil.Bytes(extra),
+			Extra:    hexutil.Bytes(extra),
 		}
 
 		//查找包含所请求签名者的钱包
@@ -73,23 +80,42 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 		}
 		log.Info("SubmitBokerTransaction SetDefaults", "Nonce", args.Nonce.String(), "Major", args.Major, "Minor", args.Minor)
 
-		input := []byte("")
-		tx := types.NewBaseTransaction(args.Major, args.Minor, (uint64)(*args.Nonce), (common.Address)(*args.To), (*big.Int)(args.Value), input)
-
 		var chainID *big.Int
-		if config := t.ethereum.ApiBackend.ChainConfig(); config.IsEIP155(t.ethereum.ApiBackend.CurrentBlock().Number()) {
-			chainID = config.ChainId
+		var tx *types.Transaction
+
+		//根据交易类型进行区分
+		if protocol.Base == txMajor {
+
+			tx = types.NewBaseTransaction(args.Major, args.Minor, (uint64)(*args.Nonce), (common.Address)(*args.To), (*big.Int)(args.Value), []byte(""))
+			if config := t.ethereum.ApiBackend.ChainConfig(); config.IsEIP155(t.ethereum.ApiBackend.CurrentBlock().Number()) {
+
+				chainID = config.ChainId
+			}
+
+		} else if protocol.Extra == txMajor {
+
+			tx = types.NewExtraTransaction(args.Major, args.Minor, (uint64)(*args.Nonce), (common.Address)(*args.To), (*big.Int)(args.Value), new(big.Int).SetUint64(defaultGas), new(big.Int).SetUint64(defaultGasPrice), args.Extra)
+			if config := t.ethereum.ApiBackend.ChainConfig(); config.IsEIP155(t.ethereum.ApiBackend.CurrentBlock().Number()) {
+
+				chainID = config.ChainId
+			}
+		} else {
+
+			log.Error("SubmitBokerTransaction txType Not Found")
+			return errors.New("SubmitBokerTransaction txType Not Found")
 		}
 
 		//对该笔交易签名来确保该笔交易的真实有效性
 		signed, err := wallet.SignTxWithPassphrase(account, t.ethereum.Password(), tx, chainID)
 		if err != nil {
+
 			log.Error("SubmitBokerTransaction SignTxWithPassphrase", "error", err)
 			return err
 		}
-		//log.Info("SubmitBokerTransaction SetDefaults", "Nonce", args.Nonce.String(), "GasPrice", args.GasPrice)
 
+		log.Info("SubmitBokerTransaction SignTxWithPassphrase", "Gas", signed.Gas(), "GasPrice", signed.GasPrice(), "Value", signed.Value)
 		if _, err := ethapi.SubmitTransaction(ctx, t.ethereum.ApiBackend, signed); err != nil {
+
 			log.Error("SubmitBokerTransaction SubmitTransaction", "error", err)
 			return err
 		}

@@ -528,7 +528,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 //普通交易检验
 func (pool *TxPool) normalValidateTx(tx *types.Transaction, local bool) error {
 
-	log.Info("****normalValidateTx****", "tx Gas", tx.Gas(), "pool.currentMaxGas", pool.currentMaxGas)
+	log.Info("****normalValidateTx****", "tx Gas", tx.Gas(), "pool.currentMaxGas", pool.currentMaxGas, "tx Nonce", tx.Nonce())
 
 	//如果当前的最大Gas数量小于交易所标记的Gas数量，则放回GasLimit错误(这里需要添加针对基础合约类型的判断，因为基础合约采用的Gas为最大值)
 	if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
@@ -536,7 +536,6 @@ func (pool *TxPool) normalValidateTx(tx *types.Transaction, local bool) error {
 	}
 
 	//判断交易是否已经经过正确的签名
-	//from, err := types.Sender(pool.signer, tx)
 	from, err := types.Sender(types.HomesteadSigner{}, tx)
 	if err != nil {
 		return ErrInvalidSender
@@ -555,7 +554,7 @@ func (pool *TxPool) normalValidateTx(tx *types.Transaction, local bool) error {
 	if pool.currentState.GetNonce(from) > tx.Nonce() {
 		return ErrNonceTooLow
 	}
-	//log.Info("normalValidateTx", "GetNonce", pool.currentState.GetNonce(from), "Tx.Nonce", tx.Nonce())
+	log.Info("normalValidateTx", "from current Nonce", pool.currentState.GetNonce(from), "tx Nonce", tx.Nonce())
 
 	//cost == Value + GasPrice * GasLimit
 	//判断当前from用户的钱是否大于本次交易所花成本的最大值，如果小于则返回 ErrInsufficientFunds
@@ -574,11 +573,60 @@ func (pool *TxPool) normalValidateTx(tx *types.Transaction, local bool) error {
 	return nil
 }
 
-//普通交易检验
-func (pool *TxPool) baseValidateTx(tx *types.Transaction, local bool) error {
+//扩展交易检测
+func (pool *TxPool) extraValidateTx(tx *types.Transaction, local bool) error {
+
+	log.Info("****extraValidateTx****", "tx Gas", tx.Gas(), "pool.currentMaxGas", pool.currentMaxGas, "tx Nonce", tx.Nonce())
+
+	//如果当前的最大Gas数量小于交易所标记的Gas数量，则放回GasLimit错误(这里需要添加针对基础合约类型的判断，因为基础合约采用的Gas为最大值)
+	if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
+		return ErrGasLimit
+	}
 
 	//判断交易是否已经经过正确的签名
-	//from, err := types.Sender(pool.signer, tx)
+	from, err := types.Sender(types.HomesteadSigner{}, tx)
+	if err != nil {
+		return ErrInvalidSender
+	}
+	log.Info("extraValidateTx", "from", from)
+
+	// Drop non-local transactions under our own minimal accepted gas price
+	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
+
+	//如果不是本地的交易,并且GasPrice低于我们的设置,那么也不会接收
+	if !local && pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
+		return ErrUnderpriced
+	}
+
+	//判断交易中的Nonce是否大于发出交易用户的当前Nonce值
+	if pool.currentState.GetNonce(from) > tx.Nonce() {
+		return ErrNonceTooLow
+	}
+	log.Info("extraValidateTx", "from current Nonce", pool.currentState.GetNonce(from), "tx Nonce", tx.Nonce())
+
+	//cost == Value + GasPrice * GasLimit
+	//判断当前from用户的钱是否大于本次交易所花成本的最大值，如果小于则返回 ErrInsufficientFunds
+	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
+		log.Error("extraValidateTx", "balance", pool.currentState.GetBalance(from), "cost", tx.Cost())
+		return ErrInsufficientFunds
+	}
+
+	//使用给定的数据，计算Gas。
+	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
+
+	//判断交易的Gas是否小于计算出来的Gas，如果小于则返回 ErrIntrinsicGas
+	if tx.Gas().Cmp(intrGas) < 0 {
+		return ErrIntrinsicGas
+	}
+	return nil
+}
+
+//基础交易检测
+func (pool *TxPool) baseValidateTx(tx *types.Transaction, local bool) error {
+
+	log.Info("****baseValidateTx****", "tx Gas", tx.Gas(), "pool.currentMaxGas", pool.currentMaxGas, "tx Nonce", tx.Nonce())
+
+	//判断交易是否已经经过正确的签名
 	from, err := types.Sender(types.HomesteadSigner{}, tx)
 	if err != nil {
 		return ErrInvalidSender
@@ -606,15 +654,22 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 	if protocol.Normal == tx.Major() {
 
+		//普通交易类型检测
 		return pool.normalValidateTx(tx, local)
 	} else if protocol.Base == tx.Major() {
 
+		//基础交易类型检测
 		if (tx.Minor() >= protocol.MinMinor) && (tx.Minor() <= protocol.MaxMinor) {
 
-			//基础合约交易类型
 			return pool.baseValidateTx(tx, local)
 		}
 	} else if protocol.Extra == tx.Major() {
+
+		//扩展交易类型检测
+		if (tx.Minor() >= protocol.Word) && (tx.Minor() <= protocol.File) {
+
+			return pool.extraValidateTx(tx, local)
+		}
 
 	}
 	return ErrInvalidType

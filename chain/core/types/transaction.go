@@ -100,6 +100,45 @@ func NewBaseTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, nonc
 	return newTransaction(txMajor, txMinor, nonce, &to, amount, protocol.MaxGasLimit, protocol.MaxGasPrice, payload)
 }
 
+//创建扩展交易
+func NewExtraTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, extra []byte) *Transaction {
+
+	//判断数据是否长度大于0
+	if len(extra) > 0 {
+		extra = common.CopyBytes(extra)
+	}
+
+	//构造一个交易结构(注意这里的txType类型和Gas的关系)
+	d := txdata{
+		AccountNonce: nonce,
+		Recipient:    &to,
+		Amount:       new(big.Int),
+		GasLimit:     new(big.Int),
+		Time:         new(big.Int),
+		Price:        new(big.Int),
+		Major:        txMajor,
+		Minor:        txMinor,
+		V:            new(big.Int),
+		R:            new(big.Int),
+		S:            new(big.Int),
+		Extra:        extra,
+	}
+
+	//设置交易时间
+	d.Time.SetInt64(time.Now().Unix())
+
+	if amount != nil {
+		d.Amount.Set(amount)
+	}
+	if gasLimit != nil {
+		d.GasLimit.Set(gasLimit)
+	}
+	if gasPrice != nil {
+		d.Price.Set(gasPrice)
+	}
+	return &Transaction{data: d}
+}
+
 //创建合约
 func NewContractCreation(nonce uint64, amount, gasLimit, gasPrice *big.Int, payload []byte) *Transaction {
 	return newTransaction(protocol.Normal, 0, nonce, nil, amount, gasLimit, gasPrice, payload)
@@ -254,7 +293,7 @@ func (tx *Transaction) Validate() error {
 		}
 	case protocol.Extra:
 		{
-			if tx.Minor() < protocol.Picture || tx.Minor() > protocol.File {
+			if tx.Minor() < protocol.Word || tx.Minor() > protocol.File {
 				return errors.New("extra transaction unknown minor transaction type")
 			}
 		}
@@ -319,9 +358,10 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (tx *Transaction) Data() []byte            { return common.CopyBytes(tx.data.Payload) }
-func (tx *Transaction) Extra() []byte           { return common.CopyBytes(tx.data.Extra) }
-func (tx *Transaction) SetExtra(extra []byte)   { tx.data.Extra = extra }
+func (tx *Transaction) Data() []byte  { return common.CopyBytes(tx.data.Payload) }
+func (tx *Transaction) Extra() []byte { return common.CopyBytes(tx.data.Extra) }
+
+//func (tx *Transaction) SetExtra(extra []byte)   { tx.data.Extra = extra }
 func (tx *Transaction) Gas() *big.Int           { return new(big.Int).Set(tx.data.GasLimit) }
 func (tx *Transaction) GasPrice() *big.Int      { return new(big.Int).Set(tx.data.Price) }
 func (tx *Transaction) Value() *big.Int         { return new(big.Int).Set(tx.data.Amount) }

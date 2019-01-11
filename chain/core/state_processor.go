@@ -89,7 +89,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 }
 
 //处理普通交易
-func binaryTransaction(config *params.ChainConfig,
+func normalTransaction(config *params.ChainConfig,
 	dposContext *types.DposContext,
 	bc *BlockChain,
 	author *common.Address,
@@ -109,11 +109,10 @@ func binaryTransaction(config *params.ChainConfig,
 
 	context := NewEVMContext(msg, header, bc, author)
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
-	_, extra, gas, failed, err := BinaryMessage(vmenv, msg, gp, boker)
+	_, gas, failed, err := NormalMessage(vmenv, msg, gp, boker)
 	if err != nil {
 		return nil, nil, err
 	}
-	tx.SetExtra(extra)
 
 	//用待处理的更改更新状态
 	var root []byte
@@ -166,12 +165,11 @@ func contractSetTransaction(config *params.ChainConfig,
 
 	context := NewEVMContext(msg, header, bc, author)
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
-	_, extra, gas, failed, err := contractMessage(vmenv, msg, gp, msg.Major(), msg.Minor(), boker)
+	_, gas, failed, err := contractMessage(vmenv, msg, gp, msg.Major(), msg.Minor(), boker)
 	if err != nil {
-		log.Error("contractSetTransaction contractMessage", "extra", extra, "gas", gas, "failed", failed, "err", err)
+		log.Error("contractSetTransaction contractMessage", "gas", gas, "failed", failed, "err", err)
 		return nil, nil, err
 	}
-	tx.SetExtra(extra)
 
 	var root []byte
 	if config.IsByzantium(header.Number) {
@@ -237,12 +235,11 @@ func baseTransaction(config *params.ChainConfig,
 
 	context := NewEVMContext(msg, header, bc, author)
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
-	_, extra, gas, failed, err := baseMessage(vmenv, msg, gp, boker)
+	_, gas, failed, err := BaseMessage(vmenv, msg, gp, boker)
 	if err != nil {
 		log.Error("baseTransaction failed", "err", err)
 		return nil, nil, err
 	}
-	tx.SetExtra(extra)
 
 	var root []byte
 	if config.IsByzantium(header.Number) {
@@ -259,6 +256,56 @@ func baseTransaction(config *params.ChainConfig,
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
 	log.Info("****baseTransaction End****", "gas", gas, "err", err)
+	return receipt, gas, err
+}
+
+//扩展交易处理
+func extraTransaction(config *params.ChainConfig,
+	dposContext *types.DposContext,
+	bc *BlockChain,
+	author *common.Address,
+	gp *GasPool,
+	statedb *state.StateDB,
+	header *types.Header,
+	tx *types.Transaction,
+	usedGas *big.Int,
+	cfg vm.Config,
+	msg types.Message,
+	boker bokerapi.Api) (*types.Receipt, *big.Int, error) {
+
+	log.Info("****extraTransaction****")
+
+	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number))
+	if err != nil {
+
+		log.Error("extraTransaction AsMessage", "err", err)
+		return nil, nil, err
+	}
+	log.Info("extraTransaction", "Major", tx.Major(), "Minor", tx.Minor(), "Time", header.Time.Int64())
+
+	context := NewEVMContext(msg, header, bc, author)
+	vmenv := vm.NewEVM(context, statedb, config, cfg)
+	_, gas, failed, err := ExtraMessage(vmenv, msg, gp, boker)
+	if err != nil {
+		log.Error("extraTransaction failed", "err", err)
+		return nil, nil, err
+	}
+
+	var root []byte
+	if config.IsByzantium(header.Number) {
+		statedb.Finalise(true)
+	} else {
+		root = statedb.IntermediateRoot(config.IsEIP158(header.Number)).Bytes()
+	}
+	usedGas.Add(usedGas, gas)
+
+	receipt := types.NewReceipt(root, failed, usedGas)
+	receipt.TxHash = tx.Hash()
+	receipt.GasUsed = new(big.Int).Set(gas)
+	receipt.Logs = statedb.GetLogs(tx.Hash())
+	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+
+	log.Info("****extraTransaction End****", "gas", gas, "extra", tx.Extra())
 	return receipt, gas, err
 }
 
@@ -297,11 +344,10 @@ func validatorTransaction(config *params.ChainConfig,
 		log.Info("validatorTransaction", "Number", bc.CurrentBlock().Number().Int64())
 		if bc.CurrentBlock().Number().Int64() == 0 {
 
-			_, extra, gas, failed, err := validatorMessage(vmenv, msg, gp, msg.Major(), msg.Minor(), boker)
+			_, gas, failed, err := validatorMessage(vmenv, msg, gp, msg.Major(), msg.Minor(), boker)
 			if err != nil {
 				return nil, nil, err
 			}
-			tx.SetExtra(extra)
 
 			//设置验证者
 			dposContext.Clean()
@@ -325,11 +371,10 @@ func validatorTransaction(config *params.ChainConfig,
 		return nil, nil, errors.New("from address not assign token producer")
 	}
 
-	_, extra, gas, failed, err := validatorMessage(vmenv, msg, gp, msg.Major(), msg.Minor(), boker)
+	_, gas, failed, err := validatorMessage(vmenv, msg, gp, msg.Major(), msg.Minor(), boker)
 	if err != nil {
 		return nil, nil, err
 	}
-	tx.SetExtra(extra)
 
 	//设置验证者
 	//log.Info("validatorTransaction validatorMessage", "txType", msg.TxType())
@@ -368,12 +413,12 @@ func ApplyTransaction(config *params.ChainConfig,
 	if err != nil {
 		return nil, nil, err
 	}
-	log.Info("****ApplyTransaction****", "Number", header.Number.String(), "Major", msg.Major(), "Minor", msg.Minor(), "from", msg.From())
+	log.Info("****ApplyTransaction****", "Number", header.Number.String(), "Major", msg.Major(), "Minor", msg.Minor(), "from", msg.From(), "extra", tx.Extra())
 
 	if msg.Major() == protocol.Normal {
 
-		return binaryTransaction(config, dposContext, bc, author, gp, statedb, header, tx, usedGas, cfg, msg, boker)
-	} else {
+		return normalTransaction(config, dposContext, bc, author, gp, statedb, header, tx, usedGas, cfg, msg, boker)
+	} else if msg.Major() == protocol.Base {
 
 		if msg.To() == nil {
 			return nil, nil, protocol.ErrToIsNil
@@ -395,6 +440,9 @@ func ApplyTransaction(config *params.ChainConfig,
 
 			return nil, nil, protocol.ErrInvalidType
 		}
+	} else {
+
+		return extraTransaction(config, dposContext, bc, author, gp, statedb, header, tx, usedGas, cfg, msg, boker)
 	}
 }
 

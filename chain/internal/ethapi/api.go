@@ -621,7 +621,7 @@ func (s *PublicBlockChainAPI) GetNextTokenNoder(ctx context.Context) (common.Add
 	return common.Address{}, errors.New("failed get next token noder")
 }
 
-//播客链新增函数处理，设置当前基础合约
+//Tina链新增函数处理，设置当前基础合约
 func (s *PublicBlockChainAPI) SetBaseContracts(ctx context.Context, address common.Address, contractType protocol.ContractType, abiJson string) error {
 
 	//检测节点信息
@@ -637,10 +637,10 @@ func (s *PublicBlockChainAPI) SetBaseContracts(ctx context.Context, address comm
 	}
 
 	//产生一个交易
-	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetSystemContract, address, abiJson)
+	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetSystemContract, address, []byte(abiJson))
 }
 
-//播客链新增函数处理，取消一个基础合约
+//Tina链新增函数处理，取消一个基础合约
 func (s *PublicBlockChainAPI) CancelBaseContracts(ctx context.Context, address common.Address, contractType protocol.ContractType) error {
 
 	log.Info("****CancelBaseContracts****", "address", address.String(), "contractType", contractType)
@@ -658,29 +658,27 @@ func (s *PublicBlockChainAPI) CancelBaseContracts(ctx context.Context, address c
 	}
 
 	//产生一个交易
-	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.CancelSystemContract, address, "")
+	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.CancelSystemContract, address, []byte(""))
 }
 
-/*func (s *PublicBlockChainAPI) txTypeRotate(contractType protocol.ContractType, isCancel bool) protocol.TxType {
+//Tina链新增函数处理，设置文字到交易的扩展字段中
+func (s *PublicBlockChainAPI) SetWord(ctx context.Context, word string) error {
 
-	if isCancel {
+	log.Info("SetWord", "word", word)
 
-		if contractType == protocol.SystemContract {
-			return protocol.CancelSystemContract
-		} else if contractType == protocol.PersonalContract {
-			return protocol.CancelPersonalContract
-		}
-		return protocol.Binary
+	//检测保存文字的大小是否越界
+	if len(word) > protocol.MaxExtraSize {
 
-	} else {
-		if contractType == protocol.SystemContract {
-			return protocol.SetSystemContract
-		} else if contractType == protocol.PersonalContract {
-			return protocol.SetPersonalContract
-		}
-		return protocol.Binary
+		return errors.New("Set Word Failed Word Length Too Length")
 	}
-}*/
+	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Extra, protocol.Word, common.Address{}, []byte(word))
+}
+
+//Tina链新增函数处理，设置图片到交易的扩展字段中
+func (s *PublicBlockChainAPI) SetPicture(ctx context.Context, picture []byte) error {
+
+	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Extra, protocol.Picture, common.Address{}, picture)
+}
 
 func (s *PublicBlockChainAPI) isExitsTxType(contractType protocol.ContractType, needTypes ...protocol.ContractType) error {
 
@@ -734,64 +732,6 @@ func (s *PublicBlockChainAPI) checkContract() error {
 	return nil
 }
 
-/*func (s *PublicBlockChainAPI) baseContractsDeal(ctx context.Context, address common.Address, abiJson string, contractType protocol.ContractType, needTypes ...protocol.ContractType) error {
-
-	//判断是否属于要求的类型
-	var judge bool = false
-	for _, needType := range needTypes {
-
-		if needType == contractType {
-			judge = true
-			break
-		}
-	}
-	if !judge {
-		return errors.New("CoinBase Not`s Set Base Contracts Account")
-	}
-
-	block := s.b.CurrentBlock()
-	if block != nil {
-
-		//获取当前Coinbase
-		coinbase, err := s.b.Coinbase()
-		if err != nil {
-			return err
-		}
-
-		//判断账号是否是验证人账号
-		if !block.DposContext.IsValidator(coinbase) {
-			return errors.New("Current coinbase Not`s Validator")
-		}
-
-		//判断账号是否是指定账号
-		txLevel, err := s.b.Boker().GetAccount(coinbase)
-		if err != nil {
-			return err
-		}
-
-		if !bokerapi.ExistsTxType(protocol.SetPersonalContract, txLevel) &&
-			!bokerapi.ExistsTxType(protocol.SetSystemContract, txLevel) &&
-			!bokerapi.ExistsTxType(protocol.CancelPersonalContract, txLevel) &&
-			!bokerapi.ExistsTxType(protocol.CancelSystemContract, txLevel) {
-
-			return errors.New("CoinBase Not`s Set Base Contracts Account")
-		}
-
-		//产生一个设置基础合约的交易
-		if contractType == protocol.ContractVote {
-			s.b.Boker().SubmitBokerTransaction(ctx, protocol.SetVote, address, abiJson)
-		} else if contractType == protocol.ContractAssignToken {
-			s.b.Boker().SubmitBokerTransaction(ctx, protocol.SetAssignToken, address, abiJson)
-		} else if contractType == protocol.UnContractVote {
-			s.b.Boker().SubmitBokerTransaction(ctx, protocol.CancelVote, address, abiJson)
-		} else if contractType == protocol.UnContractAssignToken {
-			s.b.Boker().SubmitBokerTransaction(ctx, protocol.CanclAssignToken, address, abiJson)
-		}
-		return nil
-	}
-	return errors.New("failed baseContractsDeal")
-}
-*/
 //播客链新增函数处理，添加一个验证者信息
 func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.Address, votes *big.Int) error {
 
@@ -829,7 +769,7 @@ func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.A
 		if localCoinbase == coinbase {
 
 			//产生一个设置验证者的交易
-			s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetValidator, address, "")
+			s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetValidator, address, []byte(""))
 			return nil
 
 		} else {
@@ -855,7 +795,7 @@ func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.A
 			}
 
 			//产生一个设置验证者的交易
-			s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetValidator, address, "")
+			s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetValidator, address, []byte(""))
 			return nil
 		}
 	}
@@ -891,8 +831,6 @@ type CallArgs struct {
 func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config) ([]byte, *big.Int, bool, error) {
 	defer func(start time.Time) { log.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
-	//log.Info("****doCall****")
-
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		return nil, common.Big0, false, err
@@ -906,6 +844,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 			}
 		}
 	}
+
 	// Set default gas & gas price if none were set
 	gas, gasPrice := args.Gas.ToInt(), args.GasPrice.ToInt()
 	if gas.Sign() == 0 {
@@ -946,7 +885,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// and apply the message.
 	gp := new(core.GasPool).AddGas(math.MaxBig256)
 
-	res, _, gas, failed, err := core.BinaryMessage(evm, msg, gp, s.b.Boker())
+	res, gas, failed, err := core.NormalMessage(evm, msg, gp, s.b.Boker())
 	if err := vmError(); err != nil {
 
 		log.Error("doCall", "err", err)
@@ -1480,8 +1419,10 @@ func (args *SendTxArgs) ToTransaction() (*types.Transaction, error) {
 
 			return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data), nil
 		} else if args.Major == protocol.Extra {
+
 			return nil, nil
 		} else {
+
 			return nil, errors.New("unknown transaction type")
 		}
 	}

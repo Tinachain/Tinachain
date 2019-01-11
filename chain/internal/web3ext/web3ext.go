@@ -475,6 +475,17 @@ web3._extend({
 			call: 'eth_decodeAbi',
 			params: 3,
 		}),
+		
+		new web3._extend.Method({
+			name: 'setWord',
+			call: 'eth_setWord',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'setPicture',
+			call: 'eth_setPicture',
+			params: 1,
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

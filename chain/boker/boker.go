@@ -158,11 +158,6 @@ func (boker *BokerBackend) GetContractAddr(contractType protocol.ContractType) (
 	return boker.contracts.GetContractAddr(contractType)
 }
 
-func (boker *BokerBackend) IsSystemAccount(address common.Address) bool {
-
-	return boker.accounts.IsSystemAccount(address)
-}
-
 func (boker *BokerBackend) IsLocalValidator(address common.Address) bool {
 
 	if boker.ethereum.GetLocalValidator() == address {
@@ -173,7 +168,8 @@ func (boker *BokerBackend) IsLocalValidator(address common.Address) bool {
 }
 
 //SubmitBokerTransaction 设置一个播客链交易
-func (boker *BokerBackend) SubmitBokerTransaction(ctx context.Context, txMajor protocol.TxMajor, txMinor protocol.TxMinor, to common.Address, extra string) error {
+func (boker *BokerBackend) SubmitBokerTransaction(ctx context.Context, txMajor protocol.TxMajor, txMinor protocol.TxMinor, to common.Address, extra []byte) error {
+
 	return boker.transactions.SubmitBokerTransaction(ctx, txMajor, txMinor, to, extra)
 }
 
@@ -218,4 +214,9 @@ func (boker *BokerBackend) GetMethodName(txMinor protocol.TxMinor) (string, stri
 	default:
 		return "", "", protocol.ErrTxType
 	}
+}
+
+func (boker *BokerBackend) GetTeamAccount() common.Address {
+
+	return boker.accounts.GetTeamAccount()
 }

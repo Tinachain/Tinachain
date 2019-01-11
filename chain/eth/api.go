@@ -472,26 +472,32 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.
 			tracer.(*ethapi.JavascriptTracer).Stop(&timeoutError{})
 		}()
 		defer cancel()
+
 	} else if config == nil {
+
 		tracer = vm.NewStructLogger(nil)
 	} else {
+
 		tracer = vm.NewStructLogger(config.LogConfig)
 	}
 
 	// Retrieve the tx from the chain and the containing block
 	tx, blockHash, _, txIndex := core.GetTransaction(api.eth.ChainDb(), txHash)
 	if tx == nil {
+
 		return nil, fmt.Errorf("transaction %x not found", txHash)
 	}
+
 	msg, context, statedb, err := api.computeTxEnv(blockHash, int(txIndex))
 	if err != nil {
+
 		return nil, err
 	}
 
 	// Run the transaction with tracing enabled.
 	log.Info("****TraceTransaction****")
 	vmenv := vm.NewEVM(context, statedb, api.config, vm.Config{Debug: true, Tracer: tracer})
-	ret, _, gas, failed, err := core.BinaryMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas()), api.eth.Boker())
+	ret, gas, failed, err := core.NormalMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas()), api.eth.Boker())
 	if err != nil {
 		return nil, fmt.Errorf("tracing failed: %v", err)
 	}
@@ -542,7 +548,7 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int) (co
 
 		vmenv := vm.NewEVM(context, statedb, api.config, vm.Config{})
 		gp := new(core.GasPool).AddGas(tx.Gas())
-		_, _, _, _, err := core.BinaryMessage(vmenv, msg, gp, api.eth.Boker())
+		_, _, _, err := core.NormalMessage(vmenv, msg, gp, api.eth.Boker())
 		if err != nil {
 			return nil, vm.Context{}, nil, fmt.Errorf("tx %x failed: %v", tx.Hash(), err)
 		}

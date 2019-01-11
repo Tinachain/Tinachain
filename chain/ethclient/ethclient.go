@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"os"
 
 	"github.com/Tinachain/Tina/chain"
 	_ "github.com/Tinachain/Tina/chain/boker/protocol"
@@ -514,6 +516,70 @@ func (ec *Client) DecodeAbi(ctx context.Context, abiJson string, method string, 
 	var result hexutil.Bytes
 	err := ec.c.CallContext(ctx, &result, "eth_decodeAbi", abiJson, method, payload)
 	return err
+}
+
+//文字保存
+func (ec *Client) SetWord(ctx context.Context, word string) error {
+
+	var result hexutil.Bytes
+
+	log.Info("SetWord", "len", len(word), "word", word)
+	err := ec.c.CallContext(ctx, &result, "eth_setWord", word)
+	return err
+}
+
+// 判断所给路径文件/文件夹是否存在
+func (ec *Client) existsPicture(path string) bool {
+
+	_, err := os.Stat(path)
+	if err != nil {
+
+		if os.IsExist(err) {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+func (ec *Client) pictureSize(path string) int64 {
+
+	fileInfo, err := os.Stat(path)
+	if nil == err {
+
+		return fileInfo.Size()
+	}
+	return 0
+}
+
+//图片保存
+func (ec *Client) SetPicture(ctx context.Context, picture string) error {
+
+	if ec.existsPicture(picture) {
+
+		fileSize := ec.pictureSize(picture)
+
+		//判断图片文件是否大于1MB
+		if fileSize > 1*1024*1024 {
+
+			return errors.New("SetPicture Function More Than Max 1MB")
+		}
+
+		//读取文件
+		picBuffer, err := ioutil.ReadFile(picture)
+		if err != nil {
+
+			return errors.New("SetPicture Function ReadFile Failed")
+		}
+
+		//发起设置图片交易
+		var result hexutil.Bytes
+		err = ec.c.CallContext(ctx, &result, "eth_setPicture", picBuffer)
+		return err
+	} else {
+
+		return errors.New("Not Found Picture File")
+	}
 }
 
 func toCallArg(msg ethereum.CallMsg) interface{} {

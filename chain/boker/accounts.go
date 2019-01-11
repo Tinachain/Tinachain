@@ -40,15 +40,6 @@ func NewAccount() *BokerAccount {
 	return bokerAccount
 }
 
-func (a *BokerAccount) IsSystemAccount(address common.Address) bool {
-
-	if address == a.systemAccount {
-		return true
-	} else {
-		return false
-	}
-}
-
 func (a *BokerAccount) GetAccount(address common.Address) (protocol.TxMajor, error) {
 
 	if address == a.systemAccount || address == a.communityAccount || address == a.foundationAccount || address == a.teamAccount {
@@ -56,4 +47,9 @@ func (a *BokerAccount) GetAccount(address common.Address) (protocol.TxMajor, err
 	} else {
 		return protocol.Normal, nil
 	}
+}
+
+func (a *BokerAccount) GetTeamAccount() common.Address {
+
+	return a.teamAccount
 }
