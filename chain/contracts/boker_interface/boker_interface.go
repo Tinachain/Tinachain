@@ -16,9 +16,9 @@ import (
 	"github.com/Tinachain/Tina/chain/log"
 )
 
-//播客链合约接口
+//Tina链合约接口
 type BokerInterfaceService struct {
-	bokerInterface *BokerInterface //播客链合约接口
+	bokerInterface *BokerInterface //Tina链合约接口
 	currentEpoch   *big.Int        //当前周期序号
 	addr           common.Address  //合约地址
 	ethereum       *eth.Ethereum   //以太坊对象

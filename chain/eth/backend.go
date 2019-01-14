@@ -66,7 +66,7 @@ type Ethereum struct {
 	networkId       uint64                         //网络ID
 	netRPCService   *ethapi.PublicNetAPI           //网络Api接口
 	lock            sync.RWMutex                   // Protects the variadic fields (e.g. gas price and coinbase)
-	boker           bokerapi.Api                   //播客链新增加的接口
+	boker           bokerapi.Api                   //Tina链新增加的接口
 }
 
 func (s *Ethereum) AddLesServer(ls LesServer) {

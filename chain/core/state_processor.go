@@ -39,7 +39,7 @@ type StateProcessor struct {
 	config *params.ChainConfig //链配置选项
 	bc     *BlockChain         //规范块链
 	engine consensus.Engine    //共识引擎
-	boker  bokerapi.Api        //播客链的接口
+	boker  bokerapi.Api        //Tina链的接口
 }
 
 //初始化一个新的状态处理器。

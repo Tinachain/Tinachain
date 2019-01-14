@@ -173,7 +173,7 @@ func (method Method) singleUnpack(v interface{}, output []byte) error {
 	return nil
 }
 
-//播客链新增
+//Tina链新增
 
 func (method Method) multInputUnpack(v []interface{}, input []byte) error {
 

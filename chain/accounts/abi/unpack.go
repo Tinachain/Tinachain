@@ -34,7 +34,7 @@ type unpacker interface {
 	singleUnpack(v interface{}, output []byte) error
 	isTupleReturn() bool
 
-	//播客链新增
+	//Tina链新增
 	singleInputUnpack(v interface{}, input []byte) error
 	multInputUnpack(v []interface{}, input []byte) error
 }

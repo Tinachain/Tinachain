@@ -1,4 +1,4 @@
-//播客链主动产生交易
+//Tina链主动产生交易
 package boker
 
 import (
@@ -22,7 +22,7 @@ const (
 	defaultGasPrice = 50 * params.Shannon
 )
 
-//播客链的基础合约管理
+//Tina链的基础合约管理
 type BokerTransaction struct {
 	ethereum *eth.Ethereum
 }

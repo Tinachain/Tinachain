@@ -65,7 +65,7 @@ func NewKeyedTransactor(key *ecdsa.PrivateKey) *TransactOpts {
 	}
 }
 
-//播客链中使用密码创建的Opts
+//Tina链中使用密码创建的Opts
 func NewPasswordTransactor(ethereum *eth.Ethereum, addr common.Address) *TransactOpts {
 
 	keyAddr := addr

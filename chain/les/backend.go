@@ -70,7 +70,7 @@ type LightEthereum struct {
 	netRPCService                              *ethapi.PublicNetAPI
 	wg                                         sync.WaitGroup
 	password                                   string       //挖矿账号的密码
-	boker                                      bokerapi.Api //播客链新增加的接口
+	boker                                      bokerapi.Api //Tina链新增加的接口
 }
 
 func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {

@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"os"
 	"strings"
 	"time"
 
@@ -563,7 +565,7 @@ func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.A
 	return res[:], state.Error()
 }
 
-//****播客链新增处理****
+//****Tina链新增处理****
 
 //得到最后一次的出块节点
 func (s *PublicBlockChainAPI) GetLastProducer(ctx context.Context) (common.Address, error) {
@@ -667,17 +669,64 @@ func (s *PublicBlockChainAPI) SetWord(ctx context.Context, word string) error {
 	log.Info("SetWord", "word", word)
 
 	//检测保存文字的大小是否越界
-	if len(word) > protocol.MaxExtraSize {
+	if len(word) > int(protocol.MaxExtraSize) {
 
-		return errors.New("Set Word Failed Word Length Too Length")
+		return errors.New("Setword More Than MaxExtraSize(1MB)")
 	}
 	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Extra, protocol.Word, common.Address{}, []byte(word))
 }
 
-//Tina链新增函数处理，设置图片到交易的扩展字段中
-func (s *PublicBlockChainAPI) SetPicture(ctx context.Context, picture []byte) error {
+// 判断所给路径文件/文件夹是否存在
+func (s *PublicBlockChainAPI) existsPicture(path string) bool {
 
-	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Extra, protocol.Picture, common.Address{}, picture)
+	_, err := os.Stat(path)
+	if err != nil {
+
+		if os.IsExist(err) {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+func (s *PublicBlockChainAPI) pictureSize(path string) int64 {
+
+	fileInfo, err := os.Stat(path)
+	if nil == err {
+
+		return fileInfo.Size()
+	}
+	return 0
+}
+
+//Tina链新增函数处理，设置图片到交易的扩展字段中
+func (s *PublicBlockChainAPI) SetPicture(ctx context.Context, picture string) error {
+
+	log.Info("SetPicture", "picture", picture)
+
+	if s.existsPicture(picture) {
+
+		fileSize := s.pictureSize(picture)
+		log.Info("SetPicture", "fileSize", fileSize)
+
+		//判断图片文件是否大于1MB
+		if fileSize > protocol.MaxExtraSize {
+
+			return errors.New("SetPicture Picture More Than MaxExtraSize(1MB)")
+		}
+
+		//读取文件
+		picBuffer, err := ioutil.ReadFile(picture)
+		if err != nil {
+
+			return errors.New("SetPicture Function ReadFile Failed")
+		}
+		return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Extra, protocol.Picture, common.Address{}, picBuffer)
+	} else {
+
+		return errors.New("Not Found Picture File")
+	}
 }
 
 func (s *PublicBlockChainAPI) isExitsTxType(contractType protocol.ContractType, needTypes ...protocol.ContractType) error {
@@ -732,7 +781,7 @@ func (s *PublicBlockChainAPI) checkContract() error {
 	return nil
 }
 
-//播客链新增函数处理，添加一个验证者信息
+//Tina链新增函数处理，添加一个验证者信息
 func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.Address, votes *big.Int) error {
 
 	block, err := s.b.BlockByNumber(ctx, 0)
@@ -802,7 +851,7 @@ func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.A
 	return errors.New("failed AddValidator")
 }
 
-//播客链新增函数处理，添加一个验证者信息
+//Tina链新增函数处理，添加一个验证者信息
 func (s *PublicBlockChainAPI) DecodeAbi(ctx context.Context, abiJson string, method string, payload string) error {
 
 	log.Info("****DecodeAbi****", "abiJson", abiJson, "method", method, "payload", payload)
@@ -1077,7 +1126,7 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 	return fields, nil
 }
 
-//播客链中添加获取当前候选人相关信息
+//Tina链中添加获取当前候选人相关信息
 type ValidatorList struct {
 	Address []common.Address `json:"address"`
 }

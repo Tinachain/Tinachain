@@ -46,6 +46,7 @@ var (
 	// than some meaningful limit a user might use. This is not a consensus error
 	// making the transaction invalid, rather a DOS protection.
 	ErrOversizedData = errors.New("oversized data")           //超大数据
+	ErrOverExtraData = errors.New("over extra data")          //超大扩展数据
 	ErrInvalidType   = errors.New("unknown transaction type") //未知交易类型
 )
 
@@ -642,9 +643,19 @@ func (pool *TxPool) baseValidateTx(tx *types.Transaction, local bool) error {
 //对交易进行基本信息的验证
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
-	//Dos攻击判断
-	if tx.Size() > 32*1024 {
-		return ErrOversizedData
+	if protocol.Normal == tx.Major() || protocol.Base == tx.Major() {
+
+		//为了防止Dos攻击，因此对于普通交易和基础交易的交易大小设置最大不能超过32KB
+		if tx.Size() > protocol.MaxNormalSize {
+			return ErrOversizedData
+		}
+	} else if protocol.Extra == tx.Major() {
+
+		//对于扩展类型的交易，交易的扩展字段不能超过最大扩展字段大小
+		if len(tx.Extra()) > int(protocol.MaxExtraSize) {
+			return ErrOverExtraData
+		}
+
 	}
 
 	//交易值是否进行签名判断

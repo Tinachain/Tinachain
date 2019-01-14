@@ -1,4 +1,4 @@
-//播客链增加的特殊账号管理类
+//Tina链增加的特殊账号管理类
 package boker
 
 import (
@@ -14,9 +14,9 @@ import (
 	"github.com/Tinachain/Tina/chain/trie"
 )
 
-const JsonFileName = "boker.json" //播客链配置
+const JsonFileName = "boker.json" //Tina链配置
 
-//播客链中基础合约相关配置信息
+//Tina链中基础合约相关配置信息
 type BaseContract struct {
 	ContractType    uint64         `json:"contracttype"`    //基础合约类型
 	DeployAddress   common.Address `json:"deployaddress"`   //部署账号
@@ -27,7 +27,7 @@ type BaseContractConfig struct {
 	Bases []BaseContract `json:"bases,omitempty"`
 }
 
-//播客链用来分配通证的账号和私钥信息
+//Tina链用来分配通证的账号和私钥信息
 type ProducerConfig struct {
 	Coinbase common.Address `json:"coinbase"` //挖矿的Coinbase
 	Password string         `json:"password"` //Coinbase的密码
@@ -167,7 +167,7 @@ func (boker *BokerBackend) IsLocalValidator(address common.Address) bool {
 	}
 }
 
-//SubmitBokerTransaction 设置一个播客链交易
+//SubmitBokerTransaction 设置一个Tina链交易
 func (boker *BokerBackend) SubmitBokerTransaction(ctx context.Context, txMajor protocol.TxMajor, txMinor protocol.TxMinor, to common.Address, extra []byte) error {
 
 	return boker.transactions.SubmitBokerTransaction(ctx, txMajor, txMinor, to, extra)

@@ -435,7 +435,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		return err
 	}
 
-	//加载播客链信息
+	//加载Tina链信息
 	/*baseTrie, contractTrie, err := newBokerFromProto(self.chainDb, parent.Header().BokerProto)
 	if err != nil {
 		return err

@@ -82,7 +82,8 @@ var (
 	MaxGasLimit        *big.Int = new(big.Int).SetUint64(0)                  //最大的GasLimit
 	TimeOfFirstBlock            = int64(0)                                   //创世区块的时间偏移量
 	ConfirmedBlockHead          = []byte("confirmed-block-head")
-	MaxExtraSize                = int(1 * 1024 * 1024)
+	MaxExtraSize                = int64(1 * 1024 * 1024)
+	MaxNormalSize               = common.StorageSize(32 * 1024)
 )
 
 var (
@@ -150,7 +151,7 @@ var (
 	ErrTxType                     = errors.New("failed to tx type")
 )
 
-//设置播客链配置
+//设置Tina链配置
 type BokerConfig struct {
 	Address common.Address
 }

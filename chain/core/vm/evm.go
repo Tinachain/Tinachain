@@ -69,7 +69,7 @@ type Context struct {
 	// Message information
 	Origin   common.Address // Provides information for ORIGIN
 	GasPrice *big.Int       // Provides information for GASPRICE
-	Extra    []byte         //播客链新增虚拟机参数，扩展字段
+	Extra    []byte         //Tina链新增虚拟机参数，扩展字段
 
 	// Block information
 	Coinbase    common.Address // Provides information for COINBASE

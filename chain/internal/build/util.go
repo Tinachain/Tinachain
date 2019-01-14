@@ -61,10 +61,10 @@ func GOPATH() string {
 	return os.Getenv("GOPATH")
 }
 
-//返回以太坊和播客链的版本信息
+//返回以太坊和Tina链的版本信息
 type VersionConfig struct {
 	ethereum string `json:"ethereum"`    //以太坊版本
-	boker    string `json:"json:"boker"` //播客链版本
+	boker    string `json:"json:"boker"` //Tina链版本
 }
 
 func VERSION() (string, string) {

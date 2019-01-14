@@ -77,7 +77,7 @@ type Header struct {
 	TxHash      common.Hash                 `json:"transactionsRoot" gencodec:"required"`  //保存该区块中交易Merkle树的根节点的Hash值
 	ReceiptHash common.Hash                 `json:"receiptsRoot"     gencodec:"required"`  //一个区块中所包含的交易中的接收者也是以Merkle树的形式进行存储的，该值是该Merkle树根节点的Hash值
 	DposProto   *DposContextProto           `json:"dposContext"      gencodec:"required"`  //采用的Dpos上下文
-	BokerProto  *protocol.BokerBackendProto `json:"bokerBackend"      gencodec:"required"` //播客链上下文
+	BokerProto  *protocol.BokerBackendProto `json:"bokerBackend"      gencodec:"required"` //Tina链上下文
 	Bloom       Bloom                       `json:"logsBloom"        gencodec:"required"`  //用于索引与搜索的结构（详见Tips）
 	Difficulty  *big.Int                    `json:"difficulty"       gencodec:"required"`  //该区块的难度
 	Number      *big.Int                    `json:"number"           gencodec:"required"`  //所有祖先区块的数量（也就是区块高度）

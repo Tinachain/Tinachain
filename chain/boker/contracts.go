@@ -1,4 +1,4 @@
-//播客链增加的特殊账号管理类
+//Tina链增加的特殊账号管理类
 package boker
 
 import (
@@ -29,14 +29,14 @@ type ContractService struct {
 	contract *boker_contract.BokerInterfaceService //合约服务类
 }
 
-//播客链的基础合约管理
+//Tina链的基础合约管理
 type BokerContracts struct {
 	singleTrie    *trie.Trie                               //基础合约Hash树，Key为基础合约的Address Value为合约的类型
 	contractsTrie *trie.Trie                               //所有基础合约整体保存树，这里保存所有的基础合约信息，但是不保存基础合约的类型信息
 	abiTrie       *trie.Trie                               //合约的abi树
 	ethereum      *eth.Ethereum                            //以太坊对象
-	accounts      *BokerAccount                            //播客链账号对象
-	transactions  *BokerTransaction                        //播客链交易对象
+	accounts      *BokerAccount                            //Tina链账号对象
+	transactions  *BokerTransaction                        //Tina链交易对象
 	db            ethdb.Database                           //数据库
 	contracts     map[common.Address]protocol.ContractType //基础合约的Map
 	services      ContractService                          //合约服务类

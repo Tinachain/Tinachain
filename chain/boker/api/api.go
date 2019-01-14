@@ -9,7 +9,7 @@ import (
 	"github.com/Tinachain/Tina/chain/trie"
 )
 
-//播客链定义的接口
+//Tina链定义的接口
 type Api interface {
 	//查询帐号得到此账号可以进行的主交易类型
 	GetAccount(address common.Address) (protocol.TxMajor, error)

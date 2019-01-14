@@ -38,7 +38,7 @@ type SimulatedBackend struct {
 	pendingBlock *types.Block        //根据请求导入当前待处理的块
 	pendingState *state.StateDB      //目前处于待处理状态的待处理状态
 	config       *params.ChainConfig //链配置信息
-	boker        bokerapi.Api        //播客链接口
+	boker        bokerapi.Api        //Tina链接口
 }
 
 //创建一个新的用于进行测试的后台模拟链

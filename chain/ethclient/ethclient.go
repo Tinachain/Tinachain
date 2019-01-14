@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/big"
-	"os"
 
 	"github.com/Tinachain/Tina/chain"
 	_ "github.com/Tinachain/Tina/chain/boker/protocol"
@@ -433,7 +431,7 @@ func (ec *Client) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (*big.I
 	return (*big.Int)(&hex), nil
 }
 
-//播客链禁止 RPC 指令
+//Tina链禁止 RPC 指令
 func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 
 	data, err := rlp.EncodeToBytes(tx)
@@ -452,7 +450,7 @@ func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) er
 	return ec.c.CallContext(ctx, nil, "eth_sendRawTransaction", common.ToHex(data))
 }
 
-/****播客链新增的RPC调用****/
+/****Tina链新增的RPC调用****/
 
 //得到最后一次的出块节点
 func (ec *Client) GetLastProducerAt(ctx context.Context) ([]byte, error) {
@@ -528,58 +526,15 @@ func (ec *Client) SetWord(ctx context.Context, word string) error {
 	return err
 }
 
-// 判断所给路径文件/文件夹是否存在
-func (ec *Client) existsPicture(path string) bool {
-
-	_, err := os.Stat(path)
-	if err != nil {
-
-		if os.IsExist(err) {
-			return true
-		}
-		return false
-	}
-	return true
-}
-
-func (ec *Client) pictureSize(path string) int64 {
-
-	fileInfo, err := os.Stat(path)
-	if nil == err {
-
-		return fileInfo.Size()
-	}
-	return 0
-}
-
 //图片保存
 func (ec *Client) SetPicture(ctx context.Context, picture string) error {
 
-	if ec.existsPicture(picture) {
+	log.Info("SetPicture", "picture", picture)
 
-		fileSize := ec.pictureSize(picture)
-
-		//判断图片文件是否大于1MB
-		if fileSize > 1*1024*1024 {
-
-			return errors.New("SetPicture Function More Than Max 1MB")
-		}
-
-		//读取文件
-		picBuffer, err := ioutil.ReadFile(picture)
-		if err != nil {
-
-			return errors.New("SetPicture Function ReadFile Failed")
-		}
-
-		//发起设置图片交易
-		var result hexutil.Bytes
-		err = ec.c.CallContext(ctx, &result, "eth_setPicture", picBuffer)
-		return err
-	} else {
-
-		return errors.New("Not Found Picture File")
-	}
+	//发起设置图片交易
+	var result hexutil.Bytes
+	err := ec.c.CallContext(ctx, &result, "eth_setPicture", picture)
+	return err
 }
 
 func toCallArg(msg ethereum.CallMsg) interface{} {

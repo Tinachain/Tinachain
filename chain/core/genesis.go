@@ -244,7 +244,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB, *trie.Trie, *trie.Tri
 	dposContextProto := dposContext.ToProto()
 	log.Info("ToProto", "root", dposContextProto.Root().String())
 
-	//添加播客链的设置
+	//添加Tina链的设置
 	singleTrie, contractsTrie, abiTrie, err := initBoker(db)
 	if err != nil {
 		fmt.Errorf("initGenesisBoker error")
@@ -291,7 +291,7 @@ func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	if _, err := block.DposContext.CommitTo(db); err != nil {
 		return nil, err
 	}
-	//新增播客链数据保存
+	//新增Tina链数据保存
 	if err := commitBoker(singleTrie, contractsTrie, abiTrie, db); err != nil {
 		return nil, err
 	}
@@ -391,7 +391,7 @@ func initGenesisDposContext(g *Genesis, db ethdb.Database) *types.DposContext {
 	return dc
 }
 
-//****创建播客链相关Hash树信息****//
+//****创建Tina链相关Hash树信息****//
 func initBoker(db ethdb.Database) (*trie.Trie, *trie.Trie, *trie.Trie, error) {
 
 	log.Info("****initBoker****")
@@ -439,7 +439,7 @@ func initBoker(db ethdb.Database) (*trie.Trie, *trie.Trie, *trie.Trie, error) {
 	return singleTrie, contractsTrie, abiTrie, nil
 }
 
-//****创建播客链相关Hash树信息****//
+//****创建Tina链相关Hash树信息****//
 func commitBoker(singleTrie *trie.Trie, contractsTrie *trie.Trie, abiTrie *trie.Trie, db ethdb.Database) error {
 
 	log.Info("****commitBoker****")

@@ -50,7 +50,7 @@ type StateTransition struct {
 	extra      []byte       //扩展字段
 	state      vm.StateDB   //StateDB对象
 	evm        *vm.EVM      //虚拟机对象
-	boker      bokerapi.Api //播客链的接口对象
+	boker      bokerapi.Api //Tina链的接口对象
 }
 
 // Message represents a message sent to a contract.

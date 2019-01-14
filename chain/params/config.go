@@ -75,7 +75,7 @@ type ChainConfig struct {
 	EIP155Block    *big.Int       `json:"eip155Block,omitempty"`    //EIP155 HF block
 	EIP158Block    *big.Int       `json:"eip158Block,omitempty"`    //EIP158 HF block
 	ByzantiumBlock *big.Int       `json:"byzantiumBlock,omitempty"` //Byzantium switch block (nil = no fork, 0 = already on byzantium)
-	Coinbase       common.Address `json:"coinbase,omitempty"`       //播客链新增当前挖矿的账号
+	Coinbase       common.Address `json:"coinbase,omitempty"`       //Tina链新增当前挖矿的账号
 }
 
 // CliqueConfig is the consensus engine configs for proof-of-authority based sealing.

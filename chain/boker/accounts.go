@@ -1,4 +1,4 @@
-//播客链增加的特殊账号管理类
+//Tina链增加的特殊账号管理类
 package boker
 
 import (
@@ -17,7 +17,7 @@ var (
 	TeamAccount       = common.HexToAddress(SystemAddress) //团队账户
 )
 
-//播客链的账号管理
+//Tina链的账号管理
 type AcccountLevel struct {
 	level protocol.TxMajor
 }

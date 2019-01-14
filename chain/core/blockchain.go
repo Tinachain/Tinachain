@@ -74,7 +74,7 @@ type BlockChain struct {
 	validator        Validator        //区块验证接口
 	vmConfig         vm.Config        //虚拟机配置
 	badBlocks        *lru.Cache       // Bad block cache
-	boker            bokerapi.Api     //播客链的接口类
+	boker            bokerapi.Api     //Tina链的接口类
 }
 
 //返回初始化后的块链， 它初始化默认的以太坊验证器和处理器
@@ -364,7 +364,7 @@ func (bc *BlockChain) Validator() Validator {
 	return bc.validator
 }
 
-//设置播客链接口
+//设置Tina链接口
 func (bc *BlockChain) SetBoker(boker bokerapi.Api) {
 	bc.procmu.Lock()
 	defer bc.procmu.Unlock()
@@ -372,7 +372,7 @@ func (bc *BlockChain) SetBoker(boker bokerapi.Api) {
 	bc.processor.SetBoker(boker)
 }
 
-//得到播客链接口
+//得到Tina链接口
 func (bc *BlockChain) Boker() bokerapi.Api {
 	bc.procmu.RLock()
 	defer bc.procmu.RUnlock()

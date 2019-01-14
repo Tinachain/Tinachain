@@ -69,7 +69,7 @@ type Backend interface {
 	ChainConfig() *params.ChainConfig
 	CurrentBlock() *types.Block
 
-	//获取播客链的接口
+	//获取Tina链的接口
 	Coinbase() (common.Address, error)
 	SetCoinbase(coinbase common.Address)
 	Password() string
