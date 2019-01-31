@@ -1,0 +1,29 @@
+安装Nodejs：
+(1):yum install gcc gcc-c++
+(2):cd /usr/local/src
+(3):wget https://npm.taobao.org/mirrors/node/v10.13.0/node-v10.13.0.tar.gz
+(4):tar xvf node-v10.13.0.tar.gz
+(5):cd node-v10.13.0/
+(6):./configure
+(7):make
+
+安装git：
+yum install git -y
+
+下载源码：
+git clone https://github.com/carsenk/explorer
+
+如果出现（“fatal: unable to access 'https://github.com/ruanwenwu/newp.git/': Peer reports incompatible or unsupported protocol version.”）
+yum update -y nss curl libcurl 
+
+4:安装bower
+npm install -g bower
+
+5:安装bower
+bower install --allow-root
+
+6：执行
+npm start
+
+
+Existing lock /var/run/yum.pid: another copy is running as pid 11542.

@@ -634,6 +634,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 	//给GasPrice一个初值GasLimit
 	gp := new(core.GasPool).AddGas(env.header.GasLimit)
+	sp := new(big.Int).SetInt64(protocol.MaxBlockSize)
 
 	var coalescedLogs []*types.Log
 	for {
@@ -652,7 +653,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 		//开始执行交易
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
-		err, logs := env.commitTransaction(tx, bc, coinbase, gp)
+		err, logs := env.commitTransaction(tx, bc, coinbase, gp, sp)
 
 		//根据返回错误进行处理
 		switch err {
@@ -701,7 +702,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 	}
 }
 
-func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
+func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool, sp *big.Int) (error, []*types.Log) {
 
 	//首先获取当前状态的快照
 	snap := env.state.Snapshot()
@@ -713,6 +714,7 @@ func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, c
 		bc,
 		&coinbase,
 		gp,
+		sp,
 		env.state,
 		env.header,
 		tx,

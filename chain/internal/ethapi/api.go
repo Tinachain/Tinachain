@@ -669,9 +669,9 @@ func (s *PublicBlockChainAPI) SetWord(ctx context.Context, word string) error {
 	log.Info("SetWord", "word", word)
 
 	//检测保存文字的大小是否越界
-	if len(word) > int(protocol.MaxExtraSize) {
+	if len(word) > int(protocol.MaxWordSize) {
 
-		return errors.New("Setword More Than MaxExtraSize(1MB)")
+		return errors.New("Setword More Than MaxWordSize(1MB)")
 	}
 	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Extra, protocol.Word, common.Address{}, []byte(word))
 }
@@ -873,17 +873,20 @@ type CallArgs struct {
 	Value    hexutil.Big      `json:"value"`
 	Data     hexutil.Bytes    `json:"data"`
 	Extra    hexutil.Bytes    `json:"extra"`
+	Ip       hexutil.Bytes    `json:"ip"`
 	Major    protocol.TxMajor `json:"txMajor"`
 	Minor    protocol.TxMinor `json:"txMinor"`
 }
 
 func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber, vmCfg vm.Config) ([]byte, *big.Int, bool, error) {
+
 	defer func(start time.Time) { log.Debug("Executing EVM call finished", "runtime", time.Since(start)) }(time.Now())
 
 	state, header, err := s.b.StateAndHeaderByNumber(ctx, blockNr)
 	if state == nil || err != nil {
 		return nil, common.Big0, false, err
 	}
+
 	// Set sender address or use a default if none specified
 	addr := args.From
 	if addr == (common.Address{}) {
@@ -904,7 +907,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	}
 
 	// Create new call message
-	msg := types.NewMessage(addr, args.To, 0, args.Value.ToInt(), gas, gasPrice, args.Data, args.Extra, false, args.Major, args.Minor)
+	msg := types.NewMessage(addr, args.To, 0, args.Value.ToInt(), gas, gasPrice, args.Data, args.Extra, args.Ip, false, args.Major, args.Minor)
 
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.
@@ -933,8 +936,9 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	// Setup the gas pool (also for unmetered requests)
 	// and apply the message.
 	gp := new(core.GasPool).AddGas(math.MaxBig256)
+	sp := new(big.Int).SetInt64(protocol.MaxBlockSize)
 
-	res, gas, failed, err := core.NormalMessage(evm, msg, gp, s.b.Boker())
+	res, gas, failed, err := core.NormalMessage(evm, msg, gp, sp, s.b.Boker())
 	if err := vmError(); err != nil {
 
 		log.Error("doCall", "err", err)
@@ -1084,6 +1088,7 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		"difficulty":       (*hexutil.Big)(head.Difficulty),
 		"totalDifficulty":  (*hexutil.Big)(s.b.GetTd(b.Hash())),
 		"extraData":        hexutil.Bytes(head.Extra),
+		"validatorIp":      string(head.Ip[:]),
 		"size":             hexutil.Uint64(uint64(b.Size().Int64())),
 		"gasLimit":         (*hexutil.Big)(head.GasLimit),
 		"gasUsed":          (*hexutil.Big)(head.GasUsed),
@@ -1168,7 +1173,9 @@ type RPCTransaction struct {
 	GasPrice         *hexutil.Big     `json:"gasPrice"`
 	Hash             common.Hash      `json:"hash"`
 	Input            hexutil.Bytes    `json:"input"`
+	Word             string           `json:"word"`
 	Extra            hexutil.Bytes    `json:"extra"`
+	Ip               string           `json:"ip"`
 	Nonce            hexutil.Uint64   `json:"nonce"`
 	To               *common.Address  `json:"to"`
 	TransactionIndex hexutil.Uint     `json:"transactionIndex"`
@@ -1191,7 +1198,9 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		GasPrice: (*hexutil.Big)(tx.GasPrice()),
 		Hash:     tx.Hash(),
 		Input:    hexutil.Bytes(tx.Data()),
+		Word:     string(tx.Word()[:]),
 		Extra:    hexutil.Bytes(tx.Extra()),
+		Ip:       string(tx.Ip()[:]),
 		Nonce:    hexutil.Uint64(tx.Nonce()),
 		To:       tx.To(),
 		Value:    (*hexutil.Big)(tx.Value()),
@@ -1199,6 +1208,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		R:        (*hexutil.Big)(r),
 		S:        (*hexutil.Big)(s),
 	}
+
 	if blockHash != (common.Hash{}) {
 		result.BlockHash = blockHash
 		result.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
@@ -1359,6 +1369,7 @@ func (s *PublicTransactionPoolAPI) GetTransactionReceipt(hash common.Hash) (map[
 		"from":              from,
 		"to":                tx.To(),
 		"extra":             hexutil.Bytes(tx.Extra()),
+		"ip":                string(tx.Ip()[:]),
 		"gasUsed":           (*hexutil.Big)(receipt.GasUsed),
 		"cumulativeGasUsed": (*hexutil.Big)(receipt.CumulativeGasUsed),
 		"contractAddress":   nil,
@@ -1413,6 +1424,7 @@ type SendTxArgs struct {
 	Value    *hexutil.Big     `json:"value"`
 	Data     hexutil.Bytes    `json:"data"`
 	Extra    hexutil.Bytes    `json:"extra"`
+	Ip       hexutil.Bytes    `json:"ip"`
 	Nonce    *hexutil.Uint64  `json:"nonce"`
 	Major    protocol.TxMajor `json:"major"`
 	Minor    protocol.TxMinor `json:"minor"`
@@ -1492,6 +1504,10 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 		log.Error("SubmitTransaction Validate", "error", err)
 		return common.Hash{}, err
 	}
+
+	//设置IP地址
+	tx.SetIp()
+	log.Info("SubmitTransaction SetIp", "Ip", string(tx.Ip()[:]))
 
 	//发送交易
 	if err := b.SendTx(ctx, tx); err != nil {

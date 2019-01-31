@@ -33,6 +33,7 @@ type BlockGen struct {
 	statedb *state.StateDB
 
 	gasPool  *GasPool
+	sizePool *big.Int
 	txs      []*types.Transaction //交易数组
 	receipts []*types.Receipt     //回执数组
 	uncles   []*types.Header      //叔块数组
@@ -69,7 +70,7 @@ func (b *BlockGen) AddTx(tx *types.Transaction, boker bokerapi.Api) {
 	b.statedb.Prepare(tx.Hash(), common.Hash{}, len(b.txs))
 
 	//应用交易，并返回回执
-	receipt, _, err := ApplyTransaction(b.config, nil, nil, &b.header.Coinbase, b.gasPool, b.statedb, b.header, tx, b.header.GasUsed, vm.Config{}, boker)
+	receipt, _, err := ApplyTransaction(b.config, nil, nil, &b.header.Coinbase, b.gasPool, b.sizePool, b.statedb, b.header, tx, b.header.GasUsed, vm.Config{}, boker)
 
 	//如果返回失败，则退出此协程
 	if err != nil {

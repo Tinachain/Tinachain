@@ -78,7 +78,7 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 			log.Error("SubmitBokerTransaction SetDefaults", "error", err)
 			return err
 		}
-		log.Info("SubmitBokerTransaction SetDefaults", "Nonce", args.Nonce.String(), "Major", args.Major, "Minor", args.Minor)
+		log.Info("SubmitBokerTransaction SetDefaults", "Nonce", args.Nonce.String(), "Major", args.Major, "Minor", args.Minor, "Extra", args.Extra)
 
 		var chainID *big.Int
 		var tx *types.Transaction
@@ -86,7 +86,12 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 		//根据交易类型进行区分
 		if protocol.Base == txMajor {
 
-			tx = types.NewBaseTransaction(args.Major, args.Minor, (uint64)(*args.Nonce), (common.Address)(*args.To), (*big.Int)(args.Value), []byte(""))
+			tx = types.NewBaseTransaction(args.Major,
+				args.Minor,
+				(uint64)(*args.Nonce),
+				(common.Address)(*args.To),
+				(*big.Int)(args.Value),
+				[]byte(""))
 			if config := t.ethereum.ApiBackend.ChainConfig(); config.IsEIP155(t.ethereum.ApiBackend.CurrentBlock().Number()) {
 
 				chainID = config.ChainId
@@ -94,11 +99,20 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 
 		} else if protocol.Extra == txMajor {
 
-			tx = types.NewExtraTransaction(args.Major, args.Minor, (uint64)(*args.Nonce), (common.Address)(*args.To), (*big.Int)(args.Value), new(big.Int).SetUint64(defaultGas), new(big.Int).SetUint64(defaultGasPrice), args.Extra)
+			tx = types.NewExtraTransaction(args.Major,
+				args.Minor,
+				(uint64)(*args.Nonce),
+				(common.Address)(*args.To),
+				(*big.Int)(args.Value),
+				new(big.Int).SetUint64(defaultGas),
+				new(big.Int).SetUint64(defaultGasPrice),
+				args.Extra)
 			if config := t.ethereum.ApiBackend.ChainConfig(); config.IsEIP155(t.ethereum.ApiBackend.CurrentBlock().Number()) {
 
 				chainID = config.ChainId
 			}
+			log.Info("SubmitBokerTransaction tx", "Major", tx.Major(), "Miner", tx.Minor(), "Word", tx.Word(), "Extra", tx.Extra())
+
 		} else {
 
 			log.Error("SubmitBokerTransaction txType Not Found")
@@ -114,6 +128,7 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 		}
 
 		log.Info("SubmitBokerTransaction SignTxWithPassphrase", "Gas", signed.Gas(), "GasPrice", signed.GasPrice(), "Value", signed.Value)
+
 		if _, err := ethapi.SubmitTransaction(ctx, t.ethereum.ApiBackend, signed); err != nil {
 
 			log.Error("SubmitBokerTransaction SubmitTransaction", "error", err)

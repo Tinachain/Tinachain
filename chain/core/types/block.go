@@ -30,6 +30,7 @@ import (
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/common/hexutil"
 	"github.com/Tinachain/Tina/chain/crypto/sha3"
+	"github.com/Tinachain/Tina/chain/log"
 	"github.com/Tinachain/Tina/chain/rlp"
 )
 
@@ -87,6 +88,7 @@ type Header struct {
 	Extra       []byte                      `json:"extraData"        gencodec:"required"`  //区块相关的附加信息
 	MixDigest   common.Hash                 `json:"mixHash"          gencodec:"required"`  //该哈希值与Nonce值一起能够证明在该区块上已经进行了足够的计算（用于验证该区块挖矿成功与否的Hash值）
 	Nonce       BlockNonce                  `json:"nonce"            gencodec:"required"`  //该哈希值与MixDigest值一起能够证明在该区块上已经进行了足够的计算（用于验证该区块挖矿成功与否的Hash值）
+	Ip          []byte                      `json:"blockIp"        gencodec:"required"`    //区块的打包IP(为了让交易和打包信息更加透明，因此添加了区块打包IP和交易提交IP两个信息)
 }
 
 // field type overrides for gencodec
@@ -230,6 +232,12 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 		}
 	}
 
+	//得到当前生成区块的公网IP
+	Ip := protocol.GetExternalIp()
+	b.header.Ip = b.header.Ip[:0]
+	b.header.Ip = append(b.header.Ip, Ip...)
+	log.Info("NewBlock", "Ip", string(b.header.Ip[:]))
+
 	return b
 }
 
@@ -262,6 +270,10 @@ func CopyHeader(h *Header) *Header {
 	if len(h.Extra) > 0 {
 		cpy.Extra = make([]byte, len(h.Extra))
 		copy(cpy.Extra, h.Extra)
+	}
+	if len(h.Ip) > 0 {
+		cpy.Ip = make([]byte, len(h.Ip))
+		copy(cpy.Ip, h.Ip)
 	}
 
 	// add dposContextProto to header
@@ -323,6 +335,7 @@ func (b *Block) Transaction(hash common.Hash) *Transaction {
 	return nil
 }
 
+func (b *Block) Header() *Header      { return CopyHeader(b.header) }
 func (b *Block) Number() *big.Int     { return new(big.Int).Set(b.header.Number) }
 func (b *Block) GasLimit() *big.Int   { return new(big.Int).Set(b.header.GasLimit) }
 func (b *Block) GasUsed() *big.Int    { return new(big.Int).Set(b.header.GasUsed) }
@@ -341,8 +354,7 @@ func (b *Block) TxHash() common.Hash       { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash  { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash    { return b.header.UncleHash }
 func (b *Block) Extra() []byte             { return common.CopyBytes(b.header.Extra) }
-
-func (b *Block) Header() *Header { return CopyHeader(b.header) }
+func (b *Block) IP() []byte                { return common.CopyBytes(b.header.Ip) }
 
 // Body returns the non-header content of the block.
 func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
@@ -447,7 +459,26 @@ func (h *Header) String() string {
 	Extra:		    %s
 	MixDigest:      %x
 	Nonce:		    %x
-]`, h.Hash(), h.ParentHash, h.UncleHash, h.Validator, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.DposProto, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra, h.MixDigest, h.Nonce)
+	Ip:				%s
+]`, h.Hash(),
+		h.ParentHash,
+		h.UncleHash,
+		h.Validator,
+		h.Coinbase,
+		h.Root,
+		h.TxHash,
+		h.ReceiptHash,
+		h.DposProto,
+		h.Bloom,
+		h.Difficulty,
+		h.Number,
+		h.GasLimit,
+		h.GasUsed,
+		h.Time,
+		h.Extra,
+		h.MixDigest,
+		h.Nonce,
+		h.Ip)
 }
 
 type Blocks []*Block

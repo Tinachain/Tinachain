@@ -40,7 +40,8 @@ The state transitioning model does all all the necessary work to work out a vali
 6) Derive new state root	导出新的state root
 */
 type StateTransition struct {
-	gp         *GasPool //用来追踪区块内部的Gas的使用情况
+	gp         *GasPool //区块剩余的Gas池
+	sp         *big.Int //区块剩余的空间池
 	msg        Message
 	gas        uint64
 	gasPrice   *big.Int     // gas的价格
@@ -118,9 +119,10 @@ func IntrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
 
 // NewStateTransition initialises and returns a new state transition object.
 //创建一个交易的状态对象
-func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition {
+func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int) *StateTransition {
 	return &StateTransition{
 		gp:         gp,
+		sp:         sp,
 		evm:        evm,
 		msg:        msg,
 		gasPrice:   msg.GasPrice(),
@@ -133,41 +135,41 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 }
 
 //普通交易处理
-func NormalMessage(evm *vm.EVM, msg Message, gp *GasPool, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
+func NormalMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
 
-	st := NewStateTransition(evm, msg, gp)
+	st := NewStateTransition(evm, msg, gp, sp)
 	ret, _, gasUsed, failed, err := st.NormalTransitionDb(boker)
 	return ret, gasUsed, failed, err
 }
 
 //基础交易处理
-func BaseMessage(evm *vm.EVM, msg Message, gp *GasPool, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
+func BaseMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
 
-	st := NewStateTransition(evm, msg, gp)
+	st := NewStateTransition(evm, msg, gp, sp)
 	ret, _, _, failed, err := st.BaseTransitionDb(boker)
 	return ret, new(big.Int).SetInt64(0), failed, err
 }
 
 //扩展交易处理
-func ExtraMessage(evm *vm.EVM, msg Message, gp *GasPool, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
+func ExtraMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
 
-	st := NewStateTransition(evm, msg, gp)
+	st := NewStateTransition(evm, msg, gp, sp)
 	ret, _, gasUsed, failed, err := st.ExtraTransitionDb(boker)
 	return ret, gasUsed, failed, err
 }
 
 //部署基础合约的消息
-func contractMessage(evm *vm.EVM, msg Message, gp *GasPool, txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
+func contractMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
 
-	st := NewStateTransition(evm, msg, gp)
+	st := NewStateTransition(evm, msg, gp, sp)
 	ret, _, _, failed, err := st.ContractTransitionDb(txMajor, txMinor, boker)
 	return ret, new(big.Int).SetInt64(0), failed, err
 }
 
 //通证分配合约的消息
-func validatorMessage(evm *vm.EVM, msg Message, gp *GasPool, txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
+func validatorMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
 
-	st := NewStateTransition(evm, msg, gp)
+	st := NewStateTransition(evm, msg, gp, sp)
 	ret, _, _, failed, err := st.ValidatorTransitionDb(txMajor, txMinor, boker)
 	return ret, new(big.Int).SetInt64(0), failed, err
 }
@@ -217,27 +219,36 @@ func (st *StateTransition) buyGas() error {
 	if mgas.BitLen() > 64 {
 		return vm.ErrOutOfGas
 	}
+
 	//计算Gas的价格合计 = Gas * GasPrice
 	mgval := new(big.Int).Mul(mgas, st.gasPrice)
-
 	var (
 		state  = st.state
 		sender = st.from()
 	)
+
 	//判断用户账户中有足够的费用
 	if state.GetBalance(sender.Address()).Cmp(mgval) < 0 {
 		return errInsufficientBalanceForGas
 	}
+
+	//从GasPool中删除本次交易需要使用的Gas，如果大于0时，则说明交易可以被执行，如果小于0则说明本次交易不能被执行。
 	if err := st.gp.SubGas(mgas); err != nil {
 		return err
 	}
 	st.gas += mgas.Uint64()
-
 	st.initialGas.Set(mgas)
 	state.SubBalance(sender.Address(), mgval)
 	return nil
 }
 
+//检测交易大小
+func (st *StateTransition) checkTxSize() error {
+
+	return nil
+}
+
+//
 func (st *StateTransition) preCheck() error {
 	msg := st.msg
 	sender := st.from()

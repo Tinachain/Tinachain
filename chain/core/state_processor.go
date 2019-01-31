@@ -59,6 +59,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		header       = block.Header()
 		allLogs      []*types.Log
 		gp           = new(GasPool).AddGas(block.GasLimit())
+		sp           = big.NewInt(protocol.MaxBlockSize)
 	)
 
 	//根据任何硬叉规范改变块和状态
@@ -71,7 +72,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 
 		//设置当前statedb状态,以便后面evm创建交易日志
 		statedb.Prepare(tx.Hash(), block.Hash(), i)
-		receipt, _, err := ApplyTransaction(p.config, block.DposCtx(), p.bc, nil, gp, statedb, header, tx, totalUsedGas, cfg, p.boker)
+		receipt, _, err := ApplyTransaction(p.config, block.DposCtx(), p.bc, nil, gp, sp, statedb, header, tx, totalUsedGas, cfg, p.boker)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -94,6 +95,7 @@ func normalTransaction(config *params.ChainConfig,
 	bc *BlockChain,
 	author *common.Address,
 	gp *GasPool,
+	sp *big.Int,
 	statedb *state.StateDB,
 	header *types.Header,
 	tx *types.Transaction,
@@ -109,7 +111,7 @@ func normalTransaction(config *params.ChainConfig,
 
 	context := NewEVMContext(msg, header, bc, author)
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
-	_, gas, failed, err := NormalMessage(vmenv, msg, gp, boker)
+	_, gas, failed, err := NormalMessage(vmenv, msg, gp, sp, boker)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -147,6 +149,7 @@ func contractSetTransaction(config *params.ChainConfig,
 	bc *BlockChain,
 	author *common.Address,
 	gp *GasPool,
+	sp *big.Int,
 	statedb *state.StateDB,
 	header *types.Header,
 	tx *types.Transaction,
@@ -165,7 +168,7 @@ func contractSetTransaction(config *params.ChainConfig,
 
 	context := NewEVMContext(msg, header, bc, author)
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
-	_, gas, failed, err := contractMessage(vmenv, msg, gp, msg.Major(), msg.Minor(), boker)
+	_, gas, failed, err := contractMessage(vmenv, msg, gp, sp, msg.Major(), msg.Minor(), boker)
 	if err != nil {
 		log.Error("contractSetTransaction contractMessage", "gas", gas, "failed", failed, "err", err)
 		return nil, nil, err
@@ -193,6 +196,7 @@ func baseTransaction(config *params.ChainConfig,
 	bc *BlockChain,
 	author *common.Address,
 	gp *GasPool,
+	sp *big.Int,
 	statedb *state.StateDB,
 	header *types.Header,
 	tx *types.Transaction,
@@ -211,31 +215,9 @@ func baseTransaction(config *params.ChainConfig,
 	}
 	log.Info("baseTransaction", "Major", tx.Major(), "Minor", tx.Minor(), "Time", header.Time.Int64())
 
-	//判断是否是分配通证合约
-	/*if tx.Minor() == protocol.AssignToken {
-
-		firstBlock := bc.GetBlockByNumber(0)
-		if firstBlock == nil {
-			return nil, nil, errors.New("not found first block")
-		}
-
-		tokenNoder, err := dposContext.GetTokenNoder(tx.Time().Int64(), firstBlock.Time().Int64())
-		if err != nil {
-
-			log.Error("baseTransaction dposContext.GetCurrentTokenNoder", "tx Time", tx.Time().Int64(), "firstTimer", firstBlock.Time().Int64(), "err", err)
-			return nil, nil, err
-		}
-
-		if tokenNoder != msg.From() {
-
-			log.Error("baseTransaction failed tokenNoder != msg.From()", "tokenNoder", tokenNoder, "msg.From()", msg.From())
-			return nil, nil, errors.New("from address not assign token producer")
-		}
-	}*/
-
 	context := NewEVMContext(msg, header, bc, author)
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
-	_, gas, failed, err := BaseMessage(vmenv, msg, gp, boker)
+	_, gas, failed, err := BaseMessage(vmenv, msg, gp, sp, boker)
 	if err != nil {
 		log.Error("baseTransaction failed", "err", err)
 		return nil, nil, err
@@ -265,6 +247,7 @@ func extraTransaction(config *params.ChainConfig,
 	bc *BlockChain,
 	author *common.Address,
 	gp *GasPool,
+	sp *big.Int,
 	statedb *state.StateDB,
 	header *types.Header,
 	tx *types.Transaction,
@@ -281,11 +264,11 @@ func extraTransaction(config *params.ChainConfig,
 		log.Error("extraTransaction AsMessage", "err", err)
 		return nil, nil, err
 	}
-	log.Info("extraTransaction", "Major", tx.Major(), "Minor", tx.Minor(), "Time", header.Time.Int64())
+	log.Info("extraTransaction", "Major", tx.Major(), "Minor", tx.Minor(), "Time", header.Time.Int64(), "Word", tx.Word(), "Extra", tx.Extra())
 
 	context := NewEVMContext(msg, header, bc, author)
 	vmenv := vm.NewEVM(context, statedb, config, cfg)
-	_, gas, failed, err := ExtraMessage(vmenv, msg, gp, boker)
+	_, gas, failed, err := ExtraMessage(vmenv, msg, gp, sp, boker)
 	if err != nil {
 		log.Error("extraTransaction failed", "err", err)
 		return nil, nil, err
@@ -305,7 +288,7 @@ func extraTransaction(config *params.ChainConfig,
 	receipt.Logs = statedb.GetLogs(tx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 
-	log.Info("****extraTransaction End****", "gas", gas, "extra", tx.Extra())
+	log.Info("****extraTransaction End****", "gas", gas)
 	return receipt, gas, err
 }
 
@@ -315,6 +298,7 @@ func validatorTransaction(config *params.ChainConfig,
 	bc *BlockChain,
 	author *common.Address,
 	gp *GasPool,
+	sp *big.Int,
 	statedb *state.StateDB,
 	header *types.Header,
 	tx *types.Transaction,
@@ -344,7 +328,7 @@ func validatorTransaction(config *params.ChainConfig,
 		log.Info("validatorTransaction", "Number", bc.CurrentBlock().Number().Int64())
 		if bc.CurrentBlock().Number().Int64() == 0 {
 
-			_, gas, failed, err := validatorMessage(vmenv, msg, gp, msg.Major(), msg.Minor(), boker)
+			_, gas, failed, err := validatorMessage(vmenv, msg, gp, sp, msg.Major(), msg.Minor(), boker)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -371,7 +355,7 @@ func validatorTransaction(config *params.ChainConfig,
 		return nil, nil, errors.New("from address not assign token producer")
 	}
 
-	_, gas, failed, err := validatorMessage(vmenv, msg, gp, msg.Major(), msg.Minor(), boker)
+	_, gas, failed, err := validatorMessage(vmenv, msg, gp, sp, msg.Major(), msg.Minor(), boker)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -402,6 +386,7 @@ func ApplyTransaction(config *params.ChainConfig,
 	bc *BlockChain,
 	author *common.Address,
 	gp *GasPool,
+	sp *big.Int,
 	statedb *state.StateDB,
 	header *types.Header,
 	tx *types.Transaction,
@@ -417,7 +402,7 @@ func ApplyTransaction(config *params.ChainConfig,
 
 	if msg.Major() == protocol.Normal {
 
-		return normalTransaction(config, dposContext, bc, author, gp, statedb, header, tx, usedGas, cfg, msg, boker)
+		return normalTransaction(config, dposContext, bc, author, gp, sp, statedb, header, tx, usedGas, cfg, msg, boker)
 	} else if msg.Major() == protocol.Base {
 
 		if msg.To() == nil {
@@ -429,20 +414,20 @@ func ApplyTransaction(config *params.ChainConfig,
 
 		case protocol.SetSystemContract, protocol.CancelSystemContract:
 			//设置合约(已经测试)
-			return contractSetTransaction(config, dposContext, bc, author, gp, statedb, header, tx, usedGas, cfg, msg, boker)
+			return contractSetTransaction(config, dposContext, bc, author, gp, sp, statedb, header, tx, usedGas, cfg, msg, boker)
 		case protocol.VoteUser, protocol.VoteEpoch, protocol.RegisterCandidate: //基础交易(已经测试)
 
-			return baseTransaction(config, dposContext, bc, author, gp, statedb, header, tx, usedGas, cfg, msg, boker)
+			return baseTransaction(config, dposContext, bc, author, gp, sp, statedb, header, tx, usedGas, cfg, msg, boker)
 		case protocol.SetValidator: //设置验证人(已经测试)
 
-			return validatorTransaction(config, dposContext, bc, author, gp, statedb, header, tx, usedGas, cfg, msg, boker)
+			return validatorTransaction(config, dposContext, bc, author, gp, sp, statedb, header, tx, usedGas, cfg, msg, boker)
 		default:
 
 			return nil, nil, protocol.ErrInvalidType
 		}
 	} else {
 
-		return extraTransaction(config, dposContext, bc, author, gp, statedb, header, tx, usedGas, cfg, msg, boker)
+		return extraTransaction(config, dposContext, bc, author, gp, sp, statedb, header, tx, usedGas, cfg, msg, boker)
 	}
 }
 

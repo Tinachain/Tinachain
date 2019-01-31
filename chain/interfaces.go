@@ -22,6 +22,7 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/core/types"
 )
@@ -122,6 +123,8 @@ type CallMsg struct {
 	Value    *big.Int        // amount of wei sent along with the call
 	Data     []byte          // input data, usually an ABI-encoded contract method invocation
 	Extra    []byte
+	Major    protocol.TxMajor
+	Minor    protocol.TxMinor
 }
 
 // A ContractCaller provides contract calls, essentially transactions that are executed by

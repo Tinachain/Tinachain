@@ -5,7 +5,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	_ "net"
+	"net/http"
 	"reflect"
 	"strings"
 	"time"
@@ -82,8 +85,10 @@ var (
 	MaxGasLimit        *big.Int = new(big.Int).SetUint64(0)                  //最大的GasLimit
 	TimeOfFirstBlock            = int64(0)                                   //创世区块的时间偏移量
 	ConfirmedBlockHead          = []byte("confirmed-block-head")
-	MaxExtraSize                = int64(1 * 1024 * 1024)
+	MaxWordSize                 = int64(1 * 1024 * 1024)
+	MaxExtraSize                = int64(2 * 1024 * 1024)
 	MaxNormalSize               = common.StorageSize(32 * 1024)
+	MaxBlockSize                = int64(5 * 1024 * 1024)
 )
 
 var (
@@ -143,12 +148,12 @@ var (
 	ErrValidatorsIsFull           = errors.New("Current Validators is Full")                      //当前验证者数量已满
 	ErrExistsValidators           = errors.New("Current Validators Exists")                       //当前存在验证者
 	ErrGenesisBlock               = errors.New("not genesis block")                               //区块需要不为0，即最近区块不是创世区块，证明已经工作
-	ErrDecodeValidators           = errors.New("failed to decode validators")
-	ErrEncodeValidators           = errors.New("failed to encode validators")
-	ErrSetEpochTrieFail           = errors.New("failed set epoch trie")
-	ErrEpochTrieNil               = errors.New("failed to producers length is zero")
-	ErrToIsNil                    = errors.New("setValidator block header to is nil")
-	ErrTxType                     = errors.New("failed to tx type")
+	ErrDecodeValidators           = errors.New("failed to decode validators")                     //解码验证者失败
+	ErrEncodeValidators           = errors.New("failed to encode validators")                     //编码验证者失败
+	ErrSetEpochTrieFail           = errors.New("failed set epoch trie")                           //设置周期树失败
+	ErrEpochTrieNil               = errors.New("failed to producers length is zero")              //出块节点长度为0
+	ErrToIsNil                    = errors.New("setValidator block header to is nil")             //设置验证者区块头为nil
+	ErrTxType                     = errors.New("failed to tx type")                               //交易类型失败
 )
 
 //设置Tina链配置
@@ -447,167 +452,17 @@ func DecodeAbi(abiJson string, name string, payload string) (MethodJson, error) 
 		}
 		json.Params = append(json.Params, param)
 	}
-	//log.Info("DecodeAbi ", "Json", json)
-
-	/*for i := 0; i < len(params); i++ {
-
-		valueOf := reflect.ValueOf(params[i])
-		out := valueOf.Elem().Interface()
-		s := fmt.Sprintf("%v", out)
-		outArray = append(outArray, s)
-		log.Info("DecodeAbi ", "Param", s)
-	}*/
 
 	return json, nil
 }
 
-//这里提供了一个函数，来对合约的abi进行解析
-/*func DecodeAbi(abiJson string, name string, payload string) (MethodJson, error) {
+func GetExternalIp() string {
 
-	const definition = `[{"constant":false,"inputs":[{"name":"","type":"int256"},{"name":"str","type":"string"}],"name":"test","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"show","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},{"payable":false,"stateMutability":"nonpayable","type":"fallback"}]`
-	payload = "069fd0a30000000000000000000000000000000000000000000000000000000000000005000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000046861686100000000000000000000000000000000000000000000000000000000"
-	name = "test"
-
-	//解析Abi格式成为Json格式
-	abiDecoder, err := abi.JSON(strings.NewReader(definition))
+	resp, err := http.Get("http://myexternalip.com/raw")
 	if err != nil {
-		return MethodJson{}, err
+		return ""
 	}
-	log.Info("DecodeAbi", "Methods Inputs count", len(abiDecoder.Methods[name].Inputs))
-
-	//剔除最前面的0x标记
-	var decodeString string = ""
-	hexFlag := strings.Index(payload, "0x")
-	if hexFlag == -1 {
-		decodeString = payload
-	} else {
-		decodeString = payload[2:]
-	}
-
-	//将字符串转换成[]Byte
-	decodeBytes, err := hex.DecodeString(decodeString)
-	if err != nil {
-		return MethodJson{}, err
-	}
-	log.Info("DecodeAbi", "decodeBytes", decodeBytes)
-
-	//根据函数的名称，设置函数的输入参数信息
-	method, ok := abiDecoder.Methods[name]
-	if !ok {
-		return MethodJson{}, errors.New("")
-	}
-
-	params := make([]interface{}, 0)
-	for i := 0; i < len(method.Inputs); i++ {
-
-		//设置参数类型
-		var param reflect.Value
-
-		paramType := getInterface(method.Inputs[i])
-		param = reflect.New(reflect.TypeOf(paramType))
-
-		switch method.Inputs[i].Type.T {
-		case abi.SliceTy:
-
-			log.Info("DecodeAbi abi.SliceTy")
-			var paramType = []byte{}
-			param = reflect.New(reflect.TypeOf(paramType))
-		case abi.StringTy:
-
-			log.Info("DecodeAbi abi.StringTy")
-			var paramType = string("")
-			param = reflect.New(reflect.TypeOf(paramType))
-		case abi.IntTy:
-
-			log.Info("DecodeAbi", "Methods Inputs index", i, "method.Inputs[i].Type.Type", method.Inputs[i].Type.Type)
-			switch method.Inputs[i].Type.Type {
-
-			case reflect.TypeOf(int8(0)):
-
-				var paramType = int8(0)
-				param = reflect.New(reflect.TypeOf(paramType))
-			case reflect.TypeOf(int16(0)):
-
-				var paramType = int16(0)
-				param = reflect.New(reflect.TypeOf(paramType))
-			case reflect.TypeOf(int32(0)):
-
-				var paramType = int32(0)
-				param = reflect.New(reflect.TypeOf(paramType))
-			case reflect.TypeOf(int64(0)):
-
-				var paramType = int64(0)
-				param = reflect.New(reflect.TypeOf(paramType))
-			case reflect.TypeOf(&big.Int{}):
-
-				var paramType = big.NewInt(1)
-				param = reflect.New(reflect.TypeOf(paramType))
-			}
-		case abi.UintTy:
-
-			log.Info("DecodeAbi", "Methods Inputs index", i, "method.Inputs[i].Type.Type", method.Inputs[i].Type.Type)
-			switch method.Inputs[i].Type.Type {
-
-			case reflect.TypeOf(uint8(0)):
-
-				var paramType = uint8(0)
-				param = reflect.New(reflect.TypeOf(paramType))
-			case reflect.TypeOf(uint16(0)):
-
-				var paramType = uint16(0)
-				param = reflect.New(reflect.TypeOf(paramType))
-			case reflect.TypeOf(uint32(0)):
-
-				var paramType = uint32(0)
-				param = reflect.New(reflect.TypeOf(paramType))
-			case reflect.TypeOf(uint64(0)):
-
-				var paramType = uint64(0)
-				param = reflect.New(reflect.TypeOf(paramType))
-			case reflect.TypeOf(&big.Int{}):
-
-				var paramType = big.NewInt(1)
-				param = reflect.New(reflect.TypeOf(paramType))
-			}
-		case abi.BoolTy:
-
-			log.Info("DecodeAbi abi.BoolTy")
-			var paramType = bool(true)
-			param = reflect.New(reflect.TypeOf(paramType))
-		case abi.AddressTy:
-
-			log.Info("DecodeAbi abi.AddressTy")
-			var paramType = common.Address{}
-			param = reflect.New(reflect.TypeOf(paramType))
-		case abi.BytesTy:
-
-			log.Info("DecodeAbi abi.BytesTy")
-			var paramType = common.Hex2Bytes("0100000000000000000000000000000000000000000000000000000000000000")
-			param = reflect.New(reflect.TypeOf(paramType))
-		case abi.FunctionTy:
-
-			log.Info("DecodeAbi abi.FunctionTy")
-			var paramType = common.Hex2Bytes("0100000000000000000000000000000000000000000000000000000000000000")
-			param = reflect.New(reflect.TypeOf(paramType))
-		}
-		params = append(params, param.Interface())
-	}
-	if err := abiDecoder.InputUnpack(params, name, decodeBytes[4:]); err != nil {
-		log.Error("DecodeAbi ", "err", err)
-		return MethodJson{}, err
-	}
-
-	//将返回的信息放入到Json格式中
-	json := MethodJson{}
-
-	for i := 0; i < len(params); i++ {
-
-		valueOf := reflect.ValueOf(params[i])
-		out := valueOf.Elem().Interface()
-		s := fmt.Sprintf("%v", out)
-		outArray = append(outArray, s)
-		log.Info("DecodeAbi ", "Param", s)
-	}
-
-	return json, nil
-}*/
+	defer resp.Body.Close()
+	content, _ := ioutil.ReadAll(resp.Body)
+	return string(content)
+}

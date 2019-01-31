@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/common/hexutil"
 	"github.com/Tinachain/Tina/chain/core"
@@ -497,7 +498,7 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.
 	// Run the transaction with tracing enabled.
 	log.Info("****TraceTransaction****")
 	vmenv := vm.NewEVM(context, statedb, api.config, vm.Config{Debug: true, Tracer: tracer})
-	ret, gas, failed, err := core.NormalMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas()), api.eth.Boker())
+	ret, gas, failed, err := core.NormalMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas()), new(big.Int).SetInt64(protocol.MaxBlockSize), api.eth.Boker())
 	if err != nil {
 		return nil, fmt.Errorf("tracing failed: %v", err)
 	}
@@ -548,7 +549,8 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int) (co
 
 		vmenv := vm.NewEVM(context, statedb, api.config, vm.Config{})
 		gp := new(core.GasPool).AddGas(tx.Gas())
-		_, _, _, err := core.NormalMessage(vmenv, msg, gp, api.eth.Boker())
+		sp := new(big.Int).SetInt64(protocol.MaxBlockSize)
+		_, _, _, err := core.NormalMessage(vmenv, msg, gp, sp, api.eth.Boker())
 		if err != nil {
 			return nil, vm.Context{}, nil, fmt.Errorf("tx %x failed: %v", tx.Hash(), err)
 		}

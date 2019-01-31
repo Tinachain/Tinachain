@@ -270,9 +270,10 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 	evmContext := core.NewEVMContext(msg, block.Header(), b.blockchain, nil)
 	vmenv := vm.NewEVM(evmContext, statedb, b.config, vm.Config{})
 	gaspool := new(core.GasPool).AddGas(math.MaxBig256)
+	sizepool := new(big.Int).SetInt64(protocol.MaxBlockSize)
 
 	//创建这个交易的状态对象
-	ret, gasUsed, _, failed, _, err := core.NewStateTransition(vmenv, msg, gaspool).TransitionDb(b.blockchain.Boker())
+	ret, gasUsed, _, failed, err := core.NewStateTransition(vmenv, msg, gaspool, sizepool).NormalTransitionDb(b.blockchain.Boker())
 	log.Info("callContract", "ret", ret, "gasUsed", gasUsed)
 
 	return ret, gasUsed, failed, err
@@ -339,4 +340,7 @@ func (m callmsg) Gas() *big.Int           { return m.CallMsg.Gas }
 func (m callmsg) Value() *big.Int         { return m.CallMsg.Value }
 func (m callmsg) Data() []byte            { return m.CallMsg.Data }
 func (m callmsg) Extra() []byte           { return m.CallMsg.Extra }
-func (m callmsg) TxType() protocol.TxType { return protocol.Binary }
+func (m callmsg) Major() protocol.TxMajor { return m.CallMsg.Major }
+func (m callmsg) Minor() protocol.TxMinor { return m.CallMsg.Minor }
+
+//func (m callmsg) TxType() protocol.TxType { return protocol.Binary }

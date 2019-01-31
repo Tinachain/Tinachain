@@ -170,6 +170,7 @@ func (ec *Client) TransactionByHash(ctx context.Context, hash common.Hash) (tx *
 		return nil, false, fmt.Errorf("server returned transaction without signature")
 	}
 	setSenderFromServer(json.tx, json.From, json.BlockHash)
+
 	return json.tx, json.BlockNumber == nil, nil
 }
 

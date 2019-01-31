@@ -65,7 +65,13 @@ type txdata struct {
 	Recipient    *common.Address  `json:"to"       rlp:"nil"`                   //接收地址，可以为nil
 	Amount       *big.Int         `json:"value"    gencodec:"required"`         //交易使用的数量
 	Payload      []byte           `json:"input"    gencodec:"required"`         //交易可以携带的数据，在不同类型的交易中有不同的含义(这个字段在eth.sendTransaction()中对应的是data字段，在eth.getTransaction()中对应的是input字段)
-	Extra        []byte           `json:"extra"    gencodec:"required"`         //扩展数据
+
+	//这是两个扩展字段，一个用来保存文字，一个用来保存内容
+	Word  []byte `json:"word"    gencodec:"required"`  //扩展数据
+	Extra []byte `json:"extra"    gencodec:"required"` //扩展数据
+
+	//这里新增交易IP字段，用来显示发起交易的IP地址
+	Ip []byte `json:"ip"    gencodec:"required"` //交易提交的IP信息
 
 	//交易的签名数据
 	V *big.Int `json:"v" gencodec:"required"`
@@ -85,6 +91,7 @@ type txdataMarshaling struct {
 	Extra        hexutil.Bytes
 	Major        protocol.TxMajor
 	Minor        protocol.TxMinor
+	Ip           hexutil.Bytes
 	V            *hexutil.Big
 	R            *hexutil.Big
 	S            *hexutil.Big
@@ -121,7 +128,21 @@ func NewExtraTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, non
 		V:            new(big.Int),
 		R:            new(big.Int),
 		S:            new(big.Int),
-		Extra:        extra,
+	}
+
+	//设置扩展字段
+	if txMajor == protocol.Extra {
+
+		if txMinor == protocol.Word {
+
+			d.Word = d.Word[:0]
+			d.Word = append(d.Word, extra...)
+
+		} else if txMinor == protocol.Picture || txMinor == protocol.File {
+
+			d.Extra = d.Extra[:0]
+			d.Extra = append(d.Extra, extra...)
+		}
 	}
 
 	//设置交易时间
@@ -136,6 +157,11 @@ func NewExtraTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, non
 	if gasPrice != nil {
 		d.Price.Set(gasPrice)
 	}
+	//得到当前生成区块的公网IP
+	Ip := protocol.GetExternalIp()
+	d.Ip = d.Ip[:0]
+	d.Ip = append(d.Ip, Ip...)
+
 	return &Transaction{data: d}
 }
 
@@ -179,6 +205,11 @@ func newTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, nonce ui
 	if gasPrice != nil {
 		d.Price.Set(gasPrice)
 	}
+
+	//得到当前生成区块的公网IP
+	Ip := protocol.GetExternalIp()
+	d.Ip = d.Ip[:0]
+	d.Ip = append(d.Ip, Ip...)
 
 	return &Transaction{data: d}
 }
@@ -301,6 +332,15 @@ func (tx *Transaction) Validate() error {
 	return nil
 }
 
+func (tx *Transaction) SetIp() error {
+
+	Ip := protocol.GetExternalIp()
+	tx.data.Ip = tx.data.Ip[:0]
+	tx.data.Ip = append(tx.data.Ip, Ip...)
+
+	return nil
+}
+
 // Protected returns whether the transaction is protected from replay protection.
 func (tx *Transaction) Protected() bool {
 	return isProtectedV(tx.data.V)
@@ -358,10 +398,9 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
-func (tx *Transaction) Data() []byte  { return common.CopyBytes(tx.data.Payload) }
-func (tx *Transaction) Extra() []byte { return common.CopyBytes(tx.data.Extra) }
-
-//func (tx *Transaction) SetExtra(extra []byte)   { tx.data.Extra = extra }
+func (tx *Transaction) Data() []byte            { return common.CopyBytes(tx.data.Payload) }
+func (tx *Transaction) Word() []byte            { return common.CopyBytes(tx.data.Word) }
+func (tx *Transaction) Extra() []byte           { return common.CopyBytes(tx.data.Extra) }
 func (tx *Transaction) Gas() *big.Int           { return new(big.Int).Set(tx.data.GasLimit) }
 func (tx *Transaction) GasPrice() *big.Int      { return new(big.Int).Set(tx.data.Price) }
 func (tx *Transaction) Value() *big.Int         { return new(big.Int).Set(tx.data.Amount) }
@@ -370,6 +409,7 @@ func (tx *Transaction) CheckNonce() bool        { return true }
 func (tx *Transaction) Major() protocol.TxMajor { return tx.data.Major }
 func (tx *Transaction) Minor() protocol.TxMinor { return tx.data.Minor }
 func (tx *Transaction) Time() *big.Int          { return tx.data.Time }
+func (tx *Transaction) Ip() []byte              { return common.CopyBytes(tx.data.Ip) }
 
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.
@@ -419,6 +459,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		extra:      tx.data.Extra,
 		major:      tx.data.Major,
 		minor:      tx.data.Minor,
+		ip:         tx.data.Ip,
 		checkNonce: true,
 	}
 
@@ -484,6 +525,7 @@ func (tx *Transaction) String() string {
 	Value:    %#x
 	Data:     0x%x
 	Extra:	 0x%x
+	Ip:			%s
 	V:        %#x
 	R:        %#x
 	S:        %#x
@@ -501,6 +543,7 @@ func (tx *Transaction) String() string {
 		tx.data.Amount,
 		tx.data.Payload,
 		tx.data.Extra,
+		string(tx.data.Ip[:]),
 		tx.data.V,
 		tx.data.R,
 		tx.data.S,
@@ -639,6 +682,7 @@ type Message struct {
 	checkNonce              bool
 	major                   protocol.TxMajor
 	minor                   protocol.TxMinor
+	ip                      []byte
 }
 
 func NewMessage(from common.Address,
@@ -647,6 +691,7 @@ func NewMessage(from common.Address,
 	amount, gasLimit, price *big.Int,
 	data []byte,
 	extra []byte,
+	ip []byte,
 	checkNonce bool,
 	major protocol.TxMajor,
 	minor protocol.TxMinor) Message {
@@ -662,6 +707,7 @@ func NewMessage(from common.Address,
 		checkNonce: checkNonce,
 		major:      major,
 		minor:      minor,
+		ip:         ip,
 	}
 }
 
@@ -676,3 +722,4 @@ func (m Message) Extra() []byte           { return m.extra }
 func (m Message) CheckNonce() bool        { return m.checkNonce }
 func (m Message) Major() protocol.TxMajor { return m.major }
 func (m Message) Minor() protocol.TxMinor { return m.minor }
+func (m Message) Ip() []byte              { return m.ip }
