@@ -1,11 +1,7 @@
-安装Nodejs：
-(1):yum install gcc gcc-c++
-(2):cd /usr/local/src
-(3):wget https://npm.taobao.org/mirrors/node/v10.13.0/node-v10.13.0.tar.gz
-(4):tar xvf node-v10.13.0.tar.gz
-(5):cd node-v10.13.0/
-(6):./configure
-(7):make
+安装Nodejs(使用EPEL安装)：
+(1):yum info epel-release
+(2):yum install epel-release
+(3):yum install nodejs
 
 安装git：
 yum install git -y
@@ -18,6 +14,9 @@ yum update -y nss curl libcurl
 
 4:安装bower
 npm install -g bower
+
+如果出错（relocation error: node-gyp: symbol SSL_set_cert_cb, version libssl.so.10 not defined in file libssl.so.10 with link time reference）
+yum update openssl
 
 5:安装bower
 bower install --allow-root
