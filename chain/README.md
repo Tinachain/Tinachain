@@ -128,6 +128,9 @@ It means synchronize time with 1.cn.pool.ntp.org every 10 minutes. You can adjus
 
 ### 8、Start mining
 	miner.start()
+	
+### 9、Set Word
+	eth.setWord("This is a Test")
 
 ## Programatically interfacing Geth nodes
 
