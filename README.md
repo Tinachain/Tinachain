@@ -1,4 +1,3 @@
-![Image text](https://github.com/Bokerchain/Boker/blob/master/image/Boker.png)
 
 ## Tina链（Tinachain）
 Tina链是一个专门为服务于文章保存而开发的垂直型区块链平台，用户可以非常方便的使用Tina链所提供的接口将自己的文章永久保存在区块链上。<br/>
