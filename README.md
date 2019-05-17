@@ -29,3 +29,7 @@ Main chain code, implementing DPOS.
 ### [contracts](https://github.com/Bokerchain/Boker/tree/master/contracts)
 用Solidity写的基础合约代码<br/>
 Basic contract code in solidity.
+
+### [explorer](https://github.com/Bokerchain/Boker/tree/master/explorer)
+Tina链的区块链浏览器以及用户文章上传页面<br/>
+Basic contract code in solidity.
