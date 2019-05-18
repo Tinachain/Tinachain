@@ -92,7 +92,7 @@ personal.newAccount()
 
 第五步：设置帐号解锁（这里使用假定账号、密码）
 
-personal.unlockAccount(eth.accounts[0], "12345678", 0)
+personal.unlockAccount(账号, 密码, 0)
 
 第六步：设置自己为验证人
 
