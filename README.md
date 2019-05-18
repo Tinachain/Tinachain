@@ -11,7 +11,7 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
 * Tina链的交易结构格式
 
     type txdata struct {
-	
+    
         Major        protocol.TxMajor `json:"major"   gencodec:"required"`          
     	Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          
     	AccountNonce uint64           `json:"nonce"    gencodec:"required"`         
@@ -113,21 +113,21 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
 ## 关于我们（About us）
 
 ### Tinachain Co-Founder
-* WeChat: [区什么块什么链啊](Blockchain_fxh7622) 
-* Twitter: [区什么块什么链啊](https://twitter.com/chain_fxh7622) 
-* Twitter: [后青春期的诗](https://twitter.com/chain_stayreal)
+	* WeChat: [区什么块什么链啊](Blockchain_fxh7622) 	
+	* Twitter: [区什么块什么链啊](https://twitter.com/chain_fxh7622) 
+	* Twitter: [后青春期的诗](https://twitter.com/chain_stayreal)
 
 
 ## 目录（Folders）
 
 ### [chain](https://github.com/Bokerchain/Boker/tree/master/chain)
-基础链代码，实现DPOS<br/>
-Main chain code, implementing DPOS.
+    基础链代码，实现DPOS<br/>
+    Main chain code, implementing DPOS.
 
 ### [contracts](https://github.com/Bokerchain/Boker/tree/master/contracts)
-用Solidity写的基础合约代码<br/>
-Basic contract code in solidity.
+    用Solidity写的基础合约代码<br/>
+    Basic contract code in solidity.
 
 ### [explorer](https://github.com/Bokerchain/Boker/tree/master/explorer)
-Tina链的区块链浏览器以及用户文章上传页面<br/>
-Basic contract code in solidity.
+    Tina链的区块链浏览器以及用户文章上传页面<br/>
+    Basic contract code in solidity.
