@@ -7,6 +7,61 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
 ## Tina链系统架构（System architecture）
 ![Image text](https://github.com/Tinachain/Tina/blob/master/image/Architecture.jpg)
 
+## Tina链交易结构
+* Tina链的交易结构格式
+
+type txdata struct {
+	Major        protocol.TxMajor `json:"major"   gencodec:"required"`          //主交易类型
+	Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          //次交易类型
+	AccountNonce uint64           `json:"nonce"    gencodec:"required"`         //交易Nonce
+	Price        *big.Int         `json:"gasPrice" gencodec:"required"`         //Gas单价
+	GasLimit     *big.Int         `json:"gas"      gencodec:"required"`         //GasLimit
+	Time         *big.Int         `json:"timestamp"        gencodec:"required"` //交易发起时间
+	Recipient    *common.Address  `json:"to"       rlp:"nil"`                   //接收地址，可以为nil
+	Amount       *big.Int         `json:"value"    gencodec:"required"`         //交易使用的数量
+	Payload      []byte           `json:"input"    gencodec:"required"`         //交易可以携带的数据，在不同类型的交易中有不同的含义(这个字段在eth.sendTransaction()中对应的是data字段，在eth.getTransaction()中对应的是input字段)
+	Name         []byte           `json:"name"    gencodec:"required"`          //文件名称，这个文件名称只有在扩展类型中的图片类型和文件类型时启作用。
+	Word         []byte           `json:"word"    gencodec:"required"`          //扩展数据
+	Extra        []byte           `json:"extra"    gencodec:"required"`         //扩展数据
+	Ip           []byte           `json:"ip"    gencodec:"required"`            //交易提交的IP信息
+
+	//交易的签名数据
+	V *big.Int `json:"v" gencodec:"required"`
+	R *big.Int `json:"r" gencodec:"required"`
+	S *big.Int `json:"s" gencodec:"required"`
+
+	// This is only used when marshaling to JSON.
+	Hash *common.Hash `json:"hash" rlp:"-"`
+}
+
+* Tina链的RPC交易结构
+
+type RPCTransaction struct {
+	Major            protocol.TxMajor `json:"major"`
+	MajorNotes       string           `json:"majorNotes"`
+	Minor            protocol.TxMinor `json:"minor"`
+	MinorNotes       string           `json:"minorNotes"`
+	BlockHash        common.Hash      `json:"blockHash"`
+	BlockNumber      *hexutil.Big     `json:"blockNumber"`
+	From             common.Address   `json:"from"`
+	Gas              *hexutil.Big     `json:"gas"`
+	GasPrice         *hexutil.Big     `json:"gasPrice"`
+	Hash             common.Hash      `json:"hash"`
+	Input            hexutil.Bytes    `json:"input"`
+	Name             string           `json:"name"`
+	Word             string           `json:"word"`
+	Extra            hexutil.Bytes    `json:"extra"`
+	Ip               string           `json:"ip"`
+	Nonce            hexutil.Uint64   `json:"nonce"`
+	To               *common.Address  `json:"to"`
+	TransactionIndex hexutil.Uint     `json:"transactionIndex"`
+	Value            *hexutil.Big     `json:"value"`
+	V                *hexutil.Big     `json:"v"`
+	R                *hexutil.Big     `json:"r"`
+	S                *hexutil.Big     `json:"s"`
+}
+
+
 ## 关于我们（About us）
 
 ### Tinachain Co-Founder
