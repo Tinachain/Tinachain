@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"os"
 
 	"github.com/Tinachain/Tina/chain"
+	"github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/common/hexutil"
 	"github.com/Tinachain/Tina/chain/core/types"
@@ -537,14 +540,32 @@ func (ec *Client) SetPicture(ctx context.Context, picture string) error {
 	return err
 }
 
+func pathExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+func fileExist(filename string) bool {
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
 //图片保存
 func (ec *Client) GetPicture(ctx context.Context, hash common.Hash, savePath string) error {
 
-	log.Info("GetPicture", "hash", picture, "savePath", savePath)
+	log.Info("GetPicture", "hash", hash, "savePath", savePath)
 
 	// 得到交易信息;
 	var json *rpcTransaction
-	err = ec.c.CallContext(ctx, &json, "eth_getTransactionByHash", hash)
+	err := ec.c.CallContext(ctx, &json, "eth_getTransactionByHash", hash)
 	if err != nil {
 		return err
 	} else if json == nil {
@@ -554,17 +575,35 @@ func (ec *Client) GetPicture(ctx context.Context, hash common.Hash, savePath str
 	}
 	setSenderFromServer(json.tx, json.From, json.BlockHash)
 
-	if json.tx.data.Major != protocol.Extra {
+	if json.tx.Major() != protocol.Extra {
 		return fmt.Errorf("Transaction from hash Major not is Extra type")
 	}
 
-	if json.tx.data.Minor != protocol.Picture {
+	if json.tx.Minor() != protocol.Picture {
 		return fmt.Errorf("Transaction from hash Minor not is Picture type")
 	}
 
-	//得到文件名称
-	filePath := savePath + "/" + json.tx.data.Name
+	_, err = pathExists(savePath)
+	if err == nil {
+		return fmt.Errorf("Not Found GetPicture Dir")
+	}
 
+	//得到文件名称
+	filePath := savePath + "/" + string(json.tx.Name())
+	ret := fileExist(filePath)
+	if !ret {
+		deleteErr := os.Remove(filePath)
+		if deleteErr != nil {
+			return fmt.Errorf("GetPicture File Exits")
+		}
+	}
+
+	//
+	err = ioutil.WriteFile(filePath, json.tx.Extra(), 0666)
+	if err != nil {
+		return fmt.Errorf("GetPicture File Exits")
+	}
+	return nil
 }
 
 func toCallArg(msg ethereum.CallMsg) interface{} {
