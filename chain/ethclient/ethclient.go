@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	_ "io/ioutil"
 	"math/big"
 	"os"
 
 	"github.com/Tinachain/Tina/chain"
-	"github.com/Tinachain/Tina/chain/boker/protocol"
+	_ "github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/common/hexutil"
 	"github.com/Tinachain/Tina/chain/core/types"
@@ -563,47 +563,20 @@ func (ec *Client) GetPicture(ctx context.Context, hash common.Hash, savePath str
 
 	log.Info("GetPicture", "hash", hash, "savePath", savePath)
 
-	// 得到交易信息;
-	var json *rpcTransaction
-	err := ec.c.CallContext(ctx, &json, "eth_getTransactionByHash", hash)
-	if err != nil {
-		return err
-	} else if json == nil {
-		return ethereum.NotFound
-	} else if _, r, _ := json.tx.RawSignatureValues(); r == nil {
-		return fmt.Errorf("server returned transaction without signature")
-	}
-	setSenderFromServer(json.tx, json.From, json.BlockHash)
+	//发起设置图片交易
+	var result hexutil.Bytes
+	err := ec.c.CallContext(ctx, &result, "eth_getPicture", hash, savePath)
+	return err
+}
 
-	if json.tx.Major() != protocol.Extra {
-		return fmt.Errorf("Transaction from hash Major not is Extra type")
-	}
+func (ec *Client) GetFile(ctx context.Context, hash common.Hash, saveFile string) error {
 
-	if json.tx.Minor() != protocol.Picture {
-		return fmt.Errorf("Transaction from hash Minor not is Picture type")
-	}
+	log.Info("GetFile", "hash", hash, "saveFile", saveFile)
 
-	_, err = pathExists(savePath)
-	if err == nil {
-		return fmt.Errorf("Not Found GetPicture Dir")
-	}
-
-	//得到文件名称
-	filePath := savePath + "/" + string(json.tx.Name())
-	ret := fileExist(filePath)
-	if !ret {
-		deleteErr := os.Remove(filePath)
-		if deleteErr != nil {
-			return fmt.Errorf("GetPicture File Exits")
-		}
-	}
-
-	//
-	err = ioutil.WriteFile(filePath, json.tx.Extra(), 0666)
-	if err != nil {
-		return fmt.Errorf("GetPicture File Exits")
-	}
-	return nil
+	//发起设置图片交易
+	var result hexutil.Bytes
+	err := ec.c.CallContext(ctx, &result, "eth_GetFile", hash, saveFile)
+	return err
 }
 
 func toCallArg(msg ethereum.CallMsg) interface{} {

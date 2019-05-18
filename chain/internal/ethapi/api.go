@@ -788,6 +788,113 @@ func (s *PublicBlockChainAPI) SetFile(ctx context.Context, filePath string) erro
 	}
 }
 
+func pathExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+func fileExist(filename string) bool {
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
+func (s *PublicBlockChainAPI) GetPicture(ctx context.Context, hash common.Hash, savePath string) error {
+
+	log.Info("RPC GetPicture", "hash", hash, "savePath", savePath)
+
+	if tx, _, _, _ := core.GetTransaction(s.b.ChainDb(), hash); tx != nil {
+
+		if tx.Major() != protocol.Extra {
+			return fmt.Errorf("RPC GetPicture Transaction from hash Major not is Extra type")
+		}
+
+		if tx.Minor() != protocol.Picture {
+			return fmt.Errorf("RPC GetPicture Transaction from hash Minor not is Picture type")
+		}
+
+		_, err := pathExists(savePath)
+		if err != nil {
+			return fmt.Errorf("RPC GetPicture Not Found Dir")
+		}
+
+		//得到文件名称
+		filePath := savePath + "/" + string(tx.Name())
+		f, fileErr := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
+		if fileErr != nil {
+
+			return fmt.Errorf("RPC GetPicture OpenFile Failed", "filePath", filePath)
+		}
+		//文件的写入
+		_, writeEr := f.Write(tx.Extra())
+		if writeEr != nil {
+
+			f.Close()
+			return fmt.Errorf("RPC GetPicture Write Failed", "filePath", filePath)
+		}
+
+		//关闭文件
+		if fileErr = f.Close(); fileErr != nil {
+
+			return fmt.Errorf("RPC GetPicture Close Failed", "filePath", filePath)
+		}
+
+		log.Info("RPC GetPicture Success", "hash", hash, "filePath", filePath)
+
+		return nil
+	}
+
+	return fmt.Errorf("RPC GetPicture Not Found Transaction From Hash")
+}
+
+func (s *PublicBlockChainAPI) GetFile(ctx context.Context, hash common.Hash, saveFile string) error {
+
+	log.Info("RPC GetFile", "hash", hash, "saveFile", saveFile)
+
+	if tx, _, _, _ := core.GetTransaction(s.b.ChainDb(), hash); tx != nil {
+
+		if tx.Major() != protocol.Extra {
+			return fmt.Errorf("RPC GetFile Transaction from hash Major not is Extra type")
+		}
+
+		if tx.Minor() != protocol.File {
+			return fmt.Errorf("RPC GetFile Transaction from hash Minor not is File type")
+		}
+
+		f, fileErr := os.OpenFile(saveFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
+		if fileErr != nil {
+
+			return fmt.Errorf("RPC GetFile OpenFile Failed", "saveFile", saveFile)
+		}
+		//文件的写入
+		_, writeEr := f.Write(tx.Extra())
+		if writeEr != nil {
+
+			f.Close()
+			return fmt.Errorf("RPC GetFile Write Failed", "saveFile", saveFile)
+		}
+
+		//关闭文件
+		if fileErr = f.Close(); fileErr != nil {
+
+			return fmt.Errorf("RPC GetFile Close Failed", "saveFile", saveFile)
+		}
+
+		log.Info("RPC GetFile Success", "hash", hash, "saveFile", saveFile)
+
+		return nil
+	}
+
+	return fmt.Errorf("RPC GetPicture Not Found Transaction From Hash")
+}
+
 func (s *PublicBlockChainAPI) isExitsTxType(contractType protocol.ContractType, needTypes ...protocol.ContractType) error {
 
 	var judge bool = false

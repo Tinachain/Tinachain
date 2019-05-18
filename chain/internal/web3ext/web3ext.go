@@ -486,6 +486,16 @@ web3._extend({
 			call: 'eth_setPicture',
 			params: 1,
 		}),
+		new web3._extend.Method({
+			name: 'getPicture',
+			call: 'eth_getPicture',
+			params: 2,
+		}),
+		new web3._extend.Method({
+			name: 'getFile',
+			call: 'eth_File',
+			params: 2,
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
