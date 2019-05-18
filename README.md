@@ -59,6 +59,56 @@ type RPCTransaction struct {
 	S                *hexutil.Big     `json:"s"`
 }
 
+## Tina链启动方式
+
+第一步：初始化创世文件
+
+geth --datadir "/projects/tina/node" init genesis.json
+
+
+第二步：启动geth
+
+nohup geth --nodiscover  \
+--maxpeers 3 \
+--identity "tinachain" \
+--rpc \
+--rpcaddr 0.0.0.0 \
+--rpccorsdomain "*" \
+--rpccorsdomain "http://localhost:8000" \
+--datadir "/projects/tina/node" \
+--port 30304 \
+--rpcapi "db,eth,net,web3" \
+--networkid 96579 &
+
+
+第三步：进入geth控制台
+
+geth attach ipc:/projects/tina/node/geth.ipc
+
+第四步：创建账号
+
+personal.newAccount()
+
+
+第五步：设置帐号解锁（这里使用假定账号、密码）
+
+personal.unlockAccount(eth.accounts[0], "12345678", 0)
+
+第六步：设置自己为验证人
+
+miner.setLocalValidator()
+
+第七步：设置验证人（这里使用假定账号、票数）
+
+eth.addValidator(eth.accounts[0], 10000)
+
+第八步：启动挖矿
+
+miner.start()
+
+
+
+
 
 ## 关于我们（About us）
 
