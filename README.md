@@ -14,7 +14,7 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
     
         Major        protocol.TxMajor `json:"major"   gencodec:"required"`          
         Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          
-    	AccountNonce uint64           `json:"nonce"    gencodec:"required"`         
+        AccountNonce uint64           `json:"nonce"    gencodec:"required"`         
     	Price        *big.Int         `json:"gasPrice" gencodec:"required"`         
     	GasLimit     *big.Int         `json:"gas"      gencodec:"required"`         
     	Time         *big.Int         `json:"timestamp"        gencodec:"required"` 
@@ -105,8 +105,19 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
 第八步：启动挖矿
 
     miner.start()
+	
+	
+## RPC 指令
 
+### 图片上链并从链上获取图片（文件类似）
 
+1：将图片上链（其中：/projects/tina/1.jpg 是节点上地址）
+
+    eth.setPicture("/projects/tina/1.jpg")
+	
+2：从链上获取图片（其中：交易Hash、保存图片的节点地址）
+
+    eth.getPicture("0x26635445ae6e1f20bc2a7ed5be45c3a0b7e847e1c79167c9b1564fe77ef72094", "/projects/tina")
 
 
 
