@@ -10,101 +10,99 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
 ## Tina链交易结构
 * Tina链的交易结构格式
 
-type txdata struct {
-
-    Major        protocol.TxMajor `json:"major"   gencodec:"required"`          
-	Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          
-	AccountNonce uint64           `json:"nonce"    gencodec:"required"`         
-	Price        *big.Int         `json:"gasPrice" gencodec:"required"`         
-	GasLimit     *big.Int         `json:"gas"      gencodec:"required"`         
-	Time         *big.Int         `json:"timestamp"        gencodec:"required"` 
-	Recipient    *common.Address  `json:"to"       rlp:"nil"`                   
-	Amount       *big.Int         `json:"value"    gencodec:"required"`         
-	Payload      []byte           `json:"input"    gencodec:"required"`         
-	Name         []byte           `json:"name"    gencodec:"required"`          
-	Word         []byte           `json:"word"    gencodec:"required"`          
-	Extra        []byte           `json:"extra"    gencodec:"required"`         
-	Ip           []byte           `json:"ip"    gencodec:"required"`            
-	V *big.Int `json:"v" gencodec:"required"`
-	R *big.Int `json:"r" gencodec:"required"`
-	S *big.Int `json:"s" gencodec:"required"`
-	Hash *common.Hash `json:"hash" rlp:"-"`
-}
+    type txdata struct {
+        Major        protocol.TxMajor `json:"major"   gencodec:"required"`          
+    	Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          
+    	AccountNonce uint64           `json:"nonce"    gencodec:"required"`         
+    	Price        *big.Int         `json:"gasPrice" gencodec:"required"`         
+    	GasLimit     *big.Int         `json:"gas"      gencodec:"required"`         
+    	Time         *big.Int         `json:"timestamp"        gencodec:"required"` 
+    	Recipient    *common.Address  `json:"to"       rlp:"nil"`                   
+    	Amount       *big.Int         `json:"value"    gencodec:"required"`         
+    	Payload      []byte           `json:"input"    gencodec:"required"`         
+    	Name         []byte           `json:"name"    gencodec:"required"`          
+    	Word         []byte           `json:"word"    gencodec:"required"`          
+    	Extra        []byte           `json:"extra"    gencodec:"required"`         
+    	Ip           []byte           `json:"ip"    gencodec:"required"`            
+    	V *big.Int `json:"v" gencodec:"required"`
+    	R *big.Int `json:"r" gencodec:"required"`
+    	S *big.Int `json:"s" gencodec:"required"`
+    	Hash *common.Hash `json:"hash" rlp:"-"`
+    }
 
 * Tina链的RPC交易结构
 
-type RPCTransaction struct {
-
-	Major            protocol.TxMajor `json:"major"`
-	MajorNotes       string           `json:"majorNotes"`
-	Minor            protocol.TxMinor `json:"minor"`
-	MinorNotes       string           `json:"minorNotes"`
-	BlockHash        common.Hash      `json:"blockHash"`
-	BlockNumber      *hexutil.Big     `json:"blockNumber"`
-	From             common.Address   `json:"from"`
-	Gas              *hexutil.Big     `json:"gas"`
-	GasPrice         *hexutil.Big     `json:"gasPrice"`
-	Hash             common.Hash      `json:"hash"`
-	Input            hexutil.Bytes    `json:"input"`
-	Name             string           `json:"name"`
-	Word             string           `json:"word"`
-	Extra            hexutil.Bytes    `json:"extra"`
-	Ip               string           `json:"ip"`
-	Nonce            hexutil.Uint64   `json:"nonce"`
-	To               *common.Address  `json:"to"`
-	TransactionIndex hexutil.Uint     `json:"transactionIndex"`
-	Value            *hexutil.Big     `json:"value"`
-	V                *hexutil.Big     `json:"v"`
-	R                *hexutil.Big     `json:"r"`
-	S                *hexutil.Big     `json:"s"`
-}
+    type RPCTransaction struct {
+    	Major            protocol.TxMajor `json:"major"`
+    	MajorNotes       string           `json:"majorNotes"`
+    	Minor            protocol.TxMinor `json:"minor"`
+    	MinorNotes       string           `json:"minorNotes"`
+    	BlockHash        common.Hash      `json:"blockHash"`
+    	BlockNumber      *hexutil.Big     `json:"blockNumber"`
+    	From             common.Address   `json:"from"`
+    	Gas              *hexutil.Big     `json:"gas"`
+    	GasPrice         *hexutil.Big     `json:"gasPrice"`
+    	Hash             common.Hash      `json:"hash"`
+    	Input            hexutil.Bytes    `json:"input"`
+    	Name             string           `json:"name"`
+    	Word             string           `json:"word"`
+    	Extra            hexutil.Bytes    `json:"extra"`
+    	Ip               string           `json:"ip"`
+    	Nonce            hexutil.Uint64   `json:"nonce"`
+    	To               *common.Address  `json:"to"`
+    	TransactionIndex hexutil.Uint     `json:"transactionIndex"`
+    	Value            *hexutil.Big     `json:"value"`
+    	V                *hexutil.Big     `json:"v"`
+    	R                *hexutil.Big     `json:"r"`
+    	S                *hexutil.Big     `json:"s"`
+    }
 
 ## Tina链启动方式
 
 第一步：初始化创世文件
 
-geth --datadir "/projects/tina/node" init genesis.json
+    geth --datadir "/projects/tina/node" init genesis.json
 
 
 第二步：启动geth
 
-nohup geth --nodiscover  \
---maxpeers 3 \
---identity "tinachain" \
---rpc \
---rpcaddr 0.0.0.0 \
---rpccorsdomain "*" \
---rpccorsdomain "http://localhost:8000" \
---datadir "/projects/tina/node" \
---port 30304 \
---rpcapi "db,eth,net,web3" \
---networkid 96579 &
+    nohup geth --nodiscover  \
+    --maxpeers 3 \
+    --identity "tinachain" \
+    --rpc \
+    --rpcaddr 0.0.0.0 \
+    --rpccorsdomain "*" \
+    --rpccorsdomain "http://localhost:8000" \
+    --datadir "/projects/tina/node" \
+    --port 30304 \
+    --rpcapi "db,eth,net,web3" \
+    --networkid 96579 &
 
 
 第三步：进入geth控制台
 
-geth attach ipc:/projects/tina/node/geth.ipc
+    geth attach ipc:/projects/tina/node/geth.ipc
 
 第四步：创建账号
 
-personal.newAccount()
+    personal.newAccount()
 
 
 第五步：设置帐号解锁（这里使用假定账号、密码）
 
-personal.unlockAccount(账号, 密码, 0)
+    personal.unlockAccount(account, password, 0)
 
 第六步：设置自己为验证人
 
-miner.setLocalValidator()
+    miner.setLocalValidator()
 
 第七步：设置验证人（这里使用假定账号、票数）
 
-eth.addValidator(eth.accounts[0], 10000)
+    eth.addValidator(account, 10000)
 
 第八步：启动挖矿
 
-miner.start()
+    miner.start()
 
 
 
