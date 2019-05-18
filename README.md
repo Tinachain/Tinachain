@@ -11,6 +11,7 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
 * Tina链的交易结构格式
 
     type txdata struct {
+	
         Major        protocol.TxMajor `json:"major"   gencodec:"required"`          
     	Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          
     	AccountNonce uint64           `json:"nonce"    gencodec:"required"`         
@@ -33,6 +34,7 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
 * Tina链的RPC交易结构
 
     type RPCTransaction struct {
+	
     	Major            protocol.TxMajor `json:"major"`
     	MajorNotes       string           `json:"majorNotes"`
     	Minor            protocol.TxMinor `json:"minor"`
