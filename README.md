@@ -9,11 +9,6 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
 
 ## 关于我们（About us）
 
-* Whitepaper: [blkV2.1.pdf](http://yibokeclips.otvcloud.com/uploads/apks/blkV2.1.pdf)
-* Website: [播客链](http://www.videoblkchain.com/)
-* Telegram: [Bobbyglobal](https://t.me/Bobbyglobal)
-* Twitter： [BokerChain](https://twitter.com/BokerBobby)
-		
 ### Tinachain Co-Founder
 * WeChat: [区什么块什么链啊](Blockchain_fxh7622) 
 * Twitter: [区什么块什么链啊](https://twitter.com/chain_fxh7622) 
