@@ -13,7 +13,7 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
     type txdata struct {
     
         Major        protocol.TxMajor `json:"major"   gencodec:"required"`          
-    	Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          
+        Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          
     	AccountNonce uint64           `json:"nonce"    gencodec:"required"`         
     	Price        *big.Int         `json:"gasPrice" gencodec:"required"`         
     	GasLimit     *big.Int         `json:"gas"      gencodec:"required"`         
@@ -121,13 +121,13 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
 ## 目录（Folders）
 
 ### [chain](https://github.com/Bokerchain/Boker/tree/master/chain)
-    基础链代码，实现DPOS
+    采用DPOS共识实现的基础链代码（基于ethereum 1.7.4版本）
     Main chain code, implementing DPOS.
 
 ### [contracts](https://github.com/Bokerchain/Boker/tree/master/contracts)
-    用Solidity写的基础合约代码
+    采用Solidity编写的基础合约代码
     Basic contract code in solidity.
 
 ### [explorer](https://github.com/Bokerchain/Boker/tree/master/explorer)
-    Tina链的区块链浏览器以及用户文章上传页面
+    区块链浏览器以及文章上传页面代码
     Basic contract code in solidity.
