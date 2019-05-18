@@ -11,26 +11,22 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
 * Tina链的交易结构格式
 
 type txdata struct {
-	Major        protocol.TxMajor `json:"major"   gencodec:"required"`          //主交易类型
-	Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          //次交易类型
-	AccountNonce uint64           `json:"nonce"    gencodec:"required"`         //交易Nonce
-	Price        *big.Int         `json:"gasPrice" gencodec:"required"`         //Gas单价
-	GasLimit     *big.Int         `json:"gas"      gencodec:"required"`         //GasLimit
-	Time         *big.Int         `json:"timestamp"        gencodec:"required"` //交易发起时间
-	Recipient    *common.Address  `json:"to"       rlp:"nil"`                   //接收地址，可以为nil
-	Amount       *big.Int         `json:"value"    gencodec:"required"`         //交易使用的数量
-	Payload      []byte           `json:"input"    gencodec:"required"`         //交易可以携带的数据，在不同类型的交易中有不同的含义(这个字段在eth.sendTransaction()中对应的是data字段，在eth.getTransaction()中对应的是input字段)
-	Name         []byte           `json:"name"    gencodec:"required"`          //文件名称，这个文件名称只有在扩展类型中的图片类型和文件类型时启作用。
-	Word         []byte           `json:"word"    gencodec:"required"`          //扩展数据
-	Extra        []byte           `json:"extra"    gencodec:"required"`         //扩展数据
-	Ip           []byte           `json:"ip"    gencodec:"required"`            //交易提交的IP信息
-
-	//交易的签名数据
+	Major        protocol.TxMajor `json:"major"   gencodec:"required"`          
+	Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          
+	AccountNonce uint64           `json:"nonce"    gencodec:"required"`         
+	Price        *big.Int         `json:"gasPrice" gencodec:"required"`         
+	GasLimit     *big.Int         `json:"gas"      gencodec:"required"`         
+	Time         *big.Int         `json:"timestamp"        gencodec:"required"` 
+	Recipient    *common.Address  `json:"to"       rlp:"nil"`                   
+	Amount       *big.Int         `json:"value"    gencodec:"required"`         
+	Payload      []byte           `json:"input"    gencodec:"required"`         
+	Name         []byte           `json:"name"    gencodec:"required"`          
+	Word         []byte           `json:"word"    gencodec:"required"`          
+	Extra        []byte           `json:"extra"    gencodec:"required"`         
+	Ip           []byte           `json:"ip"    gencodec:"required"`            
 	V *big.Int `json:"v" gencodec:"required"`
 	R *big.Int `json:"r" gencodec:"required"`
 	S *big.Int `json:"s" gencodec:"required"`
-
-	// This is only used when marshaling to JSON.
 	Hash *common.Hash `json:"hash" rlp:"-"`
 }
 
