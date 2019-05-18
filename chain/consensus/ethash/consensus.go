@@ -545,7 +545,7 @@ func getYear(header *types.Header) (*big.Int, *big.Int) {
 	}
 }
 
-//Tina链从2019年开始，每4年奖励减半，知道2031年结束,共产生7亿个Tina币
+//Tina链从2019年开始，每4年奖励减半，直到2031年结束,共产生7亿个Tina币
 func AccumulateRewards(config *params.ChainConfig,
 	state *state.StateDB,
 	header *types.Header,

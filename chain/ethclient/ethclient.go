@@ -8,7 +8,6 @@ import (
 	"math/big"
 
 	"github.com/Tinachain/Tina/chain"
-	_ "github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/common/hexutil"
 	"github.com/Tinachain/Tina/chain/core/types"
@@ -536,6 +535,36 @@ func (ec *Client) SetPicture(ctx context.Context, picture string) error {
 	var result hexutil.Bytes
 	err := ec.c.CallContext(ctx, &result, "eth_setPicture", picture)
 	return err
+}
+
+//图片保存
+func (ec *Client) GetPicture(ctx context.Context, hash common.Hash, savePath string) error {
+
+	log.Info("GetPicture", "hash", picture, "savePath", savePath)
+
+	// 得到交易信息;
+	var json *rpcTransaction
+	err = ec.c.CallContext(ctx, &json, "eth_getTransactionByHash", hash)
+	if err != nil {
+		return err
+	} else if json == nil {
+		return ethereum.NotFound
+	} else if _, r, _ := json.tx.RawSignatureValues(); r == nil {
+		return fmt.Errorf("server returned transaction without signature")
+	}
+	setSenderFromServer(json.tx, json.From, json.BlockHash)
+
+	if json.tx.data.Major != protocol.Extra {
+		return fmt.Errorf("Transaction from hash Major not is Extra type")
+	}
+
+	if json.tx.data.Minor != protocol.Picture {
+		return fmt.Errorf("Transaction from hash Minor not is Picture type")
+	}
+
+	//得到文件名称
+	filePath := savePath + "/" + json.tx.data.Name
+
 }
 
 func toCallArg(msg ethereum.CallMsg) interface{} {

@@ -38,6 +38,7 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 	txMajor protocol.TxMajor,
 	txMinor protocol.TxMinor,
 	to common.Address,
+	name []byte,
 	extra []byte) error {
 
 	if t.ethereum != nil {
@@ -59,6 +60,7 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 			Gas:      nil,
 			GasPrice: nil,
 			Value:    nil,
+			Name:     hexutil.Bytes(name),
 			Data:     hexutil.Bytes(extra),
 			Extra:    hexutil.Bytes(extra),
 		}
@@ -78,7 +80,12 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 			log.Error("SubmitBokerTransaction SetDefaults", "error", err)
 			return err
 		}
-		log.Info("SubmitBokerTransaction SetDefaults", "Nonce", args.Nonce.String(), "Major", args.Major, "Minor", args.Minor, "Extra", args.Extra)
+		log.Info("SubmitBokerTransaction SetDefaults",
+			"Nonce", args.Nonce.String(),
+			"Major", args.Major,
+			"Minor", args.Minor,
+			"Name", args.Name,
+			"Extra", args.Extra)
 
 		var chainID *big.Int
 		var tx *types.Transaction
@@ -106,6 +113,7 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 				(*big.Int)(args.Value),
 				new(big.Int).SetUint64(defaultGas),
 				new(big.Int).SetUint64(defaultGasPrice),
+				args.Name,
 				args.Extra)
 			if config := t.ethereum.ApiBackend.ChainConfig(); config.IsEIP155(t.ethereum.ApiBackend.CurrentBlock().Number()) {
 

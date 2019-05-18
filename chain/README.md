@@ -97,11 +97,11 @@ add commond:
 It means synchronize time with 1.cn.pool.ntp.org every 10 minutes. You can adjust the commond according to your demand.
 
 ### 1、Initialize with genesis.json
-	geth --datadir "/projects/tina/geth/node" init genesis.json
+	geth --datadir "/projects/ethereum/geth/node" init genesis.json
 * `--datadir` flag specify the data directory of your node
 
 ### 2、Run
-	nohup geth --nodiscover --maxpeers 3 --identity "tinachain" --rpc --rpcaddr 0.0.0.0 --rpccorsdomain "*" --rpcvhosts '*' --datadir "/projects/tina/geth/node" --port 30303 --rpcapi "db,eth,net,web3" --networkid 96579 &
+	nohup geth --nodiscover --maxpeers 3 --identity "bokerchain" --rpc --rpcaddr 0.0.0.0 --rpccorsdomain "*" --rpcvhosts '*' --datadir "/projects/ethereum/geth/node" --port 30303 --rpcapi "db,eth,net,web3" --networkid 96579 &
 	
 * `--rpc` Enable the HTTP-RPC server
 * `--rpcaddr` HTTP-RPC server listening interface (default: "localhost"). If you want to access RPC from other containers and/or hosts, it should be set to `--rpcaddr 0.0.0.0`.
@@ -111,7 +111,7 @@ It means synchronize time with 1.cn.pool.ntp.org every 10 minutes. You can adjus
 * `--networkid`	flag specify your private net id
 
 ### 3、Enter console mode
-	geth attach ipc:/projects/tina/geth/node/geth.ipc
+	geth attach ipc:/projects/ethereum/geth/node/geth.ipc
 
 
 ### 4、Create new account
@@ -128,9 +128,6 @@ It means synchronize time with 1.cn.pool.ntp.org every 10 minutes. You can adjus
 
 ### 8、Start mining
 	miner.start()
-	
-### 9、Set Word
-	eth.setWord("This is a Test")
 
 ## Programatically interfacing Geth nodes
 

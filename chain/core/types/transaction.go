@@ -65,13 +65,10 @@ type txdata struct {
 	Recipient    *common.Address  `json:"to"       rlp:"nil"`                   //接收地址，可以为nil
 	Amount       *big.Int         `json:"value"    gencodec:"required"`         //交易使用的数量
 	Payload      []byte           `json:"input"    gencodec:"required"`         //交易可以携带的数据，在不同类型的交易中有不同的含义(这个字段在eth.sendTransaction()中对应的是data字段，在eth.getTransaction()中对应的是input字段)
-
-	//这是两个扩展字段，一个用来保存文字，一个用来保存内容
-	Word  []byte `json:"word"    gencodec:"required"`  //扩展数据
-	Extra []byte `json:"extra"    gencodec:"required"` //扩展数据
-
-	//这里新增交易IP字段，用来显示发起交易的IP地址
-	Ip []byte `json:"ip"    gencodec:"required"` //交易提交的IP信息
+	Name         []byte           `json:"name"    gencodec:"required"`          //文件名称，这个文件名称只有在扩展类型中的图片类型和文件类型时启作用。
+	Word         []byte           `json:"word"    gencodec:"required"`          //扩展数据
+	Extra        []byte           `json:"extra"    gencodec:"required"`         //扩展数据
+	Ip           []byte           `json:"ip"    gencodec:"required"`            //交易提交的IP信息
 
 	//交易的签名数据
 	V *big.Int `json:"v" gencodec:"required"`
@@ -87,6 +84,7 @@ type txdataMarshaling struct {
 	Price        *hexutil.Big
 	GasLimit     *hexutil.Big
 	Amount       *hexutil.Big
+	Name         hexutil.Bytes
 	Payload      hexutil.Bytes
 	Extra        hexutil.Bytes
 	Major        protocol.TxMajor
@@ -108,7 +106,7 @@ func NewBaseTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, nonc
 }
 
 //创建扩展交易
-func NewExtraTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, extra []byte) *Transaction {
+func NewExtraTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, name []byte, extra []byte) *Transaction {
 
 	//判断数据是否长度大于0
 	if len(extra) > 0 {
@@ -138,10 +136,14 @@ func NewExtraTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, non
 			d.Word = d.Word[:0]
 			d.Word = append(d.Word, extra...)
 
+			d.Name = d.Name[:0]
 		} else if txMinor == protocol.Picture || txMinor == protocol.File {
 
 			d.Extra = d.Extra[:0]
 			d.Extra = append(d.Extra, extra...)
+
+			d.Name = d.Name[:0]
+			d.Name = append(d.Name, name...)
 		}
 	}
 
@@ -400,6 +402,7 @@ func (tx *Transaction) UnmarshalJSON(input []byte) error {
 
 func (tx *Transaction) Data() []byte            { return common.CopyBytes(tx.data.Payload) }
 func (tx *Transaction) Word() []byte            { return common.CopyBytes(tx.data.Word) }
+func (tx *Transaction) Name() []byte            { return common.CopyBytes(tx.data.Name) }
 func (tx *Transaction) Extra() []byte           { return common.CopyBytes(tx.data.Extra) }
 func (tx *Transaction) Gas() *big.Int           { return new(big.Int).Set(tx.data.GasLimit) }
 func (tx *Transaction) GasPrice() *big.Int      { return new(big.Int).Set(tx.data.Price) }
@@ -456,6 +459,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		to:         tx.data.Recipient,
 		amount:     tx.data.Amount,
 		data:       tx.data.Payload,
+		name:       tx.data.Name,
 		extra:      tx.data.Extra,
 		major:      tx.data.Major,
 		minor:      tx.data.Minor,
@@ -523,6 +527,7 @@ func (tx *Transaction) String() string {
 	GasPrice: %#x
 	GasLimit  %#x
 	Value:    %#x
+	Name:		0x%x
 	Data:     0x%x
 	Extra:	 0x%x
 	Ip:			%s
@@ -541,6 +546,7 @@ func (tx *Transaction) String() string {
 		tx.data.Price,
 		tx.data.GasLimit,
 		tx.data.Amount,
+		tx.data.Name,
 		tx.data.Payload,
 		tx.data.Extra,
 		string(tx.data.Ip[:]),
@@ -677,6 +683,7 @@ type Message struct {
 	from                    common.Address
 	nonce                   uint64
 	amount, price, gasLimit *big.Int
+	name                    []byte
 	data                    []byte
 	extra                   []byte
 	checkNonce              bool
@@ -689,6 +696,7 @@ func NewMessage(from common.Address,
 	to *common.Address,
 	nonce uint64,
 	amount, gasLimit, price *big.Int,
+	name []byte,
 	data []byte,
 	extra []byte,
 	ip []byte,
@@ -702,6 +710,7 @@ func NewMessage(from common.Address,
 		amount:     amount,
 		price:      price,
 		gasLimit:   gasLimit,
+		name:       name,
 		data:       data,
 		extra:      extra,
 		checkNonce: checkNonce,
@@ -717,6 +726,7 @@ func (m Message) GasPrice() *big.Int      { return m.price }
 func (m Message) Value() *big.Int         { return m.amount }
 func (m Message) Gas() *big.Int           { return m.gasLimit }
 func (m Message) Nonce() uint64           { return m.nonce }
+func (m Message) Name() []byte            { return m.name }
 func (m Message) Data() []byte            { return m.data }
 func (m Message) Extra() []byte           { return m.extra }
 func (m Message) CheckNonce() bool        { return m.checkNonce }

@@ -22,7 +22,6 @@ import (
 
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/crypto"
-	_ "github.com/Tinachain/Tina/chain/log"
 	"github.com/Tinachain/Tina/chain/params"
 )
 

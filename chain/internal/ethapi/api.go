@@ -9,12 +9,12 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/Tinachain/Tina/chain/accounts"
 	"github.com/Tinachain/Tina/chain/accounts/keystore"
-	_ "github.com/Tinachain/Tina/chain/boker/api"
 	"github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/common/hexutil"
@@ -639,7 +639,7 @@ func (s *PublicBlockChainAPI) SetBaseContracts(ctx context.Context, address comm
 	}
 
 	//产生一个交易
-	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetSystemContract, address, []byte(abiJson))
+	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetSystemContract, address, []byte(""), []byte(abiJson))
 }
 
 //Tina链新增函数处理，取消一个基础合约
@@ -660,7 +660,7 @@ func (s *PublicBlockChainAPI) CancelBaseContracts(ctx context.Context, address c
 	}
 
 	//产生一个交易
-	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.CancelSystemContract, address, []byte(""))
+	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.CancelSystemContract, address, []byte(""), []byte(""))
 }
 
 //Tina链新增函数处理，设置文字到交易的扩展字段中
@@ -673,7 +673,7 @@ func (s *PublicBlockChainAPI) SetWord(ctx context.Context, word string) error {
 
 		return errors.New("Setword More Than MaxWordSize(1MB)")
 	}
-	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Extra, protocol.Word, common.Address{}, []byte(word))
+	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Extra, protocol.Word, common.Address{}, []byte(""), []byte(word))
 }
 
 // 判断所给路径文件/文件夹是否存在
@@ -710,11 +710,14 @@ func (s *PublicBlockChainAPI) SetPicture(ctx context.Context, picture string) er
 		fileSize := s.pictureSize(picture)
 		log.Info("SetPicture", "fileSize", fileSize)
 
-		//判断图片文件是否大于1MB
-		if fileSize > protocol.MaxExtraSize {
+		//判断图片文件是否大于2MB
+		if fileSize > protocol.MaxPictureSize {
 
-			return errors.New("SetPicture Picture More Than MaxExtraSize(1MB)")
+			return errors.New("SetPicture Picture More Than MaxPictureSize(1MB)")
 		}
+
+		//得到文件名称
+		name := filepath.Base(picture)
 
 		//读取文件
 		picBuffer, err := ioutil.ReadFile(picture)
@@ -722,10 +725,66 @@ func (s *PublicBlockChainAPI) SetPicture(ctx context.Context, picture string) er
 
 			return errors.New("SetPicture Function ReadFile Failed")
 		}
-		return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Extra, protocol.Picture, common.Address{}, picBuffer)
+		return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Extra, protocol.Picture, common.Address{}, []byte(name), picBuffer)
 	} else {
 
 		return errors.New("Not Found Picture File")
+	}
+}
+
+// 判断所给路径文件/文件夹是否存在
+func (s *PublicBlockChainAPI) existsFile(path string) bool {
+
+	_, err := os.Stat(path)
+	if err != nil {
+
+		if os.IsExist(err) {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+func (s *PublicBlockChainAPI) fileSize(path string) int64 {
+
+	fileInfo, err := os.Stat(path)
+	if nil == err {
+
+		return fileInfo.Size()
+	}
+	return 0
+}
+
+//Tina链新增函数处理，设置文件分块到交易的扩展字段中
+func (s *PublicBlockChainAPI) SetFile(ctx context.Context, filePath string) error {
+
+	log.Info("SetFile", "File", filePath)
+
+	if s.existsFile(filePath) {
+
+		size := s.fileSize(filePath)
+		log.Info("SetFile", "fileSize", size)
+
+		if size > protocol.MaxExtraSize {
+
+			return errors.New("SetFile File More Than MaxExtraSize(5MB)")
+		}
+
+		//得到文件名称
+		//_, fileName := filepath.Split(filePath)
+		name := filepath.Base(filePath)
+
+		//读取文件
+		fileBuffer, err := ioutil.ReadFile(filePath)
+		if err != nil {
+
+			return errors.New("SetFile Function ReadFile Failed")
+		}
+		return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Extra, protocol.File, common.Address{}, []byte(name), fileBuffer)
+	} else {
+
+		return errors.New("Not Found File")
 	}
 }
 
@@ -818,7 +877,7 @@ func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.A
 		if localCoinbase == coinbase {
 
 			//产生一个设置验证者的交易
-			s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetValidator, address, []byte(""))
+			s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetValidator, address, []byte(""), []byte(""))
 			return nil
 
 		} else {
@@ -844,7 +903,7 @@ func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.A
 			}
 
 			//产生一个设置验证者的交易
-			s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetValidator, address, []byte(""))
+			s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetValidator, address, []byte(""), []byte(""))
 			return nil
 		}
 	}
@@ -871,6 +930,7 @@ type CallArgs struct {
 	Gas      hexutil.Big      `json:"gas"`
 	GasPrice hexutil.Big      `json:"gasPrice"`
 	Value    hexutil.Big      `json:"value"`
+	Name     hexutil.Bytes    `json:"name"`
 	Data     hexutil.Bytes    `json:"data"`
 	Extra    hexutil.Bytes    `json:"extra"`
 	Ip       hexutil.Bytes    `json:"ip"`
@@ -907,7 +967,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	}
 
 	// Create new call message
-	msg := types.NewMessage(addr, args.To, 0, args.Value.ToInt(), gas, gasPrice, args.Data, args.Extra, args.Ip, false, args.Major, args.Minor)
+	msg := types.NewMessage(addr, args.To, 0, args.Value.ToInt(), gas, gasPrice, args.Name, args.Data, args.Extra, args.Ip, false, args.Major, args.Minor)
 
 	// Setup context so it may be cancelled the call has completed
 	// or, in case of unmetered gas, setup a context with a timeout.
@@ -1163,7 +1223,7 @@ func (s *PublicBlockChainAPI) GetCurrentValidator(ctx context.Context, blockNr r
 }
 
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
-type RPCTransaction struct {
+/*type RPCTransaction struct {
 	Major            protocol.TxMajor `json:"major"`
 	Minor            protocol.TxMinor `json:"minor"`
 	BlockHash        common.Hash      `json:"blockHash"`
@@ -1173,6 +1233,32 @@ type RPCTransaction struct {
 	GasPrice         *hexutil.Big     `json:"gasPrice"`
 	Hash             common.Hash      `json:"hash"`
 	Input            hexutil.Bytes    `json:"input"`
+	Name             hexutil.Bytes    `json:"name"`
+	Word             string           `json:"word"`
+	Extra            hexutil.Bytes    `json:"extra"`
+	Ip               string           `json:"ip"`
+	Nonce            hexutil.Uint64   `json:"nonce"`
+	To               *common.Address  `json:"to"`
+	TransactionIndex hexutil.Uint     `json:"transactionIndex"`
+	Value            *hexutil.Big     `json:"value"`
+	V                *hexutil.Big     `json:"v"`
+	R                *hexutil.Big     `json:"r"`
+	S                *hexutil.Big     `json:"s"`
+}*/
+
+type RPCTransaction struct {
+	Major            protocol.TxMajor `json:"major"`
+	MajorNotes       string           `json:"majorNotes"`
+	Minor            protocol.TxMinor `json:"minor"`
+	MinorNotes       string           `json:"minorNotes"`
+	BlockHash        common.Hash      `json:"blockHash"`
+	BlockNumber      *hexutil.Big     `json:"blockNumber"`
+	From             common.Address   `json:"from"`
+	Gas              *hexutil.Big     `json:"gas"`
+	GasPrice         *hexutil.Big     `json:"gasPrice"`
+	Hash             common.Hash      `json:"hash"`
+	Input            hexutil.Bytes    `json:"input"`
+	Name             string           `json:"name"`
 	Word             string           `json:"word"`
 	Extra            hexutil.Bytes    `json:"extra"`
 	Ip               string           `json:"ip"`
@@ -1184,6 +1270,39 @@ type RPCTransaction struct {
 	R                *hexutil.Big     `json:"r"`
 	S                *hexutil.Big     `json:"s"`
 }
+
+/*func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) *RPCTransaction {
+
+	from, _ := types.Sender(types.HomesteadSigner{}, tx)
+	v, r, s := tx.RawSignatureValues()
+
+	result := &RPCTransaction{
+		Major:    tx.Major(),
+		Minor:    tx.Minor(),
+		From:     from,
+		Gas:      (*hexutil.Big)(tx.Gas()),
+		GasPrice: (*hexutil.Big)(tx.GasPrice()),
+		Hash:     tx.Hash(),
+		Input:    hexutil.Bytes(tx.Data()),
+		Name:     hexutil.Bytes(tx.Name()),
+		Word:     string(tx.Word()[:]),
+		Extra:    hexutil.Bytes(tx.Extra()),
+		Ip:       string(tx.Ip()[:]),
+		Nonce:    hexutil.Uint64(tx.Nonce()),
+		To:       tx.To(),
+		Value:    (*hexutil.Big)(tx.Value()),
+		V:        (*hexutil.Big)(v),
+		R:        (*hexutil.Big)(r),
+		S:        (*hexutil.Big)(s),
+	}
+
+	if blockHash != (common.Hash{}) {
+		result.BlockHash = blockHash
+		result.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
+		result.TransactionIndex = hexutil.Uint(index)
+	}
+	return result
+}*/
 
 func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) *RPCTransaction {
 
@@ -1198,6 +1317,7 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		GasPrice: (*hexutil.Big)(tx.GasPrice()),
 		Hash:     tx.Hash(),
 		Input:    hexutil.Bytes(tx.Data()),
+		Name:     string(tx.Name()[:]),
 		Word:     string(tx.Word()[:]),
 		Extra:    hexutil.Bytes(tx.Extra()),
 		Ip:       string(tx.Ip()[:]),
@@ -1207,6 +1327,44 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		V:        (*hexutil.Big)(v),
 		R:        (*hexutil.Big)(r),
 		S:        (*hexutil.Big)(s),
+	}
+
+	switch result.Major {
+
+	case protocol.Normal:
+		result.MajorNotes = "Normal"
+		result.MinorNotes = ""
+	case protocol.Base:
+		result.MajorNotes = "Base"
+
+		switch result.Minor {
+		case protocol.SetValidator:
+			result.MinorNotes = "SetValidator"
+		case protocol.SetSystemContract:
+			result.MinorNotes = "SetSystemContract"
+		case protocol.CancelSystemContract:
+			result.MinorNotes = "CancelSystemContract"
+		case protocol.RegisterCandidate:
+			result.MinorNotes = "RegisterCandidate"
+		case protocol.VoteUser:
+			result.MinorNotes = "VoteUser"
+		case protocol.VoteCancel:
+			result.MinorNotes = "VoteCancel"
+		case protocol.VoteEpoch:
+			result.MinorNotes = "VoteEpoch"
+		default:
+			result.MinorNotes = ""
+		}
+	case protocol.Extra:
+		result.MajorNotes = "Extra"
+		switch result.Minor {
+		case protocol.Word:
+			result.MinorNotes = "Word"
+		case protocol.Picture:
+			result.MinorNotes = "Picture"
+		case protocol.File:
+			result.MinorNotes = "File"
+		}
 	}
 
 	if blockHash != (common.Hash{}) {
@@ -1422,6 +1580,7 @@ type SendTxArgs struct {
 	Gas      *hexutil.Big     `json:"gas"`
 	GasPrice *hexutil.Big     `json:"gasPrice"`
 	Value    *hexutil.Big     `json:"value"`
+	Name     hexutil.Bytes    `json:"name"`
 	Data     hexutil.Bytes    `json:"data"`
 	Extra    hexutil.Bytes    `json:"extra"`
 	Ip       hexutil.Bytes    `json:"ip"`

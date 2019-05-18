@@ -154,8 +154,11 @@ func BaseMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, boker boker
 func ExtraMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
 
 	st := NewStateTransition(evm, msg, gp, sp)
-	ret, _, gasUsed, failed, err := st.ExtraTransitionDb(boker)
-	return ret, gasUsed, failed, err
+	ret, _, _, failed, err := st.ExtraTransitionDb(boker)
+
+	var gas *big.Int = new(big.Int).SetUint64(0)
+	gas = gas.Mul(new(big.Int).SetUint64(90000), new(big.Int).SetUint64(50*params.Shannon))
+	return ret, gas, failed, err
 }
 
 //部署基础合约的消息
@@ -481,19 +484,6 @@ func (st *StateTransition) ContractTransitionDb(txMajor protocol.TxMajor, txMino
 	if err = st.preCheck(); err != nil {
 		return
 	}
-
-	//为了测试方便，将这一行进行屏蔽
-	/*txLevel, err := boker.GetAccount(st.msg.From())
-	if err != nil {
-		return nil, nil, nil, false, []byte(""), protocol.ErrLevel
-	}
-
-	if !bokerapi.ExistsTxType(protocol.SetVote, txLevel) &&
-		!bokerapi.ExistsTxType(protocol.SetAssignToken, txLevel) &&
-		!bokerapi.ExistsTxType(protocol.CancelVote, txLevel) &&
-		!bokerapi.ExistsTxType(protocol.CanclAssignToken, txLevel) {
-		return nil, nil, nil, false, []byte(""), protocol.ErrLevel
-	}*/
 
 	if txMinor == protocol.SetSystemContract {
 		boker.SetContract(*st.msg.To(), protocol.SystemContract, false, string(st.extra))

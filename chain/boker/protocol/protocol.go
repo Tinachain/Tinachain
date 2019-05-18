@@ -1,13 +1,11 @@
 package protocol
 
 import (
-	_ "bytes"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/big"
-	_ "net"
 	"net/http"
 	"reflect"
 	"strings"
@@ -85,10 +83,13 @@ var (
 	MaxGasLimit        *big.Int = new(big.Int).SetUint64(0)                  //最大的GasLimit
 	TimeOfFirstBlock            = int64(0)                                   //创世区块的时间偏移量
 	ConfirmedBlockHead          = []byte("confirmed-block-head")
-	MaxWordSize                 = int64(1 * 1024 * 1024)
-	MaxExtraSize                = int64(2 * 1024 * 1024)
-	MaxNormalSize               = common.StorageSize(32 * 1024)
-	MaxBlockSize                = int64(5 * 1024 * 1024)
+
+	MaxWordSize    = int64(1 * 1024 * 1024)
+	MaxPictureSize = int64(1 * 1024 * 1024)
+	MaxExtraSize   = int64(5 * 1024 * 1024)
+
+	MaxNormalSize = common.StorageSize(32 * 1024)
+	MaxBlockSize  = int64(5 * 1024 * 1024)
 )
 
 var (
