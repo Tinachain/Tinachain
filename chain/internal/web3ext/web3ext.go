@@ -487,13 +487,23 @@ web3._extend({
 			params: 1,
 		}),
 		new web3._extend.Method({
+			name: 'setFile',
+			call: 'eth_setFile',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'getWord',
+			call: 'eth_getWord',
+			params: 1,
+		}),
+		new web3._extend.Method({
 			name: 'getPicture',
 			call: 'eth_getPicture',
 			params: 2,
 		}),
 		new web3._extend.Method({
 			name: 'getFile',
-			call: 'eth_File',
+			call: 'eth_getFile',
 			params: 2,
 		}),
 	],

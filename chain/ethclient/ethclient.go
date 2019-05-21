@@ -540,6 +540,16 @@ func (ec *Client) SetPicture(ctx context.Context, picture string) error {
 	return err
 }
 
+func (ec *Client) SetFile(ctx context.Context, file string) error {
+
+	log.Info("SetPicture", "file", file)
+
+	//发起设置图片交易
+	var result hexutil.Bytes
+	err := ec.c.CallContext(ctx, &result, "eth_setFile", file)
+	return err
+}
+
 func pathExists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err == nil {
@@ -556,6 +566,18 @@ func fileExist(filename string) bool {
 		return false
 	}
 	return true
+}
+
+//图片保存
+func (ec *Client) GetWord(ctx context.Context, hash common.Hash) (string, error) {
+
+	log.Info("GetWord", "hash", hash)
+
+	//发起设置图片交易
+	//var result hexutil.Bytes
+	var result string
+	err := ec.c.CallContext(ctx, &result, "eth_getWord", hash)
+	return result, err
 }
 
 //图片保存

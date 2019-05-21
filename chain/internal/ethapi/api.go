@@ -806,6 +806,25 @@ func fileExist(filename string) bool {
 	return true
 }
 
+func (s *PublicBlockChainAPI) GetWord(ctx context.Context, hash common.Hash) (string, error) {
+
+	log.Info("RPC GetWord", "hash", hash)
+
+	if tx, _, _, _ := core.GetTransaction(s.b.ChainDb(), hash); tx != nil {
+
+		if tx.Major() != protocol.Extra {
+			return "", fmt.Errorf("RPC GetPicture Transaction from hash Major not is Extra type")
+		}
+
+		if tx.Minor() != protocol.Word {
+			return "", fmt.Errorf("RPC GetPicture Transaction from hash Minor not is Word type")
+		}
+		return string(tx.Word()[:]), nil
+	}
+
+	return "", fmt.Errorf("RPC GetWord Not Found Transaction From Hash")
+}
+
 func (s *PublicBlockChainAPI) GetPicture(ctx context.Context, hash common.Hash, savePath string) error {
 
 	log.Info("RPC GetPicture", "hash", hash, "savePath", savePath)
