@@ -117,7 +117,7 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
     
 2：从链上获取文字（交易Hash）
 
-    eth.getWord("0x26635445ae6e1f20bc2a7ed5be45c3a0b7e847e1c79167c9b1564fe77ef72094", "/projects/tina")
+    eth.getWord("0x26635445ae6e1f20bc2a7ed5be45c3a0b7e847e1c79167c9b1564fe77ef72094")
 
 
 ### 图片上链
