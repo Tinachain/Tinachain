@@ -5,7 +5,7 @@ Bokerchain is a public blockchain platform that serves the vertical area of audi
 Our goal is to acheive video sharing, benefits sharing and user resources sharing, benefiting podcasts, advertisers and our users while providing entertainment.
 
 ## Tina链系统架构（System architecture）
-![Image text](https://github.com/Tinachain/Tina/blob/master/image/Architecture.jpg)
+![Image text](https://github.com/Tinachain/Tina/blob/master/image/Architecture.png)
 
 ## Tina链交易结构
 * Tina链的交易结构格式
