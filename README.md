@@ -1,13 +1,13 @@
 
-## Tina链（Tinachain）
+### Tina链（Tinachain）
 Tina链是一个专门为服务于文章保存而开发的垂直型区块链平台，用户可以非常方便的使用Tina链所提供的接口将自己的文章永久保存在区块链上。<br/>
 Bokerchain is a public blockchain platform that serves the vertical area of audio & video. It is convenient for different intelligent terminal devices to access to Bokerchain. We can form a Video Application Union by providing SDK for various video APP, meeting the need for copyright protection, data sharing and benefit protection among all apps in Video Application Union. In this situation, we may make data among podcasts, advertisers and users more transparent, also maximizing the benefits.<br/>
 Our goal is to acheive video sharing, benefits sharing and user resources sharing, benefiting podcasts, advertisers and our users while providing entertainment.
 
-## Tina链系统架构（System architecture）
-![Image text](https://github.com/Tinachain/Tina/blob/master/image/Architecture.png)
+### Tina链系统架构（System architecture）
+![Image text](https://github.com/Tinachain/Tina/blob/master/image/Architecture.jpg)
 
-## Tina链交易结构
+### Tina链交易结构
 * Tina链的交易结构格式
 
     type txdata struct {
@@ -59,14 +59,14 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
     	S                *hexutil.Big     `json:"s"`
     }
 
-## Tina链启动方式
+### Tina链启动方式
 
-第一步：初始化创世文件
+#####第一步：初始化创世文件
 
     geth --datadir "/projects/tina/node" init genesis.json
 
 
-第二步：启动geth
+#####第二步：启动geth
 
     nohup geth --nodiscover  \
     --maxpeers 3 \
@@ -81,52 +81,52 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
     --networkid 96579 &
 
 
-第三步：进入geth控制台
+#####第三步：进入geth控制台
 
     geth attach ipc:/projects/tina/node/geth.ipc
 
-第四步：创建账号
+#####第四步：创建账号
 
     personal.newAccount()
 
 
-第五步：设置帐号解锁（这里使用假定账号、密码）
+#####第五步：设置帐号解锁（这里使用假定账号、密码）
 
     personal.unlockAccount(account, password, 0)
 
-第六步：设置自己为验证人
+#####第六步：设置自己为验证人
 
     miner.setLocalValidator()
 
-第七步：设置验证人（这里使用假定账号、票数）
+#####第七步：设置验证人（这里使用假定账号、票数）
 
     eth.addValidator(account, 10000)
 
-第八步：启动挖矿
+#####第八步：启动挖矿
 
     miner.start()
 	
 	
-## RPC 指令
+### RPC 指令
 
-### 文字上链
+#### 文字上链
 
-1：将文字上链
+#####1：将文字上链
 
     eth.setWord("This is Test")
     
-2：从链上获取文字（交易Hash）
+#####2：从链上获取文字（交易Hash）
 
     eth.getWord("0x26635445ae6e1f20bc2a7ed5be45c3a0b7e847e1c79167c9b1564fe77ef72094")
 
 
-### 图片上链
+#### 图片上链
 
-1：将图片上链（其中：/projects/tina/1.jpg 是节点上地址）
+#####1：将图片上链（其中：/projects/tina/1.jpg 是节点上地址）
 
     eth.setPicture("/projects/tina/1.jpg")
 	
-2：从链上获取图片（其中：交易Hash、保存图片的节点目录，文件名使用链上的文件名，例如设置/projects/tina则保存的图片地址为：/projects/tina/1.jpg）
+#####2：从链上获取图片（其中：交易Hash、保存图片的节点目录，文件名使用链上的文件名，例如设置/projects/tina则保存的图片地址为：/projects/tina/1.jpg）
 
     eth.getPicture("0x26635445ae6e1f20bc2a7ed5be45c3a0b7e847e1c79167c9b1564fe77ef72094", "/projects/tina")
 
