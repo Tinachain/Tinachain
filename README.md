@@ -18,14 +18,14 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
 
 ### 目录（Folders）
 
-#### [chain](https://github.com/Bokerchain/Boker/tree/master/chain)
+#### [chain](https://github.com/Tinachain/Tina/tree/master/chain)
     采用DPOS共识实现的基础链代码（基于ethereum 1.7.4版本）
     Main chain code, implementing DPOS.
 
-#### [contracts](https://github.com/Bokerchain/Boker/tree/master/contracts)
+#### [contracts](https://github.com/Tinachain/Tina/tree/master/contracts)
     采用Solidity编写的基础合约代码
     Basic contract code in solidity.
 
-#### [explorer](https://github.com/Bokerchain/Boker/tree/master/explorer)
+#### [explorer](https://github.com/Tinachain/Tina/tree/master/explorer)
     区块链浏览器以及文章上传页面代码
     Basic contract code in solidity.
