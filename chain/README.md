@@ -56,26 +56,17 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
     	S                *hexutil.Big     `json:"s"`
     }
 	
-## Building the source
+### 源码编译
 
-Building Bokerchain requires both a Go (version 1.7.3 or later) and a C compiler. You can install them using your favourite package manager. Once the dependencies are installed, run
+编译Tinachain需要Go语言版本在1.9.0以上，并且运行
 
     make geth
 
-or, to build the full suite of utilities:
+或者编译所有
 
     make all
 
-## Executables
-
-The Bokerchain project comes with several wrappers/executables found in the `cmd` directory.
-
-| Command    | Description |
-|:----------:|-------------|
-| **`geth`** | Our main Ethereum CLI client. It is the entry point into the Ethereum network (main-, test- or private net), capable of running as a full node (default) archive node (retaining all historical state) or a light node (retrieving data live). It can be used by other processes as a gateway into the Ethereum network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `geth --help` and the [CLI Wiki page](https://github.com/ethereum/chain/wiki/Command-Line-Options) for command line options. |
-| `abigen` | Source code generator to convert Ethereum contract definitions into easy to use, compile-time type-safe Go packages. It operates on plain [Ethereum contract ABIs](https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI) with expanded functionality if the contract bytecode is also available. However it also accepts Solidity source files, making development much more streamlined. Please see our [Native DApps](https://github.com/ethereum/chain/wiki/Native-DApps:-Go-bindings-to-Ethereum-contracts) wiki page for details. |
-
-## Configuration
+### 配置
 
 ### genesis.json
 ```json
