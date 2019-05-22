@@ -4,9 +4,6 @@ Tina链是一个专门为服务于文字、图片、文章以及文件保存而�
 Bokerchain is a public blockchain platform that serves the vertical area of audio & video. It is convenient for different intelligent terminal devices to access to Bokerchain. We can form a Video Application Union by providing SDK for various video APP, meeting the need for copyright protection, data sharing and benefit protection among all apps in Video Application Union. In this situation, we may make data among podcasts, advertisers and users more transparent, also maximizing the benefits.<br/>
 Our goal is to acheive video sharing, benefits sharing and user resources sharing, benefiting podcasts, advertisers and our users while providing entertainment.
 
-### Tina链系统架构（System architecture）
-![Image text](https://github.com/Tinachain/Tina/blob/master/image/Architecture.png)
-
 ### Tina链交易结构
 * Tina链的交易结构格式
 
@@ -129,27 +126,3 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
 2：从链上获取图片（其中：交易Hash、保存图片的节点目录，文件名使用链上的文件名，例如设置/projects/tina则保存的图片地址为：/projects/tina/1.jpg）
 
     eth.getPicture("0x26635445ae6e1f20bc2a7ed5be45c3a0b7e847e1c79167c9b1564fe77ef72094", "/projects/tina")
-
-
-
-### 关于我们（About us）
-
-#### Tinachain Co-Founder
-	* WeChat: [区什么块什么链啊](Blockchain_fxh7622) 	
-	* Twitter: [区什么块什么链啊](https://twitter.com/chain_fxh7622) 
-	* Twitter: [后青春期的诗](https://twitter.com/chain_stayreal)
-
-
-### 目录（Folders）
-
-#### [chain](https://github.com/Bokerchain/Boker/tree/master/chain)
-    采用DPOS共识实现的基础链代码（基于ethereum 1.7.4版本）
-    Main chain code, implementing DPOS.
-
-#### [contracts](https://github.com/Bokerchain/Boker/tree/master/contracts)
-    采用Solidity编写的基础合约代码
-    Basic contract code in solidity.
-
-#### [explorer](https://github.com/Bokerchain/Boker/tree/master/explorer)
-    区块链浏览器以及文章上传页面代码
-    Basic contract code in solidity.
