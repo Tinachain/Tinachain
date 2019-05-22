@@ -55,15 +55,87 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
     	R                *hexutil.Big     `json:"r"`
     	S                *hexutil.Big     `json:"s"`
     }
+	
+## Building the source
+
+Building Bokerchain requires both a Go (version 1.7.3 or later) and a C compiler. You can install them using your favourite package manager. Once the dependencies are installed, run
+
+    make geth
+
+or, to build the full suite of utilities:
+
+    make all
+
+## Executables
+
+The Bokerchain project comes with several wrappers/executables found in the `cmd` directory.
+
+| Command    | Description |
+|:----------:|-------------|
+| **`geth`** | Our main Ethereum CLI client. It is the entry point into the Ethereum network (main-, test- or private net), capable of running as a full node (default) archive node (retaining all historical state) or a light node (retrieving data live). It can be used by other processes as a gateway into the Ethereum network via JSON RPC endpoints exposed on top of HTTP, WebSocket and/or IPC transports. `geth --help` and the [CLI Wiki page](https://github.com/ethereum/chain/wiki/Command-Line-Options) for command line options. |
+| `abigen` | Source code generator to convert Ethereum contract definitions into easy to use, compile-time type-safe Go packages. It operates on plain [Ethereum contract ABIs](https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI) with expanded functionality if the contract bytecode is also available. However it also accepts Solidity source files, making development much more streamlined. Please see our [Native DApps](https://github.com/ethereum/chain/wiki/Native-DApps:-Go-bindings-to-Ethereum-contracts) wiki page for details. |
+
+## Configuration
+
+### genesis.json
+```json
+{
+	"config": {
+		"chainId": 0,
+		"byzantiumBlock": 0,
+		"eip155Block": 0,
+		"eip158Block": 0
+	},
+	"alloc": {},
+	"difficulty": "0x000001",
+	"extraData": "",
+	"gasLimit": "0xffffffff"
+}
+
+```
+**Note: `"byzantiumBlock": 0` should be the config value, otherwise contract call may malfunction!**
+
+### boker.json
+```json
+{
+    "dpos":{
+        "validators":[
+            "0xdd165ba267593d2acc837fc507c2e94e802817d9"
+        ]
+    },
+    "contracts":{
+        "bases":[
+            {
+                "contracttype":2,
+                "deployaddress":"0xdd165ba267593d2acc837fc507c2e94e802817d9",
+                "contractaddress":"0xd7fd311c8f97349670963d87f37a68794dfa80ff"
+            }
+        ]
+    },
+    "producer":{
+        "coinbase":"0x1aa228dde26f02e1cc5551cb4f1d74d0e998d24a",
+        "password":"123456"
+    }
+}
+```
 
 ### Tina链启动方式
 
-第一步：初始化创世文件
+第一步：同步时钟（由于采用DPOS共识机制，因此对于时钟同步非常重要）
+
+	crontab -e
+
+添加内容
+
+	*/10 * * * * /usr/sbin/ntpdate 1.cn.pool.ntp.org
+
+
+第二步：初始化创世文件
 
     geth --datadir "/projects/tina/node" init genesis.json
 
 
-第二步：启动geth
+第三步：启动geth
 
     nohup geth --nodiscover  \
     --maxpeers 3 \
@@ -78,28 +150,28 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
     --networkid 96579 &
 
 
-第三步：进入geth控制台
+第四步：进入geth控制台
 
     geth attach ipc:/projects/tina/node/geth.ipc
 
-第四步：创建账号
+第五步：创建账号
 
     personal.newAccount()
 
 
-第五步：设置帐号解锁（这里使用假定账号、密码）
+第六步：设置帐号解锁（这里使用假定账号、密码）
 
     personal.unlockAccount(account, password, 0)
 
-第六步：设置自己为验证人
+第七步：设置自己为验证人
 
     miner.setLocalValidator()
 
-第七步：设置验证人（这里使用假定账号、票数）
+第八步：设置验证人（这里使用假定账号、票数）
 
     eth.addValidator(account, 10000)
 
-第八步：启动挖矿
+第九步：启动挖矿
 
     miner.start()
 	
