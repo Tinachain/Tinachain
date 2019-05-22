@@ -84,7 +84,7 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
 }
 
 ```
-**Note: `"byzantiumBlock": 0` should be the config value, otherwise contract call may malfunction!**
+**注意：`"byzantiumBlock": 0` 这个配置，否则合约调用有可能出错。**
 
 ### boker.json
 ```json
