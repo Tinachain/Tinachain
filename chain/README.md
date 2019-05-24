@@ -19,7 +19,6 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
     	Amount       *big.Int         `json:"value"    gencodec:"required"`         
     	Payload      []byte           `json:"input"    gencodec:"required"`         
     	Name         []byte           `json:"name"    gencodec:"required"`          
-    	Word         []byte           `json:"word"    gencodec:"required"`          
     	Extra        []byte           `json:"extra"    gencodec:"required"`         
     	Ip           []byte           `json:"ip"    gencodec:"required"`            
     	V *big.Int `json:"v" gencodec:"required"`
@@ -44,7 +43,6 @@ Our goal is to acheive video sharing, benefits sharing and user resources sharin
     	Hash             common.Hash      `json:"hash"`
     	Input            hexutil.Bytes    `json:"input"`
     	Name             string           `json:"name"`
-    	Word             string           `json:"word"`
     	Extra            hexutil.Bytes    `json:"extra"`
     	Ip               string           `json:"ip"`
     	Nonce            hexutil.Uint64   `json:"nonce"`

@@ -264,7 +264,7 @@ func extraTransaction(config *params.ChainConfig,
 		log.Error("extraTransaction AsMessage", "err", err)
 		return nil, nil, err
 	}
-	log.Info("extraTransaction", "Major", tx.Major(), "Minor", tx.Minor(), "Time", header.Time.Int64(), "Word", tx.Word(), "Extra", tx.Extra())
+	log.Info("extraTransaction", "Major", tx.Major(), "Minor", tx.Minor(), "Time", header.Time.Int64(), "Extra", tx.Extra())
 
 	context := NewEVMContext(msg, header, bc, author)
 	vmenv := vm.NewEVM(context, statedb, config, cfg)

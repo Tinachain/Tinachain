@@ -352,7 +352,7 @@ func (pool *TxPool) validateTx(ctx context.Context, tx *types.Transaction) error
 	if from, err = types.Sender(types.HomesteadSigner{}, tx); err != nil {
 		return core.ErrInvalidSender
 	}
-	log.Info("validateTx tx", "Major", tx.Major(), "Minor", tx.Minor(), "time", tx.Time(), "from", from.String(), "word", tx.Word())
+	log.Info("validateTx tx", "Major", tx.Major(), "Minor", tx.Minor(), "time", tx.Time(), "from", from.String(), "extra", tx.Extra())
 
 	// Last but not least check for nonce errors
 	currentState := pool.currentState(ctx)

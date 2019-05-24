@@ -119,7 +119,7 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 
 				chainID = config.ChainId
 			}
-			log.Info("SubmitBokerTransaction tx", "Major", tx.Major(), "Miner", tx.Minor(), "Word", tx.Word(), "Extra", tx.Extra())
+			log.Info("SubmitBokerTransaction tx", "Major", tx.Major(), "Miner", tx.Minor(), "Extra", tx.Extra())
 
 		} else {
 

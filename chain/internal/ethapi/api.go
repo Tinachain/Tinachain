@@ -819,7 +819,7 @@ func (s *PublicBlockChainAPI) GetWord(ctx context.Context, hash common.Hash) (st
 		if tx.Minor() != protocol.Word {
 			return "", fmt.Errorf("RPC GetPicture Transaction from hash Minor not is Word type")
 		}
-		return string(tx.Word()[:]), nil
+		return string(tx.Extra()[:]), nil
 	}
 
 	return "", fmt.Errorf("RPC GetWord Not Found Transaction From Hash")
@@ -1385,7 +1385,6 @@ type RPCTransaction struct {
 	Hash             common.Hash      `json:"hash"`
 	Input            hexutil.Bytes    `json:"input"`
 	Name             string           `json:"name"`
-	Word             string           `json:"word"`
 	Extra            hexutil.Bytes    `json:"extra"`
 	Ip               string           `json:"ip"`
 	Nonce            hexutil.Uint64   `json:"nonce"`
@@ -1396,39 +1395,6 @@ type RPCTransaction struct {
 	R                *hexutil.Big     `json:"r"`
 	S                *hexutil.Big     `json:"s"`
 }
-
-/*func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) *RPCTransaction {
-
-	from, _ := types.Sender(types.HomesteadSigner{}, tx)
-	v, r, s := tx.RawSignatureValues()
-
-	result := &RPCTransaction{
-		Major:    tx.Major(),
-		Minor:    tx.Minor(),
-		From:     from,
-		Gas:      (*hexutil.Big)(tx.Gas()),
-		GasPrice: (*hexutil.Big)(tx.GasPrice()),
-		Hash:     tx.Hash(),
-		Input:    hexutil.Bytes(tx.Data()),
-		Name:     hexutil.Bytes(tx.Name()),
-		Word:     string(tx.Word()[:]),
-		Extra:    hexutil.Bytes(tx.Extra()),
-		Ip:       string(tx.Ip()[:]),
-		Nonce:    hexutil.Uint64(tx.Nonce()),
-		To:       tx.To(),
-		Value:    (*hexutil.Big)(tx.Value()),
-		V:        (*hexutil.Big)(v),
-		R:        (*hexutil.Big)(r),
-		S:        (*hexutil.Big)(s),
-	}
-
-	if blockHash != (common.Hash{}) {
-		result.BlockHash = blockHash
-		result.BlockNumber = (*hexutil.Big)(new(big.Int).SetUint64(blockNumber))
-		result.TransactionIndex = hexutil.Uint(index)
-	}
-	return result
-}*/
 
 func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber uint64, index uint64) *RPCTransaction {
 
@@ -1444,7 +1410,6 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		Hash:     tx.Hash(),
 		Input:    hexutil.Bytes(tx.Data()),
 		Name:     string(tx.Name()[:]),
-		Word:     string(tx.Word()[:]),
 		Extra:    hexutil.Bytes(tx.Extra()),
 		Ip:       string(tx.Ip()[:]),
 		Nonce:    hexutil.Uint64(tx.Nonce()),
