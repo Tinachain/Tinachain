@@ -175,7 +175,7 @@ Tinachain is a vertical blockchain platform specifically designed for preservati
     
 2：从链上获取文字（交易Hash）
 
-    eth.getWord("0x26635445ae6e1f20bc2a7ed5be45c3a0b7e847e1c79167c9b1564fe77ef72094")
+    eth.getWord("0x8c52e28e4819d28f215563635e7a4971cddd5ad48d21424383c832ff03b12800")
 
 
 #### 图片上链
