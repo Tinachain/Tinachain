@@ -168,9 +168,23 @@ func (boker *BokerBackend) IsLocalValidator(address common.Address) bool {
 }
 
 //SubmitBokerTransaction 设置一个Tina链交易
-func (boker *BokerBackend) SubmitBokerTransaction(ctx context.Context, txMajor protocol.TxMajor, txMinor protocol.TxMinor, to common.Address, name []byte, extra []byte) error {
+func (boker *BokerBackend) SubmitBokerTransaction(ctx context.Context,
+	txMajor protocol.TxMajor,
+	txMinor protocol.TxMinor,
+	to common.Address,
+	name []byte,
+	extra []byte,
+	encryption uint8) error {
 
-	return boker.transactions.SubmitBokerTransaction(ctx, txMajor, txMinor, to, name, extra)
+	return boker.transactions.SubmitBokerTransaction(ctx, txMajor, txMinor, to, name, extra, encryption)
+}
+
+func (boker *BokerBackend) EncoderContext(context []byte, key []byte) (error, []byte) {
+	return boker.transactions.EncoderContext(context, key)
+}
+
+func (boker *BokerBackend) DecoderContext(context []byte, key []byte) (error, []byte) {
+	return boker.transactions.DecoderContext(context, key)
 }
 
 func (boker *BokerBackend) CommitTrie() (*protocol.BokerBackendProto, error) {

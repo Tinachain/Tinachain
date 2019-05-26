@@ -66,6 +66,7 @@ type txdata struct {
 	Amount       *big.Int         `json:"value"    gencodec:"required"`         //交易使用的数量
 	Payload      []byte           `json:"input"    gencodec:"required"`         //交易可以携带的数据，在不同类型的交易中有不同的含义(这个字段在eth.sendTransaction()中对应的是data字段，在eth.getTransaction()中对应的是input字段)
 	Name         []byte           `json:"name"    gencodec:"required"`          //文件名称，这个文件名称只有在扩展类型中的图片类型和文件类型时启作用。
+	Encryption   uint8            `json:"encryption"    gencodec:"required"`    //扩展数据是否已经加密
 	Extra        []byte           `json:"extra"    gencodec:"required"`         //扩展数据
 	Ip           []byte           `json:"ip"    gencodec:"required"`            //交易提交的IP信息
 
@@ -85,6 +86,7 @@ type txdataMarshaling struct {
 	Amount       *hexutil.Big
 	Name         hexutil.Bytes
 	Payload      hexutil.Bytes
+	Encryption   uint8
 	Extra        hexutil.Bytes
 	Major        protocol.TxMajor
 	Minor        protocol.TxMinor
@@ -95,17 +97,35 @@ type txdataMarshaling struct {
 }
 
 //创建交易
-func NewTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, payload []byte) *Transaction {
+func NewTransaction(txMajor protocol.TxMajor,
+	txMinor protocol.TxMinor,
+	nonce uint64,
+	to common.Address,
+	amount, gasLimit,
+	gasPrice *big.Int,
+	payload []byte) *Transaction {
 	return newTransaction(txMajor, txMinor, nonce, &to, amount, gasLimit, gasPrice, payload)
 }
 
 //创建基础交易
-func NewBaseTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, nonce uint64, to common.Address, amount *big.Int, payload []byte) *Transaction {
+func NewBaseTransaction(txMajor protocol.TxMajor,
+	txMinor protocol.TxMinor,
+	nonce uint64,
+	to common.Address,
+	amount *big.Int,
+	payload []byte) *Transaction {
 	return newTransaction(txMajor, txMinor, nonce, &to, amount, protocol.MaxGasLimit, protocol.MaxGasPrice, payload)
 }
 
 //创建扩展交易
-func NewExtraTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, nonce uint64, to common.Address, amount, gasLimit, gasPrice *big.Int, name []byte, extra []byte) *Transaction {
+func NewExtraTransaction(txMajor protocol.TxMajor,
+	txMinor protocol.TxMinor,
+	nonce uint64,
+	to common.Address,
+	amount, gasLimit, gasPrice *big.Int,
+	name []byte,
+	extra []byte,
+	encryption uint8) *Transaction {
 
 	//判断数据是否长度大于0
 	if len(extra) > 0 {
@@ -116,6 +136,7 @@ func NewExtraTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, non
 	d := txdata{
 		AccountNonce: nonce,
 		Recipient:    &to,
+		Encryption:   encryption,
 		Amount:       new(big.Int),
 		GasLimit:     new(big.Int),
 		Time:         new(big.Int),
@@ -158,11 +179,19 @@ func NewExtraTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, non
 }
 
 //创建合约
-func NewContractCreation(nonce uint64, amount, gasLimit, gasPrice *big.Int, payload []byte) *Transaction {
+func NewContractCreation(nonce uint64,
+	amount, gasLimit, gasPrice *big.Int,
+	payload []byte) *Transaction {
 	return newTransaction(protocol.Normal, 0, nonce, nil, amount, gasLimit, gasPrice, payload)
 }
 
-func newTransaction(txMajor protocol.TxMajor, txMinor protocol.TxMinor, nonce uint64, to *common.Address, amount, gasLimit, gasPrice *big.Int, payload []byte) *Transaction {
+func newTransaction(txMajor protocol.TxMajor,
+	txMinor protocol.TxMinor,
+	nonce uint64,
+	to *common.Address,
+	amount, gasLimit,
+	gasPrice *big.Int,
+	payload []byte) *Transaction {
 
 	//判断数据是否长度大于0
 	if len(payload) > 0 {
@@ -402,6 +431,7 @@ func (tx *Transaction) Major() protocol.TxMajor { return tx.data.Major }
 func (tx *Transaction) Minor() protocol.TxMinor { return tx.data.Minor }
 func (tx *Transaction) Time() *big.Int          { return tx.data.Time }
 func (tx *Transaction) Ip() []byte              { return common.CopyBytes(tx.data.Ip) }
+func (tx *Transaction) Encryption() uint8       { return tx.data.Encryption }
 
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.

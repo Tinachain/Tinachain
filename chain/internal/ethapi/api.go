@@ -639,7 +639,13 @@ func (s *PublicBlockChainAPI) SetBaseContracts(ctx context.Context, address comm
 	}
 
 	//产生一个交易
-	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetSystemContract, address, []byte(""), []byte(abiJson))
+	return s.b.Boker().SubmitBokerTransaction(ctx,
+		protocol.Base,
+		protocol.SetSystemContract,
+		address,
+		[]byte(""),
+		[]byte(abiJson),
+		0)
 }
 
 //Tina链新增函数处理，取消一个基础合约
@@ -660,20 +666,53 @@ func (s *PublicBlockChainAPI) CancelBaseContracts(ctx context.Context, address c
 	}
 
 	//产生一个交易
-	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.CancelSystemContract, address, []byte(""), []byte(""))
+	return s.b.Boker().SubmitBokerTransaction(ctx,
+		protocol.Base,
+		protocol.CancelSystemContract,
+		address,
+		[]byte(""),
+		[]byte(""),
+		0)
 }
 
 //Tina链新增函数处理，设置文字到交易的扩展字段中
 func (s *PublicBlockChainAPI) SetWord(ctx context.Context, word string) error {
 
 	log.Info("SetWord", "word", word)
-
+	var key string = ""
 	//检测保存文字的大小是否越界
 	if len(word) > int(protocol.MaxWordSize) {
 
 		return errors.New("Setword More Than MaxWordSize(1MB)")
 	}
-	return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Extra, protocol.Word, common.Address{}, []byte(""), []byte(word))
+
+	if key != "" {
+
+		err, buffer := s.b.Boker().EncoderContext([]byte(word), []byte(key))
+		if err != nil {
+
+			log.Info("SetWord", "err", err)
+
+			return errors.New("Setword Encoder Failed")
+		}
+
+		return s.b.Boker().SubmitBokerTransaction(ctx,
+			protocol.Extra,
+			protocol.Word,
+			common.Address{},
+			[]byte(""),
+			buffer,
+			1)
+
+	} else {
+		return s.b.Boker().SubmitBokerTransaction(ctx,
+			protocol.Extra,
+			protocol.Word,
+			common.Address{},
+			[]byte(""),
+			[]byte(word),
+			0)
+	}
 }
 
 // 判断所给路径文件/文件夹是否存在
@@ -704,6 +743,7 @@ func (s *PublicBlockChainAPI) pictureSize(path string) int64 {
 func (s *PublicBlockChainAPI) SetPicture(ctx context.Context, picture string) error {
 
 	log.Info("SetPicture", "picture", picture)
+	var key string = ""
 
 	if s.existsPicture(picture) {
 
@@ -725,7 +765,32 @@ func (s *PublicBlockChainAPI) SetPicture(ctx context.Context, picture string) er
 
 			return errors.New("SetPicture Function ReadFile Failed")
 		}
-		return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Extra, protocol.Picture, common.Address{}, []byte(name), picBuffer)
+
+		if key != "" {
+
+			err, buffer := s.b.Boker().EncoderContext(picBuffer, []byte(key))
+			if err != nil {
+				return errors.New("SetPicture Encoder Failed")
+			}
+
+			return s.b.Boker().SubmitBokerTransaction(ctx,
+				protocol.Extra,
+				protocol.Word,
+				common.Address{},
+				[]byte(""),
+				buffer,
+				1)
+
+		} else {
+			return s.b.Boker().SubmitBokerTransaction(ctx,
+				protocol.Extra,
+				protocol.Picture,
+				common.Address{},
+				[]byte(name),
+				picBuffer,
+				0)
+		}
+
 	} else {
 
 		return errors.New("Not Found Picture File")
@@ -761,6 +826,7 @@ func (s *PublicBlockChainAPI) SetFile(ctx context.Context, filePath string) erro
 
 	log.Info("SetFile", "File", filePath)
 
+	var key string = ""
 	if s.existsFile(filePath) {
 
 		size := s.fileSize(filePath)
@@ -781,7 +847,31 @@ func (s *PublicBlockChainAPI) SetFile(ctx context.Context, filePath string) erro
 
 			return errors.New("SetFile Function ReadFile Failed")
 		}
-		return s.b.Boker().SubmitBokerTransaction(ctx, protocol.Extra, protocol.File, common.Address{}, []byte(name), fileBuffer)
+
+		if key != "" {
+
+			err, buffer := s.b.Boker().EncoderContext(fileBuffer, []byte(key))
+			if err != nil {
+				return errors.New("SetFile Encoder Failed")
+			}
+
+			return s.b.Boker().SubmitBokerTransaction(ctx,
+				protocol.Extra,
+				protocol.Word,
+				common.Address{},
+				[]byte(""),
+				buffer,
+				1)
+		} else {
+			return s.b.Boker().SubmitBokerTransaction(ctx,
+				protocol.Extra,
+				protocol.File,
+				common.Address{},
+				[]byte(name),
+				fileBuffer,
+				0)
+		}
+
 	} else {
 
 		return errors.New("Not Found File")
@@ -806,9 +896,11 @@ func fileExist(filename string) bool {
 	return true
 }
 
+//func (s *PublicBlockChainAPI) GetWord(ctx context.Context, hash common.Hash, key string) (string, error) {
 func (s *PublicBlockChainAPI) GetWord(ctx context.Context, hash common.Hash) (string, error) {
 
 	log.Info("RPC GetWord", "hash", hash)
+	var key string = ""
 
 	if tx, _, _, _ := core.GetTransaction(s.b.ChainDb(), hash); tx != nil {
 
@@ -819,15 +911,32 @@ func (s *PublicBlockChainAPI) GetWord(ctx context.Context, hash common.Hash) (st
 		if tx.Minor() != protocol.Word {
 			return "", fmt.Errorf("RPC GetPicture Transaction from hash Minor not is Word type")
 		}
-		return string(tx.Extra()[:]), nil
+
+		// 解密
+		if 0 == tx.Encryption() {
+
+			return string(tx.Extra()[:]), nil
+		} else {
+
+			err, buffer := s.b.Boker().DecoderContext(tx.Extra(), []byte(key))
+			if err != nil {
+
+				return "", fmt.Errorf("RPC GetPicture Transaction from hash Decoder Failed")
+			}
+
+			return string(buffer[:]), nil
+		}
 	}
 
 	return "", fmt.Errorf("RPC GetWord Not Found Transaction From Hash")
 }
 
+//func (s *PublicBlockChainAPI) GetPicture(ctx context.Context, hash common.Hash, savePath string, key string) error {
 func (s *PublicBlockChainAPI) GetPicture(ctx context.Context, hash common.Hash, savePath string) error {
 
 	log.Info("RPC GetPicture", "hash", hash, "savePath", savePath)
+
+	var key string = ""
 
 	if tx, _, _, _ := core.GetTransaction(s.b.ChainDb(), hash); tx != nil {
 
@@ -851,12 +960,30 @@ func (s *PublicBlockChainAPI) GetPicture(ctx context.Context, hash common.Hash, 
 
 			return fmt.Errorf("RPC GetPicture OpenFile Failed", "filePath", filePath)
 		}
-		//文件的写入
-		_, writeEr := f.Write(tx.Extra())
-		if writeEr != nil {
 
-			f.Close()
-			return fmt.Errorf("RPC GetPicture Write Failed", "filePath", filePath)
+		// 解密, 文件的写入
+		if 0 == tx.Encryption() {
+
+			_, writeEr := f.Write(tx.Extra())
+			if writeEr != nil {
+
+				f.Close()
+				return fmt.Errorf("RPC GetPicture Write Failed", "filePath", filePath)
+			}
+		} else {
+
+			err, buffer := s.b.Boker().DecoderContext(tx.Extra(), []byte(key))
+			if err != nil {
+
+				return fmt.Errorf("RPC GetPicture Transaction from hash Decoder Failed")
+			}
+
+			_, writeEr := f.Write(buffer)
+			if writeEr != nil {
+
+				f.Close()
+				return fmt.Errorf("RPC GetPicture Write Failed", "filePath", filePath)
+			}
 		}
 
 		//关闭文件
@@ -873,9 +1000,12 @@ func (s *PublicBlockChainAPI) GetPicture(ctx context.Context, hash common.Hash, 
 	return fmt.Errorf("RPC GetPicture Not Found Transaction From Hash")
 }
 
+//func (s *PublicBlockChainAPI) GetFile(ctx context.Context, hash common.Hash, saveFile string, key string) error {
 func (s *PublicBlockChainAPI) GetFile(ctx context.Context, hash common.Hash, saveFile string) error {
 
 	log.Info("RPC GetFile", "hash", hash, "saveFile", saveFile)
+
+	var key string = ""
 
 	if tx, _, _, _ := core.GetTransaction(s.b.ChainDb(), hash); tx != nil {
 
@@ -892,12 +1022,30 @@ func (s *PublicBlockChainAPI) GetFile(ctx context.Context, hash common.Hash, sav
 
 			return fmt.Errorf("RPC GetFile OpenFile Failed", "saveFile", saveFile)
 		}
-		//文件的写入
-		_, writeEr := f.Write(tx.Extra())
-		if writeEr != nil {
 
-			f.Close()
-			return fmt.Errorf("RPC GetFile Write Failed", "saveFile", saveFile)
+		// 解密, 文件的写入
+		if 0 == tx.Encryption() {
+
+			_, writeEr := f.Write(tx.Extra())
+			if writeEr != nil {
+
+				f.Close()
+				return fmt.Errorf("RPC GetFile Write Failed", "saveFile", saveFile)
+			}
+		} else {
+
+			err, buffer := s.b.Boker().DecoderContext(tx.Extra(), []byte(key))
+			if err != nil {
+
+				return fmt.Errorf("RPC GetFile Transaction from hash Decoder Failed")
+			}
+
+			_, writeEr := f.Write(buffer)
+			if writeEr != nil {
+
+				f.Close()
+				return fmt.Errorf("RPC GetFile Write Failed", "saveFile", saveFile)
+			}
 		}
 
 		//关闭文件
@@ -1003,7 +1151,13 @@ func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.A
 		if localCoinbase == coinbase {
 
 			//产生一个设置验证者的交易
-			s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetValidator, address, []byte(""), []byte(""))
+			s.b.Boker().SubmitBokerTransaction(ctx,
+				protocol.Base,
+				protocol.SetValidator,
+				address,
+				[]byte(""),
+				[]byte(""),
+				0)
 			return nil
 
 		} else {
@@ -1029,7 +1183,13 @@ func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.A
 			}
 
 			//产生一个设置验证者的交易
-			s.b.Boker().SubmitBokerTransaction(ctx, protocol.Base, protocol.SetValidator, address, []byte(""), []byte(""))
+			s.b.Boker().SubmitBokerTransaction(ctx,
+				protocol.Base,
+				protocol.SetValidator,
+				address,
+				[]byte(""),
+				[]byte(""),
+				0)
 			return nil
 		}
 	}
@@ -1385,6 +1545,7 @@ type RPCTransaction struct {
 	Hash             common.Hash      `json:"hash"`
 	Input            hexutil.Bytes    `json:"input"`
 	Name             string           `json:"name"`
+	Encryption       uint8            `json:"encryption"`
 	Extra            hexutil.Bytes    `json:"extra"`
 	Ip               string           `json:"ip"`
 	Nonce            hexutil.Uint64   `json:"nonce"`
@@ -1402,22 +1563,23 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	v, r, s := tx.RawSignatureValues()
 
 	result := &RPCTransaction{
-		Major:    tx.Major(),
-		Minor:    tx.Minor(),
-		From:     from,
-		Gas:      (*hexutil.Big)(tx.Gas()),
-		GasPrice: (*hexutil.Big)(tx.GasPrice()),
-		Hash:     tx.Hash(),
-		Input:    hexutil.Bytes(tx.Data()),
-		Name:     string(tx.Name()[:]),
-		Extra:    hexutil.Bytes(tx.Extra()),
-		Ip:       string(tx.Ip()[:]),
-		Nonce:    hexutil.Uint64(tx.Nonce()),
-		To:       tx.To(),
-		Value:    (*hexutil.Big)(tx.Value()),
-		V:        (*hexutil.Big)(v),
-		R:        (*hexutil.Big)(r),
-		S:        (*hexutil.Big)(s),
+		Major:      tx.Major(),
+		Minor:      tx.Minor(),
+		From:       from,
+		Gas:        (*hexutil.Big)(tx.Gas()),
+		GasPrice:   (*hexutil.Big)(tx.GasPrice()),
+		Hash:       tx.Hash(),
+		Input:      hexutil.Bytes(tx.Data()),
+		Name:       string(tx.Name()[:]),
+		Encryption: tx.Encryption(),
+		Extra:      hexutil.Bytes(tx.Extra()),
+		Ip:         string(tx.Ip()[:]),
+		Nonce:      hexutil.Uint64(tx.Nonce()),
+		To:         tx.To(),
+		Value:      (*hexutil.Big)(tx.Value()),
+		V:          (*hexutil.Big)(v),
+		R:          (*hexutil.Big)(r),
+		S:          (*hexutil.Big)(s),
 	}
 
 	switch result.Major {
@@ -1666,18 +1828,19 @@ func (s *PublicTransactionPoolAPI) sign(addr common.Address, tx *types.Transacti
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 type SendTxArgs struct {
-	From     common.Address   `json:"from"`
-	To       *common.Address  `json:"to"`
-	Gas      *hexutil.Big     `json:"gas"`
-	GasPrice *hexutil.Big     `json:"gasPrice"`
-	Value    *hexutil.Big     `json:"value"`
-	Name     hexutil.Bytes    `json:"name"`
-	Data     hexutil.Bytes    `json:"data"`
-	Extra    hexutil.Bytes    `json:"extra"`
-	Ip       hexutil.Bytes    `json:"ip"`
-	Nonce    *hexutil.Uint64  `json:"nonce"`
-	Major    protocol.TxMajor `json:"major"`
-	Minor    protocol.TxMinor `json:"minor"`
+	From       common.Address   `json:"from"`
+	To         *common.Address  `json:"to"`
+	Gas        *hexutil.Big     `json:"gas"`
+	GasPrice   *hexutil.Big     `json:"gasPrice"`
+	Value      *hexutil.Big     `json:"value"`
+	Name       hexutil.Bytes    `json:"name"`
+	Data       hexutil.Bytes    `json:"data"`
+	Encryption uint8            `json:"encryption"`
+	Extra      hexutil.Bytes    `json:"extra"`
+	Ip         hexutil.Bytes    `json:"ip"`
+	Nonce      *hexutil.Uint64  `json:"nonce"`
+	Major      protocol.TxMajor `json:"major"`
+	Minor      protocol.TxMinor `json:"minor"`
 }
 
 // prepareSendTxArgs is a helper function that fills in default values for unspecified tx fields.

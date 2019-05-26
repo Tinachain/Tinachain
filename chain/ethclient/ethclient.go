@@ -520,16 +520,18 @@ func (ec *Client) DecodeAbi(ctx context.Context, abiJson string, method string, 
 }
 
 //文字保存
+//func (ec *Client) SetWord(ctx context.Context, word string, key string) error {
 func (ec *Client) SetWord(ctx context.Context, word string) error {
 
-	var result hexutil.Bytes
-
 	log.Info("SetWord", "len", len(word), "word", word)
+
+	var result hexutil.Bytes
 	err := ec.c.CallContext(ctx, &result, "eth_setWord", word)
 	return err
 }
 
 //图片保存
+//func (ec *Client) SetPicture(ctx context.Context, picture string, key string) error {
 func (ec *Client) SetPicture(ctx context.Context, picture string) error {
 
 	log.Info("SetPicture", "picture", picture)
@@ -540,6 +542,7 @@ func (ec *Client) SetPicture(ctx context.Context, picture string) error {
 	return err
 }
 
+//func (ec *Client) SetFile(ctx context.Context, file string, key string) error {
 func (ec *Client) SetFile(ctx context.Context, file string) error {
 
 	log.Info("SetPicture", "file", file)

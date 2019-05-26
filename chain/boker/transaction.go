@@ -2,7 +2,12 @@
 package boker
 
 import (
+	"bytes"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"encoding/base64"
+
 	"errors"
 	"math/big"
 
@@ -34,12 +39,64 @@ func NewTransaction(ethereum *eth.Ethereum) *BokerTransaction {
 	}
 }
 
+//补码
+func PKCS7Padding(ciphertext []byte, blocksize int) []byte {
+	padding := blocksize - len(ciphertext)%blocksize
+	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(ciphertext, padtext...)
+}
+
+//去码
+func PKCS7UnPadding(origData []byte) []byte {
+	length := len(origData)
+	unpadding := int(origData[length-1])
+	return origData[:(length - unpadding)]
+}
+
+func (t *BokerTransaction) EncoderContext(context []byte, k []byte) (error, []byte) {
+	// 分组秘钥
+	block, _ := aes.NewCipher(k)
+	// 获取秘钥块的长度
+	blockSize := block.BlockSize()
+	// 补全码
+	context = PKCS7Padding(context, blockSize)
+	// 加密模式
+	blockMode := cipher.NewCBCEncrypter(block, k[:blockSize])
+	// 创建数组
+	cryted := make([]byte, len(context))
+	// 加密
+	blockMode.CryptBlocks(cryted, context)
+
+	return nil, []byte(base64.StdEncoding.EncodeToString(cryted))
+}
+
+func (t *BokerTransaction) DecoderContext(context []byte, k []byte) (error, []byte) {
+
+	// 转成字节数组
+	crytedByte, _ := base64.StdEncoding.DecodeString(string(context[:]))
+
+	// 分组秘钥
+	block, _ := aes.NewCipher(k)
+	// 获取秘钥块的长度
+	blockSize := block.BlockSize()
+	// 加密模式
+	blockMode := cipher.NewCBCDecrypter(block, k[:blockSize])
+	// 创建数组
+	orig := make([]byte, len(crytedByte))
+	// 解密
+	blockMode.CryptBlocks(orig, crytedByte)
+	// 去补全码
+	orig = PKCS7UnPadding(orig)
+	return nil, []byte(string(orig))
+}
+
 func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 	txMajor protocol.TxMajor,
 	txMinor protocol.TxMinor,
 	to common.Address,
 	name []byte,
-	extra []byte) error {
+	extra []byte,
+	encryption uint8) error {
 
 	if t.ethereum != nil {
 
@@ -52,17 +109,18 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 
 		//设置参数（其中有些参数可以通过调用设置默认设置来进行获取）
 		args := ethapi.SendTxArgs{
-			From:     from,
-			Major:    txMajor,
-			Minor:    txMinor,
-			Nonce:    nil,
-			To:       &to,
-			Gas:      nil,
-			GasPrice: nil,
-			Value:    nil,
-			Name:     hexutil.Bytes(name),
-			Data:     hexutil.Bytes(extra),
-			Extra:    hexutil.Bytes(extra),
+			From:       from,
+			Major:      txMajor,
+			Minor:      txMinor,
+			Nonce:      nil,
+			To:         &to,
+			Gas:        nil,
+			GasPrice:   nil,
+			Value:      nil,
+			Name:       hexutil.Bytes(name),
+			Encryption: encryption,
+			Data:       hexutil.Bytes(extra),
+			Extra:      hexutil.Bytes(extra),
 		}
 
 		//查找包含所请求签名者的钱包
@@ -114,7 +172,8 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 				new(big.Int).SetUint64(defaultGas),
 				new(big.Int).SetUint64(defaultGasPrice),
 				args.Name,
-				args.Extra)
+				args.Extra,
+				args.Encryption)
 			if config := t.ethereum.ApiBackend.ChainConfig(); config.IsEIP155(t.ethereum.ApiBackend.CurrentBlock().Number()) {
 
 				chainID = config.ChainId

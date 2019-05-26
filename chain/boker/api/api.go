@@ -23,7 +23,8 @@ type Api interface {
 		txMinor protocol.TxMinor,
 		to common.Address,
 		name []byte,
-		extra []byte) error //产生一个设置验证者交易
+		extra []byte,
+		encryption uint8) error //产生一个设置验证者交易
 
 	IsLocalValidator(address common.Address) bool //判断是否是设置的本地验证者
 	GetContractTrie() (*trie.Trie,
@@ -33,6 +34,9 @@ type Api interface {
 	GetMethodName(txMinor protocol.TxMinor) (string, string, error) //根据交易类型得到方法名称（只适用于基础合约）
 	GetContract(address common.Address) (protocol.TxMajor, error)   //判断合约属性
 	GetTeamAccount() common.Address                                 //得到团队账号
+	EncoderContext(context []byte, key []byte) (error, []byte)      //对内容进行编码
+	DecoderContext(context []byte, key []byte) (error, []byte)      //对内容进行解码
+
 }
 
 type SortableAddress struct {
