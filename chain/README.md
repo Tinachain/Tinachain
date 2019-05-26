@@ -10,21 +10,25 @@ Tinachain is a vertical blockchain platform specifically designed for preservati
     type txdata struct {
     
         Major        protocol.TxMajor `json:"major"   gencodec:"required"`          
-        Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          
-        AccountNonce uint64           `json:"nonce"    gencodec:"required"`         
-        Price        *big.Int         `json:"gasPrice" gencodec:"required"`         
-    	GasLimit     *big.Int         `json:"gas"      gencodec:"required"`         
-    	Time         *big.Int         `json:"timestamp"        gencodec:"required"` 
-    	Recipient    *common.Address  `json:"to"       rlp:"nil"`                   
-    	Amount       *big.Int         `json:"value"    gencodec:"required"`         
-    	Payload      []byte           `json:"input"    gencodec:"required"`         
-    	Name         []byte           `json:"name"    gencodec:"required"`          
-    	Extra        []byte           `json:"extra"    gencodec:"required"`         
-    	Ip           []byte           `json:"ip"    gencodec:"required"`            
-    	V *big.Int `json:"v" gencodec:"required"`
-    	R *big.Int `json:"r" gencodec:"required"`
-    	S *big.Int `json:"s" gencodec:"required"`
-    	Hash *common.Hash `json:"hash" rlp:"-"`
+		Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          
+		AccountNonce uint64           `json:"nonce"    gencodec:"required"`         
+		Price        *big.Int         `json:"gasPrice" gencodec:"required"`         
+		GasLimit     *big.Int         `json:"gas"      gencodec:"required"`         
+		Time         *big.Int         `json:"timestamp"        gencodec:"required"` 
+		Recipient    *common.Address  `json:"to"       rlp:"nil"`                   
+		Amount       *big.Int         `json:"value"    gencodec:"required"`         
+		Payload      []byte           `json:"input"    gencodec:"required"`         
+		Name         []byte           `json:"name"    gencodec:"required"`          
+		Encryption   uint8            `json:"encryption"    gencodec:"required"`    
+		Extra        []byte           `json:"extra"    gencodec:"required"`         
+		Ip           []byte           `json:"ip"    gencodec:"required"`            
+
+		V *big.Int `json:"v" gencodec:"required"`
+		R *big.Int `json:"r" gencodec:"required"`
+		S *big.Int `json:"s" gencodec:"required"`
+
+		// This is only used when marshaling to JSON.
+		Hash *common.Hash `json:"hash" rlp:"-"`
     }
 
 * Tina链的RPC交易结构
@@ -32,26 +36,27 @@ Tinachain is a vertical blockchain platform specifically designed for preservati
     type RPCTransaction struct {
 	
     	Major            protocol.TxMajor `json:"major"`
-    	MajorNotes       string           `json:"majorNotes"`
-    	Minor            protocol.TxMinor `json:"minor"`
-    	MinorNotes       string           `json:"minorNotes"`
-    	BlockHash        common.Hash      `json:"blockHash"`
-    	BlockNumber      *hexutil.Big     `json:"blockNumber"`
-    	From             common.Address   `json:"from"`
-    	Gas              *hexutil.Big     `json:"gas"`
-    	GasPrice         *hexutil.Big     `json:"gasPrice"`
-    	Hash             common.Hash      `json:"hash"`
-    	Input            hexutil.Bytes    `json:"input"`
-    	Name             string           `json:"name"`
-    	Extra            hexutil.Bytes    `json:"extra"`
-    	Ip               string           `json:"ip"`
-    	Nonce            hexutil.Uint64   `json:"nonce"`
-    	To               *common.Address  `json:"to"`
-    	TransactionIndex hexutil.Uint     `json:"transactionIndex"`
-    	Value            *hexutil.Big     `json:"value"`
-    	V                *hexutil.Big     `json:"v"`
-    	R                *hexutil.Big     `json:"r"`
-    	S                *hexutil.Big     `json:"s"`
+		MajorNotes       string           `json:"majorNotes"`
+		Minor            protocol.TxMinor `json:"minor"`
+		MinorNotes       string           `json:"minorNotes"`
+		BlockHash        common.Hash      `json:"blockHash"`
+		BlockNumber      *hexutil.Big     `json:"blockNumber"`
+		From             common.Address   `json:"from"`
+		Gas              *hexutil.Big     `json:"gas"`
+		GasPrice         *hexutil.Big     `json:"gasPrice"`
+		Hash             common.Hash      `json:"hash"`
+		Input            hexutil.Bytes    `json:"input"`
+		Name             string           `json:"name"`
+		Encryption       uint8            `json:"encryption"`
+		Extra            hexutil.Bytes    `json:"extra"`
+		Ip               string           `json:"ip"`
+		Nonce            hexutil.Uint64   `json:"nonce"`
+		To               *common.Address  `json:"to"`
+		TransactionIndex hexutil.Uint     `json:"transactionIndex"`
+		Value            *hexutil.Big     `json:"value"`
+		V                *hexutil.Big     `json:"v"`
+		R                *hexutil.Big     `json:"r"`
+		S                *hexutil.Big     `json:"s"`
     }
 	
 ### 源码编译
