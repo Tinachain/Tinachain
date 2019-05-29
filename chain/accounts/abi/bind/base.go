@@ -221,10 +221,13 @@ func (c *BoundContract) Transact(opts *TransactOpts, method string, params ...in
 			//用户触发的基础合约（用户触发，但是不收取Gas费用）
 			if method == protocol.RegisterCandidateMethod {
 				return c.transact(opts, &c.address, input, extra, protocol.Base, protocol.RegisterCandidate)
+
 			} else if method == protocol.VoteCandidateMethod {
 				return c.transact(opts, &c.address, input, extra, protocol.Base, protocol.VoteUser)
+
 			} else if method == protocol.CancelVoteMethod {
 				return c.transact(opts, &c.address, input, extra, protocol.Base, protocol.VoteCancel)
+
 			} else if method == protocol.RotateVoteMethod {
 
 				//得到当前的分币节点
@@ -326,8 +329,6 @@ func (c *BoundContract) normalTransact(opts *TransactOpts,
 	txMajor protocol.TxMajor,
 	txMinor protocol.TxMinor) (*types.Transaction, error) {
 
-	//log.Info("****normalTransact****", "from", opts.From)
-
 	//判断Value值是否为空
 	var err error
 	value := opts.Value
@@ -401,7 +402,6 @@ func (c *BoundContract) normalTransact(opts *TransactOpts,
 	}
 
 	//将交易注入pending池中
-	//log.Info("****c.transactor.SendTransaction****")
 	if err := c.transactor.SendTransaction(ensureContext(opts.Context), signedTx); err != nil {
 		return nil, err
 	}

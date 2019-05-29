@@ -96,7 +96,7 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 	to common.Address,
 	name []byte,
 	extra []byte,
-	encryption uint8) error {
+	encryption uint8) (*types.Transaction, error) {
 
 	if t.ethereum != nil {
 
@@ -104,7 +104,7 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 		from, err := t.ethereum.ApiBackend.Coinbase()
 		if err != nil {
 			log.Error("bokerTransaction CoinBase", "error", err)
-			return err
+			return nil, err
 		}
 
 		//设置参数（其中有些参数可以通过调用设置默认设置来进行获取）
@@ -130,13 +130,13 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 		wallet, err := t.ethereum.AccountManager().Find(account)
 		if err != nil {
 			log.Error("SubmitBokerTransaction AccountManager Find", "error", err)
-			return err
+			return nil, err
 		}
 
 		//设置默认设置
 		if err := args.SetDefaults(ctx, t.ethereum.ApiBackend); err != nil {
 			log.Error("SubmitBokerTransaction SetDefaults", "error", err)
-			return err
+			return nil, err
 		}
 		log.Info("SubmitBokerTransaction SetDefaults",
 			"Nonce", args.Nonce.String(),
@@ -183,7 +183,7 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 		} else {
 
 			log.Error("SubmitBokerTransaction txType Not Found")
-			return errors.New("SubmitBokerTransaction txType Not Found")
+			return nil, errors.New("SubmitBokerTransaction txType Not Found")
 		}
 
 		//对该笔交易签名来确保该笔交易的真实有效性
@@ -191,7 +191,7 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 		if err != nil {
 
 			log.Error("SubmitBokerTransaction SignTxWithPassphrase", "error", err)
-			return err
+			return nil, err
 		}
 
 		log.Info("SubmitBokerTransaction SignTxWithPassphrase", "Gas", signed.Gas(), "GasPrice", signed.GasPrice(), "Value", signed.Value)
@@ -199,10 +199,10 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 		if _, err := ethapi.SubmitTransaction(ctx, t.ethereum.ApiBackend, signed); err != nil {
 
 			log.Error("SubmitBokerTransaction SubmitTransaction", "error", err)
-			return err
+			return nil, err
 		}
 
-		return nil
+		return signed, nil
 	}
-	return protocol.ErrInvalidSystem
+	return nil, protocol.ErrInvalidSystem
 }

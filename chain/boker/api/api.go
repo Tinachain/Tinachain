@@ -6,6 +6,7 @@ import (
 
 	"github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
+	"github.com/Tinachain/Tina/chain/core/types"
 	"github.com/Tinachain/Tina/chain/trie"
 )
 
@@ -24,7 +25,7 @@ type Api interface {
 		to common.Address,
 		name []byte,
 		extra []byte,
-		encryption uint8) error //产生一个设置验证者交易
+		encryption uint8) (*types.Transaction, error) //产生一个设置验证者交易
 
 	IsLocalValidator(address common.Address) bool //判断是否是设置的本地验证者
 	GetContractTrie() (*trie.Trie,

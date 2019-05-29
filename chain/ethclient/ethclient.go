@@ -441,7 +441,7 @@ func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) er
 	if err != nil {
 		return err
 	}
-	log.Info("SendTransaction", "len", len(data), "data", data)
+	log.Info("(ec *Client) SendTransaction", "len", len(data), "data", data)
 
 	tx_tmp := new(types.Transaction)
 	if err := rlp.DecodeBytes(data, tx_tmp); err != nil {

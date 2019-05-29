@@ -284,6 +284,8 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
+	log.Info("(b *SimulatedBackend) SendTransaction", "tx.Hash", tx.Hash().String())
+
 	sender, err := types.Sender(types.HomesteadSigner{}, tx)
 	if err != nil {
 		panic(fmt.Errorf("invalid transaction: %v", err))
@@ -294,7 +296,6 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transa
 		panic(fmt.Errorf("invalid transaction nonce: got %d, want %d", tx.Nonce(), nonce))
 	}
 
-	//
 	blocks, _ := core.GenerateChain(b.config, b.blockchain.CurrentBlock(), b.database, 1, b.boker, func(number int, block *core.BlockGen) {
 		for _, tx := range b.pendingBlock.Transactions() {
 			block.AddTx(tx, b.boker)

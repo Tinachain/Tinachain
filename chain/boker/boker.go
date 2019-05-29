@@ -8,6 +8,7 @@ import (
 
 	"github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
+	"github.com/Tinachain/Tina/chain/core/types"
 	"github.com/Tinachain/Tina/chain/eth"
 	"github.com/Tinachain/Tina/chain/log"
 	"github.com/Tinachain/Tina/chain/params"
@@ -174,7 +175,7 @@ func (boker *BokerBackend) SubmitBokerTransaction(ctx context.Context,
 	to common.Address,
 	name []byte,
 	extra []byte,
-	encryption uint8) error {
+	encryption uint8) (*types.Transaction, error) {
 
 	return boker.transactions.SubmitBokerTransaction(ctx, txMajor, txMinor, to, name, extra, encryption)
 }

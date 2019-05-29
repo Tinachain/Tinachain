@@ -133,7 +133,7 @@ func normalTransaction(config *params.ChainConfig,
 	//如果交易创建了合同，则将创建地址存储在收据中
 	if msg.To() == nil {
 		receipt.ContractAddress = crypto.CreateAddress(vmenv.Context.Origin, tx.Nonce())
-		log.Info("binaryTransaction", "address", receipt.ContractAddress.String())
+		log.Info("binaryTransaction", "address", receipt.ContractAddress.String(), "tx.Hash", tx.Hash().String())
 	}
 
 	//设置收据日志并创建一个用于过滤的布尔值

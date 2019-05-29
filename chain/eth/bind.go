@@ -25,6 +25,7 @@ import (
 	"github.com/Tinachain/Tina/chain/common/hexutil"
 	"github.com/Tinachain/Tina/chain/core/types"
 	"github.com/Tinachain/Tina/chain/internal/ethapi"
+	"github.com/Tinachain/Tina/chain/log"
 	"github.com/Tinachain/Tina/chain/rlp"
 	"github.com/Tinachain/Tina/chain/rpc"
 )
@@ -134,7 +135,12 @@ func (b *ContractBackend) EstimateGas(ctx context.Context, msg ethereum.CallMsg)
 // into the pending pool for execution.
 func (b *ContractBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 
+	log.Info("b *ContractBackend SendTransaction")
+
 	raw, _ := rlp.EncodeToBytes(tx)
-	_, err := b.txapi.SendRawTransaction(ctx, raw)
+	hash, err := b.txapi.SendRawTransaction(ctx, raw)
+
+	log.Info("b *ContractBackend SendTransaction", "hash", hash.String())
+
 	return err
 }

@@ -29,11 +29,18 @@ import (
 // WaitMined waits for tx to be mined on the blockchain.
 // It stops waiting when the context is canceled.
 func WaitMined(ctx context.Context, b DeployBackend, tx *types.Transaction) (*types.Receipt, error) {
+
+	log.Info("WaitMined", "tx", tx.Hash())
+
 	queryTicker := time.NewTicker(time.Second)
 	defer queryTicker.Stop()
 
 	logger := log.New("hash", tx.Hash())
+
 	for {
+
+		log.Info("WaitMined", "tx", tx.Hash())
+
 		receipt, err := b.TransactionReceipt(ctx, tx.Hash())
 		if receipt != nil {
 			return receipt, nil
@@ -55,19 +62,27 @@ func WaitMined(ctx context.Context, b DeployBackend, tx *types.Transaction) (*ty
 // WaitDeployed waits for a contract deployment transaction and returns the on-chain
 // contract address when it is mined. It stops waiting when ctx is canceled.
 func WaitDeployed(ctx context.Context, b DeployBackend, tx *types.Transaction) (common.Address, error) {
+
+	log.Info("WaitDeployed", "tx", tx.Hash())
 	if tx.To() != nil {
 		return common.Address{}, fmt.Errorf("tx is not contract creation")
 	}
+
+	log.Info("WaitDeployed", "WaitMined", "")
 	receipt, err := WaitMined(ctx, b, tx)
 	if err != nil {
 		return common.Address{}, err
 	}
+
+	log.Info("WaitDeployed", "receipt.ContractAddress", receipt.ContractAddress.String())
 	if receipt.ContractAddress == (common.Address{}) {
 		return common.Address{}, fmt.Errorf("zero address")
 	}
+
 	// Check that code has indeed been deployed at the address.
 	// This matters on pre-Homestead chains: OOG in the constructor
 	// could leave an empty account behind.
+	log.Info("WaitDeployed", "CodeAt", receipt.ContractAddress.String())
 	code, err := b.CodeAt(ctx, receipt.ContractAddress, nil)
 	if err == nil && len(code) == 0 {
 		err = ErrNoCodeAfterDeploy
