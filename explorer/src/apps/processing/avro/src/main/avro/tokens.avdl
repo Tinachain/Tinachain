@@ -1,0 +1,8 @@
+@namespace("com.ethvm.avro.tokens")
+protocol Tokens {
+
+  record EthTokenListsKeyRecord {
+    string address;
+  }
+
+}

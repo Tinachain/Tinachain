@@ -1,0 +1,277 @@
+@namespace("com.ethvm.avro.processing")
+protocol Processing {
+
+  import idl "common.avdl";
+  import idl "capture.avdl";
+
+  record KafkaOffsetInfoKeyRecord {
+    long timestamp;
+    string consumerGroupId;
+    string topic;
+  }
+
+  record KafkaOffsetInfoRecord {
+    long timestamp;
+    string consumerGroupId;
+    string topic;
+    long totalLength;
+    long totalOffset;
+  }
+
+  record BlockMetricKeyRecord {
+    string blockHash;
+    timestamp_ms timestamp = 0;
+  }
+
+  record BlockKeyRecord {
+    string blockHash;
+  }
+
+  record UncleKeyRecord {
+    string hash;
+  }
+
+  record TransactionKeyRecord {
+    string hash;
+  }
+
+  record TransactionReceiptKeyRecord {
+    string transactionHash;
+  }
+
+  record TraceKeyRecord {
+    string blockHash;
+    union { null, string } transactionHash = null;
+  }
+
+  record FungibleBalanceKeyRecord {
+    string address;
+    string contract = "";
+  }
+
+  enum FungibleTokenType {
+    ETHER, ERC20
+  }
+
+  enum FungibleBalanceDeltaType {
+    PREMINE_BALANCE,
+    HARD_FORK,
+    BLOCK_REWARD,
+    UNCLE_REWARD,
+    MINER_FEE,
+    TX_FEE,
+    TX,
+    INTERNAL_TX,
+    CONTRACT_CREATION,
+    CONTRACT_DESTRUCTION,
+    TOKEN_TRANSFER
+  }
+
+  record FungibleBalanceDeltaRecord {
+
+    FungibleTokenType tokenType;
+    FungibleBalanceDeltaType deltaType;
+    com.ethvm.avro.common.TraceLocationRecord traceLocation;
+    decimal(80, 0) amount;
+
+    string address;
+    string contractAddress = "";
+
+    union { null, string } counterpartAddress = null;
+  }
+
+  record FungibleBalanceRecord {
+    decimal(80, 0) amount;
+  }
+
+  record FungibleBalanceDeltaListRecord {
+    boolean apply = true;
+    array<FungibleBalanceDeltaRecord> deltas = [];
+    array<FungibleBalanceDeltaRecord> reversals = [];
+    union { null, string } blockHash = null;
+  }
+
+//
+
+  record NonFungibleBalanceKeyRecord {
+    string contract;
+    decimal(80, 0) tokenId;
+  }
+
+  enum NonFungibleTokenType {
+    ERC721
+  }
+
+  record NonFungibleBalanceDeltaRecord {
+
+    NonFungibleTokenType tokenType = null;
+    com.ethvm.avro.common.TraceLocationRecord traceLocation;
+
+    string from;
+    string to;
+
+    union { null, string } contract = null;
+    union { null, decimal(80, 0) } tokenId;
+
+  }
+
+  record NonFungibleBalanceRecord {
+    com.ethvm.avro.common.TraceLocationRecord traceLocation;
+    string address;
+  }
+
+  record NonFungibleBalanceDeltaListRecord {
+    boolean apply = true;
+    array<NonFungibleBalanceDeltaRecord> deltas = [];
+    array<NonFungibleBalanceDeltaRecord> reversals = [];
+    union { null, string } blockHash = null;
+  }
+
+//
+
+  record BlockAuthorRecord {
+    string author;
+    decimal(80, 0) blockNumber;
+    string blockHash;
+  }
+
+  record TransactionGasPriceRecord {
+    decimal(80, 0) blockNumber;
+    string blockHash;
+    string transactionHash;
+    int transactionPosition;
+    string address;
+    decimal(80, 0) gasPrice;
+  }
+
+  record TransactionGasPriceListRecord {
+    array<TransactionGasPriceRecord> gasPrices;
+    union { null, string } blockHash = null;
+  }
+
+  record TransactionGasUsedRecord {
+    decimal(80, 0) gasUsed;
+  }
+
+  record TransactionGasUsedListRecord {
+    array<TransactionGasUsedRecord> gasUsed;
+    union { null, string } blockHash = null;
+  }
+
+  record TransactionFeeRecord {
+    decimal(80, 0) blockNumber;
+    string blockHash;
+    string transactionHash;
+    int transactionPosition;
+    string address;
+    decimal(80, 0) transactionFee;
+  }
+
+  record TransactionFeeListRecord {
+    array<TransactionFeeRecord> transactionFees;
+    union { null, string } blockHash = null;
+  }
+
+// metrics
+
+  record BlockTimestampRecord {
+    timestamp_ms timestamp = 0;
+  }
+
+  record BlockMetricsHeaderRecord {
+    decimal(80, 0) number;
+    union { null, int } blockTime = null;
+
+    int numUncles;
+    decimal(80, 0) difficulty;
+    decimal(80, 0) totalDifficulty;
+
+    timestamp_ms timestamp = 0;
+  }
+
+  record BlockMetricsTransactionTraceRecord {
+    int totalTxs;
+    int numSuccessfulTxs;
+    int numFailedTxs;
+    int numInternalTxs;
+
+    timestamp_ms timestamp = 0;
+  }
+
+  record BlockMetricsTransactionRecord {
+    decimal(80, 0) totalGasPrice;
+    decimal(80, 0) avgGasLimit;
+    decimal(80, 0) avgGasPrice;
+
+    timestamp_ms timestamp = 0;
+  }
+
+  record BlockMetricsTransactionFeeRecord {
+    decimal(80, 0) totalTxFees;
+    decimal(80, 0) avgTxFees;
+
+    timestamp_ms timestamp = 0;
+  }
+
+  record MetricKeyRecord {
+    long `date`;
+    string name;
+  }
+
+  record MetricRecord {
+
+    union { null, int } `int` = null;
+    union { null, long } `long` = null;
+    union { null, float } `float` = null;
+    union { null, double } `double` = null;
+    union { null, bytes } `bigInteger` = null;
+
+  }
+
+// Processing Metadata
+
+  record ProcessingMetadataKeyRecord {
+    string name;
+  }
+
+  record ProcessingMetadataRecord {
+    union { null, string } `string` = null;
+    union { null, boolean } `boolean` = null;
+    union { null, int } `int` = null;
+    union { null, long } `long` = null;
+    union { null, float } `float` = null;
+    union { null, double } `double` = null;
+    union { null, bytes } `bigInteger` = null;
+  }
+
+// address metadata
+
+  enum AddressMetadataType {
+    OUT_TX_COUNT, IN_TX_COUNT, TOTAL_TX_COUNT, MINER, CONTRACT_CREATOR
+  }
+
+  record AddressMetadataKeyRecord {
+    bytes address;
+    AddressMetadataType type;
+  }
+
+  record AddressMetadataRecord {
+    union { null, long } count = null;
+    union { null, boolean } flag = null;
+  }
+
+
+  record Erc20MetadataRecord {
+    union { null, string } name = null;
+    union { null, string } symbol = null;
+    union { null, int } decimals = null;
+    union { null, decimal(80, 0) } totalSupply = null;
+  }
+
+  record Erc721MetadataRecord {
+    union { null, string } name = null;
+    union { null, string } symbol = null;
+  }
+
+}
+

@@ -1,0 +1,20 @@
+scalar Date
+scalar JSON
+scalar Decimal
+scalar Buffer
+scalar StatisticValue
+scalar Long
+scalar BigNumber
+
+enum FilterEnum {
+  in, out, all
+}
+
+
+enum Duration {
+  ALL,
+  YEAR,
+  MONTH,
+  WEEK,
+  DAY
+}

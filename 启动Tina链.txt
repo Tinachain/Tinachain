@@ -25,6 +25,7 @@ nohup geth --nodiscover  \
 --port 30304 \
 --rpcapi "db,eth,net,web3" \
 --networkid 96579 &
+
 eth.getTransaction("0x8c52e28e4819d28f215563635e7a4971cddd5ad48d21424383c832ff03b12800")
 
 第三步：进入geth控制台

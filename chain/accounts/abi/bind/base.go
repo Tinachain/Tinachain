@@ -240,7 +240,7 @@ func (c *BoundContract) Transact(opts *TransactOpts, method string, params ...in
 			return nil, errors.New("unknown system contract method name")
 		}
 	}
-	return nil, errors.New("unknown system contract method name")
+	return c.transact(opts, &c.address, input, []byte(""), protocol.Normal, 0)
 }
 
 func (c *BoundContract) Transfer(opts *TransactOpts) (*types.Transaction, error) {

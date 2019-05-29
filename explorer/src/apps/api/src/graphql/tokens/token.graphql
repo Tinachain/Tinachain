@@ -1,0 +1,94 @@
+type Query {
+  tokenHolder(address: String!, holderAddress: String!): TokenHolder
+  addressAllTokensOwned(address: String!, offset: Int = 0, limit: Int = 10): TokenPage!
+  addressTotalTokenValueUSD(address: String!): BigNumber
+  coinExchangeRate(pair: ExchangeRatePair!): CoinExchangeRate
+  tokenExchangeRates(filter: TokenExchangeRateFilter!, symbols: [String!], limit: Int = 20, page: Int = 0): [TokenExchangeRate!]!
+  totalNumTokenExchangeRates: Int!
+  tokenExchangeRateBySymbol(symbol: String!): TokenExchangeRate
+  tokenExchangeRateByAddress(address: String!): TokenExchangeRate
+  tokensMetadata(symbols: [String]): [TokenMetadata!]!
+
+  tokenExchangeRatePage(sort: TokenExchangeRateFilter!, symbols: [String!], offset: Int = 0, limit: Int = 20): TokenExchangeRatesPage!
+  tokenHolders(address: String!, offset: Int = 0, limit: Int = 20): TokenHoldersPage!
+}
+
+type TokenPage {
+  items: [Token!]!
+  totalCount: Int!
+}
+
+type Token {
+  name: String
+  website: String
+  email: String
+  symbol: String
+  address: String
+  decimals: Int
+  balance: BigNumber
+  currentPrice: BigNumber
+}
+
+type TokenHolder {
+  address: String!
+  balance: BigNumber!
+}
+
+type TokenHoldersPage {
+  items: [TokenHolder!]!
+  totalCount: Int!
+}
+
+type TokenExchangeRatesPage {
+  items: [TokenExchangeRate!]!
+  totalCount: Int!
+}
+
+type TokenExchangeRate {
+  address: String
+  symbol: String
+  name: String
+  image: String
+  currentPrice: BigNumber
+  marketCap: BigNumber
+  marketCapRank: Int
+  totalVolume: BigNumber
+  high24h: BigNumber
+  low24h: BigNumber
+  priceChange24h: BigNumber
+  priceChangePercentage24h: BigNumber
+  marketCapChange24h: BigNumber
+  marketCapChangePercentage24h: BigNumber
+  circulatingSupply: BigNumber
+  totalSupply: BigNumber
+  lastUpdated: String
+  holdersCount: Int
+  contract: Contract
+}
+
+type CoinExchangeRate {
+  currency: String
+  price: Decimal
+  marketCap: Decimal
+  vol24h: Decimal
+  change24h: Decimal
+  lastUpdated: Decimal
+}
+
+type TokenMetadata {
+  name: String
+  website: String
+  email: String
+  symbol: String
+  address: String
+  decimals: Int
+  logo: String
+}
+
+enum ExchangeRatePair {
+  ethereum_usd
+}
+
+enum TokenExchangeRateFilter {
+  price_high, price_low, volume_high, volume_low, market_cap_high, market_cap_low, market_cap_rank
+}
