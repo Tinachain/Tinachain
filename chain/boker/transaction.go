@@ -186,6 +186,8 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 			return nil, errors.New("SubmitBokerTransaction txType Not Found")
 		}
 
+		log.Info("SubmitBokerTransaction NewTransaction", "Value", tx.Value, "tx.Hash", tx.Hash().String())
+
 		//对该笔交易签名来确保该笔交易的真实有效性
 		signed, err := wallet.SignTxWithPassphrase(account, t.ethereum.Password(), tx, chainID)
 		if err != nil {
@@ -194,7 +196,13 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 			return nil, err
 		}
 
-		log.Info("SubmitBokerTransaction SignTxWithPassphrase", "Gas", signed.Gas(), "GasPrice", signed.GasPrice(), "Value", signed.Value)
+		log.Info("SubmitBokerTransaction SignTxWithPassphrase",
+			"Gas", signed.Gas(),
+			"GasPrice", signed.GasPrice(),
+			"Value", signed.Value,
+			"Nonce", signed.Nonce(),
+			"To", signed.To(),
+			"tx.Hash", signed.Hash().String())
 
 		if _, err := ethapi.SubmitTransaction(ctx, t.ethereum.ApiBackend, signed); err != nil {
 

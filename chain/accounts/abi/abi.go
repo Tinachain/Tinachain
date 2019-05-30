@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Tinachain/Tina/chain/log"
+	_ "github.com/Tinachain/Tina/chain/log"
 )
 
 // The ABI holds information about a contract's context and available
@@ -98,7 +98,7 @@ func (abi ABI) Unpack(v interface{}, name string, output []byte) (err error) {
 		return nil
 	}*/
 
-	log.Info("Unpack", "name", name, "output", output)
+	//log.Info("Unpack", "name", name, "output", output)
 	if err = bytesAreProper(output); err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func (abi ABI) Unpack(v interface{}, name string, output []byte) (err error) {
 		return unpack.tupleUnpack(v, output)
 	}
 
-	log.Info("Unpack", "output", output)
+	//log.Info("Unpack", "output", output)
 	return unpack.singleUnpack(v, output)
 }
 

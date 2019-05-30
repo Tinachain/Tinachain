@@ -458,7 +458,7 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'setBaseContracts',
 			call: 'eth_setBaseContracts',
-			params: 3,
+			params: 3,		
 		}),
 		new web3._extend.Method({
 			name: 'cancelBaseContracts',

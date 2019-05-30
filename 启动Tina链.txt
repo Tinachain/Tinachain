@@ -26,12 +26,11 @@ nohup geth --nodiscover  \
 --rpcapi "db,eth,net,web3" \
 --networkid 96579 &
 
-eth.getTransaction("0x8c52e28e4819d28f215563635e7a4971cddd5ad48d21424383c832ff03b12800")
 
 第三步：进入geth控制台
 geth attach ipc:/projects/tina/node/geth.ipc
 
-第四步：创建账号0x2ca03b26e843566c17f6d31b54f71dad7bb31130
+第四步：创建账号(0x1b1436686c6f711957dd98ab8a99cb15c462fae7)
 personal.newAccount()
 
 

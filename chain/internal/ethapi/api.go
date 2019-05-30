@@ -624,66 +624,82 @@ func (s *PublicBlockChainAPI) GetNextTokenNoder(ctx context.Context) (common.Add
 }
 
 //Tina链新增函数处理，设置当前基础合约
-func (s *PublicBlockChainAPI) SetBaseContracts(ctx context.Context, address common.Address, contractType protocol.ContractType, abiJson string) (*types.Transaction, error) {
+func (s *PublicBlockChainAPI) SetBaseContracts(ctx context.Context, address common.Address, contractType protocol.ContractType, abiJson string) (common.Hash, error) {
+
+	log.Info("(s *PublicBlockChainAPI) SetBaseContracts")
 
 	//检测节点信息
 	if err := s.checkContract(); err != nil {
 		log.Error("SetBaseContracts checkContract", "err", err)
-		return nil, err
+		return common.Hash{}, err
 	}
 
 	//检测交易类型
 	if err := s.isExitsTxType(contractType, protocol.SystemContract, protocol.PersonalContract); err != nil {
 		log.Error("SetBaseContracts isExitsTxType", "err", err)
-		return nil, err
+		return common.Hash{}, err
 	}
 
-	//产生一个交易
-	return s.b.Boker().SubmitBokerTransaction(ctx,
+	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
 		protocol.Base,
 		protocol.SetSystemContract,
 		address,
 		[]byte(""),
 		[]byte(abiJson),
 		0)
+
+	log.Info("(s *PublicBlockChainAPI) SetBaseContracts",
+		"Nonce", tx.Nonce(),
+		"To", tx.To(),
+		"tx.Hash", tx.Hash().String())
+
+	if resultErr != nil {
+		return common.Hash{}, resultErr
+	} else {
+		return tx.Hash(), nil
+	}
 }
 
 //Tina链新增函数处理，取消一个基础合约
-func (s *PublicBlockChainAPI) CancelBaseContracts(ctx context.Context, address common.Address, contractType protocol.ContractType) (*types.Transaction, error) {
+func (s *PublicBlockChainAPI) CancelBaseContracts(ctx context.Context, address common.Address, contractType protocol.ContractType) (common.Hash, error) {
 
 	log.Info("****CancelBaseContracts****", "address", address.String(), "contractType", contractType)
 
 	//检测节点信息
 	if err := s.checkContract(); err != nil {
 		log.Error("CancelBaseContracts checkContract", "err", err)
-		return nil, err
+		return common.Hash{}, err
 	}
 
 	//检测交易类型
 	if err := s.isExitsTxType(contractType, protocol.SystemContract, protocol.PersonalContract); err != nil {
 		log.Error("CancelBaseContracts isExitsTxType", "err", err)
-		return nil, err
+		return common.Hash{}, err
 	}
 
-	//产生一个交易
-	return s.b.Boker().SubmitBokerTransaction(ctx,
+	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
 		protocol.Base,
 		protocol.CancelSystemContract,
 		address,
 		[]byte(""),
 		[]byte(""),
 		0)
+	if resultErr != nil {
+		return common.Hash{}, resultErr
+	} else {
+		return tx.Hash(), nil
+	}
 }
 
 //Tina链新增函数处理，设置文字到交易的扩展字段中
-func (s *PublicBlockChainAPI) SetWord(ctx context.Context, word string) (*types.Transaction, error) {
+func (s *PublicBlockChainAPI) SetWord(ctx context.Context, word string) (common.Hash, error) {
 
-	log.Info("SetWord", "word", word)
+	log.Info("(s *PublicBlockChainAPI) SetWord", "word", word)
 	var key string = ""
 	//检测保存文字的大小是否越界
 	if len(word) > int(protocol.MaxWordSize) {
 
-		return nil, errors.New("Setword More Than MaxWordSize(1MB)")
+		return common.Hash{}, errors.New("Setword More Than MaxWordSize(1MB)")
 	}
 
 	if key != "" {
@@ -692,11 +708,10 @@ func (s *PublicBlockChainAPI) SetWord(ctx context.Context, word string) (*types.
 		if err != nil {
 
 			log.Info("SetWord", "err", err)
-
-			return nil, errors.New("Setword Encoder Failed")
+			return common.Hash{}, errors.New("Setword Encoder Failed")
 		}
 
-		return s.b.Boker().SubmitBokerTransaction(ctx,
+		tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
 			protocol.Extra,
 			protocol.Word,
 			common.Address{},
@@ -704,14 +719,26 @@ func (s *PublicBlockChainAPI) SetWord(ctx context.Context, word string) (*types.
 			buffer,
 			1)
 
+		if resultErr != nil {
+			return common.Hash{}, resultErr
+		} else {
+			return tx.Hash(), nil
+		}
+
 	} else {
-		return s.b.Boker().SubmitBokerTransaction(ctx,
+		tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
 			protocol.Extra,
 			protocol.Word,
 			common.Address{},
 			[]byte(""),
 			[]byte(word),
 			0)
+
+		if resultErr != nil {
+			return common.Hash{}, resultErr
+		} else {
+			return tx.Hash(), nil
+		}
 	}
 }
 
@@ -740,7 +767,7 @@ func (s *PublicBlockChainAPI) pictureSize(path string) int64 {
 }
 
 //Tina链新增函数处理，设置图片到交易的扩展字段中
-func (s *PublicBlockChainAPI) SetPicture(ctx context.Context, picture string) (*types.Transaction, error) {
+func (s *PublicBlockChainAPI) SetPicture(ctx context.Context, picture string) (common.Hash, error) {
 
 	log.Info("SetPicture", "picture", picture)
 	var key string = ""
@@ -753,7 +780,7 @@ func (s *PublicBlockChainAPI) SetPicture(ctx context.Context, picture string) (*
 		//判断图片文件是否大于2MB
 		if fileSize > protocol.MaxPictureSize {
 
-			return nil, errors.New("SetPicture Picture More Than MaxPictureSize(1MB)")
+			return common.Hash{}, errors.New("SetPicture Picture More Than MaxPictureSize(1MB)")
 		}
 
 		//得到文件名称
@@ -763,17 +790,17 @@ func (s *PublicBlockChainAPI) SetPicture(ctx context.Context, picture string) (*
 		picBuffer, err := ioutil.ReadFile(picture)
 		if err != nil {
 
-			return nil, errors.New("SetPicture Function ReadFile Failed")
+			return common.Hash{}, errors.New("SetPicture Function ReadFile Failed")
 		}
 
 		if key != "" {
 
 			err, buffer := s.b.Boker().EncoderContext(picBuffer, []byte(key))
 			if err != nil {
-				return nil, errors.New("SetPicture Encoder Failed")
+				return common.Hash{}, errors.New("SetPicture Encoder Failed")
 			}
 
-			return s.b.Boker().SubmitBokerTransaction(ctx,
+			tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
 				protocol.Extra,
 				protocol.Word,
 				common.Address{},
@@ -781,19 +808,32 @@ func (s *PublicBlockChainAPI) SetPicture(ctx context.Context, picture string) (*
 				buffer,
 				1)
 
+			if resultErr != nil {
+				return common.Hash{}, resultErr
+			} else {
+				return tx.Hash(), nil
+			}
+
 		} else {
-			return s.b.Boker().SubmitBokerTransaction(ctx,
+
+			tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
 				protocol.Extra,
 				protocol.Picture,
 				common.Address{},
 				[]byte(name),
 				picBuffer,
 				0)
+
+			if resultErr != nil {
+				return common.Hash{}, resultErr
+			} else {
+				return tx.Hash(), nil
+			}
 		}
 
 	} else {
 
-		return nil, errors.New("Not Found Picture File")
+		return common.Hash{}, errors.New("Not Found Picture File")
 	}
 }
 
@@ -822,7 +862,7 @@ func (s *PublicBlockChainAPI) fileSize(path string) int64 {
 }
 
 //Tina链新增函数处理，设置文件分块到交易的扩展字段中
-func (s *PublicBlockChainAPI) SetFile(ctx context.Context, filePath string) (*types.Transaction, error) {
+func (s *PublicBlockChainAPI) SetFile(ctx context.Context, filePath string) (common.Hash, error) {
 
 	log.Info("SetFile", "File", filePath)
 
@@ -834,7 +874,7 @@ func (s *PublicBlockChainAPI) SetFile(ctx context.Context, filePath string) (*ty
 
 		if size > protocol.MaxExtraSize {
 
-			return nil, errors.New("SetFile File More Than MaxExtraSize(5MB)")
+			return common.Hash{}, errors.New("SetFile File More Than MaxExtraSize(5MB)")
 		}
 
 		//得到文件名称
@@ -845,36 +885,49 @@ func (s *PublicBlockChainAPI) SetFile(ctx context.Context, filePath string) (*ty
 		fileBuffer, err := ioutil.ReadFile(filePath)
 		if err != nil {
 
-			return nil, errors.New("SetFile Function ReadFile Failed")
+			return common.Hash{}, errors.New("SetFile Function ReadFile Failed")
 		}
 
 		if key != "" {
 
 			err, buffer := s.b.Boker().EncoderContext(fileBuffer, []byte(key))
 			if err != nil {
-				return nil, errors.New("SetFile Encoder Failed")
+				return common.Hash{}, errors.New("SetFile Encoder Failed")
 			}
 
-			return s.b.Boker().SubmitBokerTransaction(ctx,
+			tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
 				protocol.Extra,
 				protocol.Word,
 				common.Address{},
 				[]byte(""),
 				buffer,
 				1)
+
+			if resultErr != nil {
+				return common.Hash{}, resultErr
+			} else {
+				return tx.Hash(), nil
+			}
 		} else {
-			return s.b.Boker().SubmitBokerTransaction(ctx,
+
+			tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
 				protocol.Extra,
 				protocol.File,
 				common.Address{},
 				[]byte(name),
 				fileBuffer,
 				0)
+
+			if resultErr != nil {
+				return common.Hash{}, resultErr
+			} else {
+				return tx.Hash(), nil
+			}
 		}
 
 	} else {
 
-		return nil, errors.New("Not Found File")
+		return common.Hash{}, errors.New("Not Found File")
 	}
 }
 
@@ -1115,11 +1168,11 @@ func (s *PublicBlockChainAPI) checkContract() error {
 }
 
 //Tina链新增函数处理，添加一个验证者信息
-func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.Address, votes *big.Int) (*types.Transaction, error) {
+func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.Address, votes *big.Int) (common.Hash, error) {
 
 	block, err := s.b.BlockByNumber(ctx, 0)
 	if err != nil {
-		return nil, err
+		return common.Hash{}, err
 	}
 
 	if block != nil {
@@ -1127,12 +1180,12 @@ func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.A
 		//获取当前Coinbase
 		coinbase, err := s.b.Coinbase()
 		if err != nil {
-			return nil, err
+			return common.Hash{}, err
 		}
 
 		if s.b.Boker() == nil {
 			log.Error("AddValidator error boker is nil")
-			return nil, nil
+			return common.Hash{}, errors.New("AddValidator error boker is nil")
 		}
 
 		const (
@@ -1144,54 +1197,62 @@ func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.A
 		number := s.BlockNumber()
 		if number.Uint64() != genesisNumber {
 
-			return nil, errors.New("AddValidator Failed Current Number not is Zero")
+			return common.Hash{}, errors.New("AddValidator Failed Current Number not is Zero")
 		}
 
 		localCoinbase := s.b.GetLocalValidator()
 		if localCoinbase == coinbase {
 
-			//产生一个设置验证者的交易
-			return s.b.Boker().SubmitBokerTransaction(ctx,
+			tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
 				protocol.Base,
 				protocol.SetValidator,
 				address,
 				[]byte(""),
 				[]byte(""),
 				0)
+			if resultErr != nil {
+				return common.Hash{}, resultErr
+			} else {
+				return tx.Hash(), nil
+			}
 
 		} else {
 
 			txMajor, err := s.b.Boker().GetAccount(coinbase)
 			if err != nil {
-				return nil, err
+				return common.Hash{}, err
 			}
 
 			//判断此账号是否具有设置验证者权限
 			if txMajor != protocol.Base {
-				return nil, errors.New("CoinBase Not`s Add Validator")
+				return common.Hash{}, errors.New("CoinBase Not`s Add Validator")
 			}
 
 			//判断此账号是否已经是验证者
 			if block.DposContext.IsValidator(address) {
-				return nil, errors.New("Account has Validator")
+				return common.Hash{}, errors.New("Account has Validator")
 			}
 
 			//判断当前是否验证者已满
 			if block.DposContext.IsValidatorFull() {
-				return nil, errors.New("Validator has Full")
+				return common.Hash{}, errors.New("Validator has Full")
 			}
 
-			//产生一个设置验证者的交易
-			return s.b.Boker().SubmitBokerTransaction(ctx,
+			tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
 				protocol.Base,
 				protocol.SetValidator,
 				address,
 				[]byte(""),
 				[]byte(""),
 				0)
+			if resultErr != nil {
+				return common.Hash{}, resultErr
+			} else {
+				return tx.Hash(), nil
+			}
 		}
 	}
-	return nil, errors.New("failed AddValidator")
+	return common.Hash{}, errors.New("failed AddValidator")
 }
 
 //Tina链新增函数处理，添加一个验证者信息
@@ -1918,7 +1979,7 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 
 	//设置IP地址
 	tx.SetIp()
-	log.Info("SubmitTransaction SetIp", "Ip", string(tx.Ip()[:]))
+	log.Info("SubmitTransaction SetIp", "Ip", string(tx.Ip()[:]), "tx.Hash", tx.Hash().String())
 
 	//发送交易
 	if err := b.SendTx(ctx, tx); err != nil {

@@ -65,7 +65,7 @@ func NewBoundContract(address common.Address,
 
 func DeployContract(opts *TransactOpts, abi abi.ABI, bytecode []byte, backend ContractBackend, params ...interface{}) (common.Address, *types.Transaction, *BoundContract, error) {
 
-	log.Info("****DeployContract****")
+	log.Info("base.go DeployContract")
 
 	//赋值
 	c := NewBoundContract(common.Address{}, abi, backend, backend)
@@ -80,6 +80,24 @@ func DeployContract(opts *TransactOpts, abi abi.ABI, bytecode []byte, backend Co
 	}
 	c.address = crypto.CreateAddress(opts.From, tx.Nonce())
 	return c.address, tx, c, nil
+}
+
+func SetBaseContract(opts *TransactOpts, abiJson string, address common.Address, backend ContractBackend) (*types.Transaction, error) {
+
+	log.Info("base.go SetBaseContract")
+
+	var abi abi.ABI
+	abiErr := abi.UnmarshalJSON([]byte(abiJson))
+	if abiErr != nil {
+		return nil, errors.New("SetBaseContract UnmarshalJSON Failed")
+	}
+
+	c := NewBoundContract(address, abi, backend, backend)
+	tx, err := c.transact(opts, &address, []byte(""), []byte(abiJson), protocol.Base, protocol.SetSystemContract)
+	if err != nil {
+		return nil, err
+	}
+	return tx, err
 }
 
 //调用合约方法，并将params作为输入值和将输出设置为result
