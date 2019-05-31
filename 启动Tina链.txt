@@ -30,12 +30,12 @@ nohup geth --nodiscover  \
 第三步：进入geth控制台
 geth attach ipc:/projects/tina/node/geth.ipc
 
-第四步：创建账号(0x1b1436686c6f711957dd98ab8a99cb15c462fae7)
+第四步：创建账号(0x4c386449ddee1ca0eb0f71a2daa5543cedb9ac83)
 personal.newAccount()
 
 
 第五步：设置帐号解锁（这里使用假定账号、密码）
-personal.unlockAccount(eth.accounts[0], "88888888", 0)
+personal.unlockAccount(eth.accounts[0], "12345678", 0)
 
 第六步：设置自己为验证人
 miner.setLocalValidator()
@@ -55,7 +55,7 @@ eth.sendTransaction({from: eth.accounts[0], to: "1ceed12b103d9e76fea7de5410f0868
 
 
 新增指令
-eth.setWord("测试的刻字内容", "123")
+eth.setWord("测试的刻字内容")
 eth.setPicture("/projects/tina/1.jpg")
 
 eth.getPicture("0x26635445ae6e1f20bc2a7ed5be45c3a0b7e847e1c79167c9b1564fe77ef72094", "/projects/tina")
