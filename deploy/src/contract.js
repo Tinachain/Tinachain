@@ -1,0 +1,1 @@
+var Ware = new Object();

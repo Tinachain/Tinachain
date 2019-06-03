@@ -1598,6 +1598,7 @@ type RPCTransaction struct {
 	MinorNotes       string           `json:"minorNotes"`
 	BlockHash        common.Hash      `json:"blockHash"`
 	BlockNumber      *hexutil.Big     `json:"blockNumber"`
+	Time             string           `json:"timestamp"`
 	From             common.Address   `json:"from"`
 	Gas              *hexutil.Big     `json:"gas"`
 	GasPrice         *hexutil.Big     `json:"gasPrice"`
@@ -1640,6 +1641,8 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		R:          (*hexutil.Big)(r),
 		S:          (*hexutil.Big)(s),
 	}
+
+	result.Time = time.Unix(tx.Time().Int64(), 0).String()
 
 	switch result.Major {
 

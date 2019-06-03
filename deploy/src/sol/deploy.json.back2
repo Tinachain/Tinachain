@@ -1,0 +1,90 @@
+{
+    "deploy": [
+        {
+            "file": "BokerManager.sol",
+            "contracts": [
+                {
+                    "name": "BokerManager",
+                    "type": 1
+                }
+            ]
+        },
+		{
+            "file": "BokerFinance.sol",
+            "contracts": [
+				{
+                    "name": "BokerFinance",
+                    "type": 1
+                }
+            ]
+        },
+        {
+            "file": "BokerLog.sol",
+            "contracts": [
+				{
+                    "name": "BokerLog",
+                    "type": 1
+                }
+            ]
+        },
+        {
+            "file": "BokerLogData.sol",
+            "contracts": [
+				{
+                    "name": "BokerLog",
+                    "type": 1
+                }
+            ]
+        },
+        {
+            "file": "BokerNode.sol",
+            "contracts": [
+				{
+                    "name": "BokerNode",
+                    "type": 1
+                }
+            ]
+        },
+        {
+            "file": "BokerNodeData.sol",
+            "contracts": [
+				{
+                    "name": "BokerNodeData",
+                    "type": 1
+                }
+            ]
+        },
+		{
+            "file": "chain_all.sol",
+            "contracts": [
+				{
+                    "name": "RecipientSuccess"
+                },
+				{
+                    "name": "CWAREToken"
+                },
+				{
+                    "name": "Chainware"
+                }
+            ]
+        },
+		{
+            "file": "BokerInterface.sol",
+            "contracts": [
+				{
+                    "name": "BokerInterface",
+                    "type": 1
+                }
+            ]
+        },
+		{
+            "file": "BokerInterfaceBase.sol",
+            "contracts": [
+				{
+                    "name": "BokerInterfaceBase",
+                    "type": 1
+                }
+            ]
+        }
+    ]
+}
