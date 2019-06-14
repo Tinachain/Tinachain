@@ -34,6 +34,7 @@ Tinachain-tx.js 目的是为了让用户非常方便的在客户端（钱包端）发起交易，并在本地进
 * cd /usr/local/nginx/conf
 * vi nginx.conf
 
+
     server {
         listen      9001 ;
         location / {
