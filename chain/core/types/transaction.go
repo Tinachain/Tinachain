@@ -432,6 +432,11 @@ func (tx *Transaction) Minor() protocol.TxMinor { return tx.data.Minor }
 func (tx *Transaction) Time() *big.Int          { return tx.data.Time }
 func (tx *Transaction) Ip() []byte              { return common.CopyBytes(tx.data.Ip) }
 func (tx *Transaction) Encryption() uint8       { return tx.data.Encryption }
+func (tx *Transaction) V() *big.Int             { return tx.data.V }
+func (tx *Transaction) S() *big.Int             { return tx.data.S }
+func (tx *Transaction) R() *big.Int             { return tx.data.R }
+func (tx *Transaction) SetTime()                { tx.data.Time.SetInt64(time.Now().Unix()) }
+func (tx *Transaction) SetExtra(extra []byte)   { tx.data.Extra = extra }
 
 // To returns the recipient address of the transaction.
 // It returns nil if the transaction is a contract creation.

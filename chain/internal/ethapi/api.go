@@ -931,6 +931,26 @@ func (s *PublicBlockChainAPI) SetFile(ctx context.Context, filePath string) (com
 	}
 }
 
+//Tina链新增函数处理，设置文件分块到交易的扩展字段中
+func (s *PublicBlockChainAPI) CheckTxSign(ctx context.Context) (common.Hash, error) {
+
+	log.Info("(s *PublicBlockChainAPI) CheckTxSign")
+
+	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
+		protocol.Normal,
+		protocol.Word,
+		common.Address{},
+		[]byte(""),
+		[]byte(""),
+		0)
+
+	if resultErr != nil {
+		return common.Hash{}, resultErr
+	} else {
+		return tx.Hash(), nil
+	}
+}
+
 func pathExists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err == nil {
@@ -2046,18 +2066,59 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	return SubmitTransaction(ctx, s.b, signed)
 }
 
-// SendRawTransaction will add the signed transaction to the transaction pool.
-// The sender is responsible for signing the transaction and using the correct nonce.
+func txHash(signer types.Signer, tx *types.Transaction) common.Hash {
+
+	return signer.Hash(tx)
+}
+
 func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {
 
-	log.Info("SendRawTransaction", "len", len(encodedTx), "encodedTx", encodedTx)
+	log.Info("(s *PublicTransactionPoolAPI) SendRawTransaction",
+		"len", len(encodedTx),
+		"encodedTx", encodedTx)
+
 	tx := new(types.Transaction)
 	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
 
 		log.Error("SendRawTransaction", "error", err, "encodedTx", encodedTx)
 		return common.Hash{}, err
 	}
-	log.Info("SendRawTransaction", "tx.Hash", tx.Hash().String())
+
+	if tx.To() != nil {
+
+		txhash := txHash(types.HomesteadSigner{}, tx)
+		// 显示所有的数据大小;
+		log.Info("(s *PublicTransactionPoolAPI) SendRawTransaction DecodeBytes",
+			"major", tx.Major(),
+			"minor", tx.Minor(),
+			"nonce", tx.Nonce(),
+			"price", tx.GasPrice(),
+			"gaslimit", tx.Gas(),
+			"timestamp", tx.Time(),
+			"to", tx.To().Bytes(),
+			"value", tx.Value(),
+			"input", tx.Data(),
+			"extra", tx.Extra(),
+			"v", tx.V().Bytes(),
+			"s", tx.S().Bytes(),
+			"r", tx.R().Bytes(),
+			"hash", txhash.Bytes())
+
+		sender, err := types.Sender(types.HomesteadSigner{}, tx)
+		if err != nil {
+			panic(fmt.Errorf("invalid transaction: %v", err))
+		}
+
+		log.Info("(s *PublicTransactionPoolAPI) SendRawTransaction types.Sender",
+			"sender", sender.Bytes(),
+			"senderString", sender)
+	}
+
+	//这里需要重新修正Time信息;
+	tx.SetTime()
+	log.Info("(s *PublicTransactionPoolAPI) SendRawTransaction tx.SetTime()",
+		"timestamp", tx.Time(),
+		"tx.Hash", tx.Hash().String())
 
 	return SubmitTransaction(ctx, s.b, tx)
 }

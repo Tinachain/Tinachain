@@ -506,6 +506,11 @@ web3._extend({
 			call: 'eth_getFile',
 			params: 2,
 		}),
+		new web3._extend.Method({
+			name: 'checkTxSign',
+			call: 'eth_checkTxSign',
+			params: 0,
+		}),
 	],
 	properties: [
 		new web3._extend.Property({

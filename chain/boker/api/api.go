@@ -34,10 +34,14 @@ type Api interface {
 
 	GetMethodName(txMinor protocol.TxMinor) (string, string, error) //根据交易类型得到方法名称（只适用于基础合约）
 	GetContract(address common.Address) (protocol.TxMajor, error)   //判断合约属性
-	GetTeamAccount() common.Address                                 //得到团队账号
 	EncoderContext(context []byte, key []byte) (error, []byte)      //对内容进行编码
 	DecoderContext(context []byte, key []byte) (error, []byte)      //对内容进行解码
 
+	SetOwner(txAddress, ownerAddress common.Address) error           //设置所属者
+	SetCommunity(txAddress, communityAddress common.Address) error   //设置社区账号
+	SetFoundation(txAddress, foundationAddress common.Address) error //设置基金账号
+	SetTeam(txAddress, teamAddress common.Address) error             //设置团队账号
+	GetTeam() common.Address                                         //得到团队账号
 }
 
 type SortableAddress struct {

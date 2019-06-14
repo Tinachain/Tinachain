@@ -2,6 +2,8 @@
 package boker
 
 import (
+	"errors"
+
 	"github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	_ "github.com/Tinachain/Tina/chain/log"
@@ -11,10 +13,10 @@ import (
 const SystemAddress = "0xd7fd311c8f97349670963d87f37a68794dfa80ff"
 
 var (
-	SystemAccount     = common.HexToAddress(SystemAddress) //系统账户
-	CommunityAccount  = common.HexToAddress(SystemAddress) //社区账户
-	FoundationAccount = common.HexToAddress(SystemAddress) //基金账户
-	TeamAccount       = common.HexToAddress(SystemAddress) //团队账户
+	SystemAccount     = common.HexToAddress("") //系统账户
+	CommunityAccount  = common.HexToAddress("") //社区账户
+	FoundationAccount = common.HexToAddress("") //基金账户
+	TeamAccount       = common.HexToAddress("") //团队账户
 )
 
 //Tina链的账号管理
@@ -22,6 +24,7 @@ type AcccountLevel struct {
 	level protocol.TxMajor
 }
 type BokerAccount struct {
+	ownerAccount      common.Address
 	systemAccount     common.Address
 	communityAccount  common.Address
 	foundationAccount common.Address
@@ -49,7 +52,67 @@ func (a *BokerAccount) GetAccount(address common.Address) (protocol.TxMajor, err
 	}
 }
 
-func (a *BokerAccount) GetTeamAccount() common.Address {
+func (a *BokerAccount) GetTeam() common.Address {
 
 	return a.teamAccount
+}
+
+func (a *BokerAccount) SetOwner(txAddress, ownerAddress common.Address) error {
+
+	if a.ownerAccount == common.HexToAddress("") {
+		a.ownerAccount = ownerAddress
+	} else {
+		if txAddress != a.ownerAccount {
+			return errors.New("")
+		} else {
+			a.ownerAccount = ownerAddress
+			return nil
+		}
+	}
+	return nil
+}
+
+func (a *BokerAccount) SetCommunity(txAddress, communityAddress common.Address) error {
+
+	if a.ownerAccount == common.HexToAddress("") {
+		return errors.New("")
+	} else {
+		if txAddress != a.ownerAccount {
+			return errors.New("")
+		} else {
+			a.communityAccount = communityAddress
+			return nil
+		}
+	}
+	return nil
+
+}
+
+func (a *BokerAccount) SetFoundation(txAddress, foundationAddress common.Address) error {
+
+	if a.ownerAccount == common.HexToAddress("") {
+		return errors.New("")
+	} else {
+		if txAddress != a.ownerAccount {
+			return errors.New("")
+		} else {
+			a.foundationAccount = foundationAddress
+			return nil
+		}
+	}
+	return nil
+}
+
+func (a *BokerAccount) SetTeam(txAddress, teamAddress common.Address) error {
+	if a.ownerAccount == common.HexToAddress("") {
+		return errors.New("")
+	} else {
+		if txAddress != a.ownerAccount {
+			return errors.New("")
+		} else {
+			a.teamAccount = teamAddress
+			return nil
+		}
+	}
+	return nil
 }

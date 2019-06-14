@@ -365,7 +365,7 @@ func (st *StateTransition) NormalTransitionDb(boker bokerapi.Api) (ret []byte, r
 
 	//得到团队账号,将Gas费用转给团队账号下
 	if boker != nil {
-		team := boker.GetTeamAccount()
+		team := boker.GetTeam()
 		st.state.AddBalance(team, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
 	} else {
 		st.state.AddBalance(common.BytesToAddress([]byte("0xd7fd311c8f97349670963d87f37a68794dfa80ff")), new(big.Int).Mul(st.gasUsed(), st.gasPrice))
@@ -469,7 +469,7 @@ func (st *StateTransition) ExtraTransitionDb(boker bokerapi.Api) (ret []byte, re
 
 	//得到团队账号,将Gas费用转给团队账号下
 	if boker != nil {
-		team := boker.GetTeamAccount()
+		team := boker.GetTeam()
 		st.state.AddBalance(team, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
 	} else {
 		st.state.AddBalance(common.BytesToAddress([]byte("0xd7fd311c8f97349670963d87f37a68794dfa80ff")), new(big.Int).Mul(st.gasUsed(), st.gasPrice))

@@ -248,9 +248,9 @@ func (pool *TxPool) loop() {
 		case ev := <-pool.chainHeadCh:
 			if ev.Block != nil {
 				pool.mu.Lock()
-				if pool.chainconfig.IsHomestead(ev.Block.Number()) {
-					pool.homestead = true
-				}
+				//if pool.chainconfig.IsHomestead(ev.Block.Number()) {
+				pool.homestead = true
+				//}
 				pool.reset(head.Header(), ev.Block.Header())
 				head = ev.Block
 
@@ -529,7 +529,7 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 //普通交易检验
 func (pool *TxPool) normalValidateTx(tx *types.Transaction, local bool) error {
 
-	log.Info("****normalValidateTx****", "tx Gas", tx.Gas(), "pool.currentMaxGas", pool.currentMaxGas, "tx Nonce", tx.Nonce())
+	log.Info("(pool *TxPool) normalValidateTx", "tx Gas", tx.Gas(), "pool.currentMaxGas", pool.currentMaxGas, "tx Nonce", tx.Nonce())
 
 	//如果当前的最大Gas数量小于交易所标记的Gas数量，则放回GasLimit错误(这里需要添加针对基础合约类型的判断，因为基础合约采用的Gas为最大值)
 	if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
@@ -577,7 +577,10 @@ func (pool *TxPool) normalValidateTx(tx *types.Transaction, local bool) error {
 //扩展交易检测
 func (pool *TxPool) extraValidateTx(tx *types.Transaction, local bool) error {
 
-	log.Info("****extraValidateTx****", "tx Gas", tx.Gas(), "pool.currentMaxGas", pool.currentMaxGas, "tx Nonce", tx.Nonce())
+	log.Info("(pool *TxPool) extraValidateTx",
+		"tx Gas", tx.Gas(),
+		"pool.currentMaxGas", pool.currentMaxGas,
+		"tx Nonce", tx.Nonce())
 
 	//如果当前的最大Gas数量小于交易所标记的Gas数量，则放回GasLimit错误(这里需要添加针对基础合约类型的判断，因为基础合约采用的Gas为最大值)
 	if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
@@ -589,7 +592,7 @@ func (pool *TxPool) extraValidateTx(tx *types.Transaction, local bool) error {
 	if err != nil {
 		return ErrInvalidSender
 	}
-	log.Info("extraValidateTx", "from", from)
+	log.Info("(pool *TxPool) extraValidateTx", "from", from)
 
 	// Drop non-local transactions under our own minimal accepted gas price
 	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
@@ -603,9 +606,8 @@ func (pool *TxPool) extraValidateTx(tx *types.Transaction, local bool) error {
 	if pool.currentState.GetNonce(from) > tx.Nonce() {
 		return ErrNonceTooLow
 	}
-	log.Info("extraValidateTx", "from current Nonce", pool.currentState.GetNonce(from), "tx Nonce", tx.Nonce())
+	log.Info("(pool *TxPool) extraValidateTx", "from current Nonce", pool.currentState.GetNonce(from), "tx Nonce", tx.Nonce())
 
-	//cost == Value + GasPrice * GasLimit
 	//判断当前from用户的钱是否大于本次交易所花成本的最大值，如果小于则返回 ErrInsufficientFunds
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		log.Error("extraValidateTx", "balance", pool.currentState.GetBalance(from), "cost", tx.Cost())
@@ -625,7 +627,10 @@ func (pool *TxPool) extraValidateTx(tx *types.Transaction, local bool) error {
 //基础交易检测
 func (pool *TxPool) baseValidateTx(tx *types.Transaction, local bool) error {
 
-	log.Info("****baseValidateTx****", "tx Gas", tx.Gas(), "pool.currentMaxGas", pool.currentMaxGas, "tx Nonce", tx.Nonce())
+	log.Info("(pool *TxPool) baseValidateTx",
+		"tx Gas", tx.Gas(),
+		"pool.currentMaxGas", pool.currentMaxGas,
+		"tx Nonce", tx.Nonce())
 
 	//判断交易是否已经经过正确的签名
 	from, err := types.Sender(types.HomesteadSigner{}, tx)
@@ -642,6 +647,11 @@ func (pool *TxPool) baseValidateTx(tx *types.Transaction, local bool) error {
 
 //对交易进行基本信息的验证
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
+
+	log.Info("(pool *TxPool) validateTx",
+		"tx Gas", tx.Gas(),
+		"tx Nonce", tx.Nonce(),
+		"local", local)
 
 	if protocol.Normal == tx.Major() || protocol.Base == tx.Major() {
 
@@ -1049,6 +1059,12 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			delete(pool.all, hash)
 			pool.priced.Removed()
 			queuedNofundsCounter.Inc(1)
+		}
+
+		// 显示一下目前此用户所有的交易信息；
+		log.Info("(pool *TxPool) Check User Tx", "addr", addr, "current nonce", pool.pendingState.GetNonce(addr))
+		for _, tx := range list.Check(pool.pendingState.GetNonce(addr)) {
+			log.Info("(pool *TxPool) User Tx", "hash", tx.Hash(), "nonce", tx.Nonce())
 		}
 
 		//得到所有的可以执行的交易，并promoteTx加入pending

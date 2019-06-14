@@ -488,14 +488,6 @@ func (ec *Client) GetNextTokenNoderAt(ctx context.Context) ([]byte, error) {
 	return result, err
 }
 
-//设置基础合约
-/*func (ec *Client) SetBaseContracts(ctx context.Context, address common.Address, contractType uint64, abiJson string) (*types.Transaction, error) {
-
-	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_setBaseContracts", address, contractType, abiJson)
-	return err
-}*/
-
 func (ec *Client) SetBaseContracts(ctx context.Context, address common.Address, contractType uint64, abiJson string) (common.Hash, error) {
 
 	log.Info("(ec *Client) SetBaseContracts", "address", address.String())
@@ -509,14 +501,6 @@ func (ec *Client) SetBaseContracts(ctx context.Context, address common.Address, 
 	return txHash, nil
 }
 
-//取消基础合约
-/*func (ec *Client) CancelBaseContracts(ctx context.Context, address common.Address, contractType uint64) (*types.Transaction, error) {
-
-	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_cancelBaseContracts", address, contractType)
-	return err
-}*/
-
 func (ec *Client) CancelBaseContracts(ctx context.Context, address common.Address, contractType uint64) (common.Hash, error) {
 
 	log.Info("(ec *Client) CancelBaseContracts", "address", address.String())
@@ -529,13 +513,6 @@ func (ec *Client) CancelBaseContracts(ctx context.Context, address common.Addres
 	return txHash, nil
 }
 
-//添加唯一验证人
-/*func (ec *Client) AddValidator(ctx context.Context, address common.Address, votes uint64) (*types.Transaction, error) {
-
-	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_addValidator", address, votes)
-	return err
-}*/
 func (ec *Client) AddValidator(ctx context.Context, address common.Address, votes uint64) (common.Hash, error) {
 
 	log.Info("(ec *Client) AddValidator", "address", address.String(), "votes", votes)
@@ -556,15 +533,6 @@ func (ec *Client) DecodeAbi(ctx context.Context, abiJson string, method string, 
 	return err
 }
 
-//文字保存
-/*func (ec *Client) SetWord(ctx context.Context, word string) (*types.Transaction, error) {
-
-	log.Info("SetWord", "len", len(word), "word", word)
-
-	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_setWord", word)
-	return err
-}*/
 func (ec *Client) SetWord(ctx context.Context, word string) (common.Hash, error) {
 
 	log.Info("(ec *Client) SetWord", "len", len(word), "word", word)
@@ -577,16 +545,6 @@ func (ec *Client) SetWord(ctx context.Context, word string) (common.Hash, error)
 	return txHash, nil
 }
 
-//图片保存
-/*func (ec *Client) SetPicture(ctx context.Context, picture string) (error) {
-
-	log.Info("SetPicture", "picture", picture)
-
-	//发起设置图片交易
-	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_setPicture", picture)
-	return err
-}*/
 func (ec *Client) SetPicture(ctx context.Context, picture string) (common.Hash, error) {
 
 	log.Info("(ec *Client) SetPicture", "picture", picture)
@@ -599,22 +557,24 @@ func (ec *Client) SetPicture(ctx context.Context, picture string) (common.Hash, 
 	return txHash, nil
 }
 
-//图片保存
-/*func (ec *Client) SetFile(ctx context.Context, file string) (error) {
-
-	log.Info("SetFile", "file", file)
-
-	//发起设置图片交易
-	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_setFile", file)
-	return err
-}*/
 func (ec *Client) SetFile(ctx context.Context, file string) (common.Hash, error) {
 
 	log.Info("(ec *Client) SetFile", "file", file)
 
 	var txHash common.Hash
 	err := ec.c.CallContext(ctx, &txHash, "eth_setFile", file)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return txHash, nil
+}
+
+func (ec *Client) CheckTxSign(ctx context.Context) (common.Hash, error) {
+
+	log.Info("(ec *Client) CheckTxSign")
+
+	var txHash common.Hash
+	err := ec.c.CallContext(ctx, &txHash, "eth_checkTxSign")
 	if err != nil {
 		return common.Hash{}, err
 	}

@@ -231,7 +231,27 @@ func (boker *BokerBackend) GetMethodName(txMinor protocol.TxMinor) (string, stri
 	}
 }
 
-func (boker *BokerBackend) GetTeamAccount() common.Address {
+func (boker *BokerBackend) GetTeam() common.Address {
 
-	return boker.accounts.GetTeamAccount()
+	return boker.accounts.GetTeam()
+}
+
+func (boker *BokerBackend) SetOwner(txAddress, ownerAddress common.Address) error {
+
+	return boker.accounts.SetOwner(txAddress, ownerAddress)
+}
+
+func (boker *BokerBackend) SetCommunity(txAddress, communityAddress common.Address) error {
+
+	return boker.accounts.SetCommunity(txAddress, communityAddress)
+}
+
+func (boker *BokerBackend) SetFoundation(txAddress, foundationAddress common.Address) error {
+
+	return boker.accounts.SetFoundation(txAddress, foundationAddress)
+}
+
+func (boker *BokerBackend) SetTeam(txAddress, teamAddress common.Address) error {
+
+	return boker.accounts.SetTeam(txAddress, teamAddress)
 }

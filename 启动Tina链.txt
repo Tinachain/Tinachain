@@ -6,7 +6,6 @@
 
 vi /etc/profile
 PATH=$PATH:/projects/tina
-
 source /etc/profile
 
 第一步：初始化创世文件

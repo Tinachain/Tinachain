@@ -24,6 +24,7 @@ import (
 
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/crypto"
+	"github.com/Tinachain/Tina/chain/log"
 	"github.com/Tinachain/Tina/chain/params"
 )
 
@@ -58,6 +59,8 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 
 	//获取该交易的RLP编码哈希值
 	h := s.Hash(tx)
+
+	log.Info("transaction_signing.go SignTx", "h", h.Str())
 
 	//使用私钥对该值进行ECDSA签名处理
 	sig, err := crypto.Sign(h[:], prv)
@@ -204,19 +207,30 @@ func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *
 	r = new(big.Int).SetBytes(sig[:32])
 	s = new(big.Int).SetBytes(sig[32:64])
 	v = new(big.Int).SetBytes([]byte{sig[64] + 27})
+
+	log.Info("(fs FrontierSigner) SignatureValues",
+		"r", r.Int64(),
+		"s", s.Int64(),
+		"v", v.Int64())
+
 	return r, s, v, nil
 }
 
-// Hash returns the hash to be signed by the sender.
-// It does not uniquely identify the transaction.
 func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
+		tx.data.Major,
+		tx.data.Minor,
 		tx.data.AccountNonce,
 		tx.data.Price,
 		tx.data.GasLimit,
+		tx.data.Time,
 		tx.data.Recipient,
 		tx.data.Amount,
 		tx.data.Payload,
+		tx.data.Name,
+		tx.data.Encryption,
+		tx.data.Extra,
+		tx.data.Ip,
 	})
 }
 
