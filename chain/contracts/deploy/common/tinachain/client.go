@@ -9,12 +9,12 @@ import (
 
 	"github.com/Tinachain/Tina/chain/accounts/abi"
 	"github.com/Tinachain/Tina/chain/accounts/abi/bind"
+	"github.com/Tinachain/Tina/chain/common"
 	ethcommon "github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/common/compiler"
+	"github.com/Tinachain/Tina/chain/contracts/boker_interface"
 	"github.com/Tinachain/Tina/chain/core/types"
 	"github.com/Tinachain/Tina/chain/ethclient"
-
-	"github.com/Tinachain/Tina/chain/contracts/deploy/solidity/src/go/boker_contract"
 )
 
 type Client struct {
@@ -66,6 +66,11 @@ func (client *Client) ContractCompile(solFile string) (contracts map[string]*Con
 	return contracts, nil
 }
 
+func txHash(signer types.Signer, tx *types.Transaction) common.Hash {
+
+	return signer.Hash(tx)
+}
+
 func (client *Client) ContractDeploy(contract *ContractInfo, params ...interface{}) error {
 	var parsed abi.ABI
 	var err error
@@ -76,14 +81,15 @@ func (client *Client) ContractDeploy(contract *ContractInfo, params ...interface
 	if err != nil {
 		return fmt.Errorf("abi.JSON err=%s abi=%s", err.Error(), contract.Abi)
 	}
+
 	address, tx, _, err = bind.DeployContract(client.Opts, parsed, ethcommon.FromHex(contract.Bin), client.EthClient, params...)
 	if err != nil {
 		return fmt.Errorf("bind.DeployContract err=%s abi=%s bin=%s", err.Error(), contract.Abi, contract.Bin)
 	}
-	fmt.Println("ContractDeploy tx=", tx.Hash().String(), "nounce=", tx.Nonce())
+
 	_, err = bind.WaitDeployed(context.Background(), client.EthClient, tx)
 	if err != nil {
-		return fmt.Errorf("bind.WaitMined err=%v", err)
+		return fmt.Errorf("bind.WaitDeployed err=%v", err)
 	}
 	contract.Address = address
 

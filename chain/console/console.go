@@ -250,7 +250,23 @@ func (c *Console) AutoCompleteInput(line string, pos int) (string, []string, str
 //欢迎词
 func (c *Console) Welcome() {
 
-	fmt.Fprintf(c.printer, "Welcome to the Tinachain Geth JavaScript console!\n\n")
+	welcome := `
+
+*************************************************************************
+*           Welcome to the Tinachain Geth JavaScript console            *
+*    ______    _                            __              _           *
+*   /_  __/   (_)   ____   ____ _  _____   / /_   ____ _   (_)   ____   *
+*    / /     / /   / __ \ / __  / / ___/  / __ \ / __  /  / /   / __ \  *
+*   / /     / /   / / / // /_/ / / /__   / / / // /_/ /  / /   / / / /  *
+*  /_/     /_/   /_/ /_/ \__,_/  \___/  /_/ /_/ \__,_/  /_/   /_/ /_/   *
+*                                                                       *
+*                                                                       *
+*************************************************************************
+
+`
+
+	fmt.Fprintf(c.printer, welcome)
+
 	c.jsre.Run(`
 		console.log("instance: " + web3.version.node);
 		console.log("coinbase: " + eth.coinbase);

@@ -28,6 +28,10 @@ type BaseContractConfig struct {
 	Bases []BaseContract `json:"bases,omitempty"`
 }
 
+type BlackConfig struct {
+	Blacks []common.Address `json:"blacks,omitempty"`
+}
+
 //Tina链用来分配通证的账号和私钥信息
 type ProducerConfig struct {
 	Coinbase common.Address `json:"coinbase"` //挖矿的Coinbase
@@ -35,6 +39,7 @@ type ProducerConfig struct {
 }
 
 type BokerConfig struct {
+	BlackList *BlackConfig        `json:"blacklist,omitempty"` //黑名单的配置信息
 	Dpos      *params.DposConfig  `json:"dpos,omitempty"`      //Dpos的配置信息
 	Contracts *BaseContractConfig `json:"contracts,omitempty"` //基础合约配置信息
 	Producer  *ProducerConfig     `json:"producer,omitempty"`  //出块节点使用的信息
@@ -46,6 +51,8 @@ type BokerBackend struct {
 	accounts     *BokerAccount
 	contracts    *BokerContracts
 	transactions *BokerTransaction
+	stock        *TinaStock
+	blacks       map[common.Address]bool
 }
 
 func New() *BokerBackend {
@@ -56,6 +63,7 @@ func New() *BokerBackend {
 	boker.accounts = nil
 	boker.contracts = nil
 	boker.transactions = nil
+	boker.blacks = make(map[common.Address]bool)
 	boker.loadConfig()
 	return boker
 }
@@ -96,6 +104,7 @@ func (boker *BokerBackend) loadConfig() error {
 		boker.config.Contracts.Bases = make([]BaseContract, 0)
 
 		boker.config.Producer = new(ProducerConfig)
+		boker.config.BlackList = new(BlackConfig)
 
 		//读取文件
 		buffer, err := ioutil.ReadFile(JsonFileName)
@@ -123,6 +132,12 @@ func (boker *BokerBackend) loadConfig() error {
 			boker.config.Contracts.Bases = append(boker.config.Contracts.Bases, v)
 		}
 		log.Info("Load Bokerchain Base Contracts", "Size", len(boker.config.Contracts.Bases))
+
+		boker.config.BlackList.Blacks = make([]common.Address, 0)
+		for _, v := range config.BlackList.Blacks {
+			boker.config.BlackList.Blacks = append(boker.config.BlackList.Blacks, v)
+		}
+		log.Info("(boker *BokerBackend) Blacks", "Size", len(boker.config.BlackList.Blacks))
 
 		boker.config.Producer.Coinbase = config.Producer.Coinbase
 		boker.config.Producer.Password = config.Producer.Password
@@ -166,6 +181,33 @@ func (boker *BokerBackend) IsLocalValidator(address common.Address) bool {
 	} else {
 		return false
 	}
+}
+
+func (boker *BokerBackend) GetBlacks() []common.Address {
+
+	var blacks []common.Address
+	for k, _ := range boker.blacks {
+		blacks = append(blacks, k)
+	}
+	return blacks
+}
+
+func (boker *BokerBackend) SetBlacks(address []common.Address) error {
+
+	boker.blacks = nil
+	boker.blacks = make(map[common.Address]bool)
+	for _, v := range address {
+		boker.blacks[v] = true
+	}
+	return nil
+}
+
+func (boker *BokerBackend) CheckBlackAddress(address common.Address) bool {
+
+	if _, ok := boker.blacks[address]; ok {
+		return true
+	}
+	return false
 }
 
 //SubmitBokerTransaction 设置一个Tina链交易
@@ -231,27 +273,22 @@ func (boker *BokerBackend) GetMethodName(txMinor protocol.TxMinor) (string, stri
 	}
 }
 
-func (boker *BokerBackend) GetTeam() common.Address {
+func (boker *BokerBackend) GetGasPool() uint64 {
 
-	return boker.accounts.GetTeam()
+	return boker.stock.GetGasPool()
 }
 
-func (boker *BokerBackend) SetOwner(txAddress, ownerAddress common.Address) error {
+func (boker *BokerBackend) AddGasPool(gas uint64) uint64 {
 
-	return boker.accounts.SetOwner(txAddress, ownerAddress)
+	return boker.stock.AddGasPool(gas)
 }
 
-func (boker *BokerBackend) SetCommunity(txAddress, communityAddress common.Address) error {
+func (boker *BokerBackend) GetOwner() common.Address {
 
-	return boker.accounts.SetCommunity(txAddress, communityAddress)
+	return boker.stock.GetOwner()
 }
 
-func (boker *BokerBackend) SetFoundation(txAddress, foundationAddress common.Address) error {
+func (boker *BokerBackend) SetOwner(operation common.Address, address common.Address) error {
 
-	return boker.accounts.SetFoundation(txAddress, foundationAddress)
-}
-
-func (boker *BokerBackend) SetTeam(txAddress, teamAddress common.Address) error {
-
-	return boker.accounts.SetTeam(txAddress, teamAddress)
+	return boker.stock.SetOwner(operation, address)
 }

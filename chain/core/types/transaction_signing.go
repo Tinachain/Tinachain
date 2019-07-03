@@ -216,7 +216,7 @@ func (fs FrontierSigner) SignatureValues(tx *Transaction, sig []byte) (r, s, v *
 	return r, s, v, nil
 }
 
-func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
+/*func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 	return rlpHash([]interface{}{
 		tx.data.Major,
 		tx.data.Minor,
@@ -231,6 +231,22 @@ func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
 		tx.data.Encryption,
 		tx.data.Extra,
 		tx.data.Ip,
+	})
+}*/
+
+func (fs FrontierSigner) Hash(tx *Transaction) common.Hash {
+	return rlpHash([]interface{}{
+		tx.data.Major,
+		tx.data.Minor,
+		tx.data.AccountNonce,
+		tx.data.Price,
+		tx.data.GasLimit,
+		tx.data.Recipient,
+		tx.data.Amount,
+		tx.data.Payload,
+		tx.data.Name,
+		tx.data.Encryption,
+		tx.data.Extra,
 	})
 }
 

@@ -18,15 +18,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/Tinachain/Tina/chain/contracts/deploy/common/tinachain"
-
-	"github.com/Tinachain/Tina/chain/contracts/deploy/common/config"
-
-	"github.com/Tinachain/Tina/chain/contracts/deploy/common"
-
-	log "common/log4go"
-
 	ethcommon "github.com/Tinachain/Tina/chain/common"
+	"github.com/Tinachain/Tina/chain/contracts/deploy/common"
+	"github.com/Tinachain/Tina/chain/contracts/deploy/common/config"
+	"github.com/Tinachain/Tina/chain/contracts/deploy/common/tinachain"
 )
 
 //版本号
@@ -35,7 +30,7 @@ var (
 	BuildTime = C.GoString(C.build_time())
 )
 
-func TLog(format string, args ...interface{}) {
+func Log(format string, args ...interface{}) {
 	fmt.Printf("[%s]", time.Now().Format("2006-01-02 15:04:05"))
 	fmt.Printf(format, args...)
 	fmt.Printf("\n")
@@ -75,7 +70,22 @@ type DeployConfig struct {
 	Deploy []DeployConfigEntry
 }
 
+type CWARETokenConfigEntry struct {
+	Owner    string
+	Supply   uint64
+	Name     string
+	Decimals uint8
+	Symbol   string
+}
+
+type ChainwareConfig struct {
+	CWAREToken CWARETokenConfigEntry
+}
+
+var interfaceBaseAddress ethcommon.Address
+
 func LoadDeployConfig() *DeployConfig {
+
 	cfg := &DeployConfig{}
 
 	cfgFile, err := os.Open(config.GetInstance().BokerchainSolFolder + "/" + "deploy.json")
@@ -90,23 +100,43 @@ func LoadDeployConfig() *DeployConfig {
 	return cfg
 }
 
+func LoadChainwareConfig() *ChainwareConfig {
+
+	cfg := &ChainwareConfig{}
+
+	cfgFile, err := os.Open(config.GetInstance().BokerchainSolFolder + "/" + "chainware.json")
+	if err != nil {
+		return cfg
+	}
+	defer cfgFile.Close()
+
+	cfgBytes, _ := ioutil.ReadAll(cfgFile)
+
+	json.Unmarshal(cfgBytes, cfg)
+	return cfg
+}
+
 func Deploy() {
+
+	Log("Deploy Contracts to Chainware")
+
 	client, err := tinachain.NewClient(config.GetInstance().BokerchainRpc)
 	if err != nil {
-		TLog(err.Error())
+		Log(err.Error())
 		return
 	}
 
 	err = client.Unlock(config.GetInstance().BokerchainAdminKeystore, config.GetInstance().BokerchainAdminPassword)
 	if err != nil {
-		TLog(err.Error())
+		Log(err.Error())
 		return
 	}
-	TLog("connected to tinachain")
+
+	Log("Deploy Program connected to Chainware account %s\n", config.GetInstance().BokerchainAdminKeystore)
 
 	fJs, err := os.Create("contract.js")
 	if err != nil {
-		TLog(err.Error())
+		Log(err.Error())
 		return
 	}
 	defer fJs.Close()
@@ -127,131 +157,197 @@ Ware.%s = web3.eth.contract(%s).at('%s', function(error, contract){
 	if config.GetInstance().BokerchainManagerAddress != "" {
 		managerAddress = tinachain.HexToAddress(config.GetInstance().BokerchainManagerAddress)
 	}
+	chainwareCfg := LoadChainwareConfig()
+
 	var CWARETokenAddress ethcommon.Address
+
 	for _, entry := range deployCfg.Deploy {
-		//		TLog("***********Deploying File %s ***********", entry.File)
+
 		filePath := config.GetInstance().BokerchainSolFolder + "/" + entry.File
 		if !common.PathExist(filePath) {
-			TLog("%s not found\n", filePath)
+
+			Log("Deploy Program Not Found Contracts File %s", filePath)
 			continue
 		}
+
 		compiledContracts, err := client.ContractCompile(filePath)
 		if err != nil {
-			TLog(err.Error())
+			Log(err.Error())
 			continue
 		}
+
 		for _, contractName := range entry.Contracts {
-			TLog("Contract %s deploying...", contractName)
+
+			Log("Deploying Contract %s", contractName)
 			contract := compiledContracts[contractName]
 			if nil == contract {
-				TLog("Contract %s nod found", contractName)
+
+				Log("Not Found Contract %s", contractName)
 				continue
 			}
+
 			if contractName == tinachain.ContractManager {
+
 				err = client.ContractDeploy(contract)
 				if err != nil {
-					TLog("Contract %s deploy fail err=%s", contractName, err.Error())
+
+					Log("Deploy Contract %s Fail Err %s", contractName, err.Error())
 					return
 				}
 				managerAddress = contract.Address
 				fJs.WriteString(fmt.Sprintf(format, contract.Name, contract.Abi, contract.Address.String(), contract.Name, contract.Name))
-				TLog("ManagerAddress = %v", managerAddress.String())
-				TLog("Contract %s deploy ok!", contract.Name)
+
+				Log("Deployed Contract %s OK Address %s", contractName, managerAddress.String())
 				err = client.AtManager(managerAddress.String())
 				if err != nil {
-					TLog("AtManager fail err=%s", err.Error())
+
+					Log("Deploy Program Set Manager Contract Address %s Fail Err %s", managerAddress.String(), err.Error())
 					return
 				}
-				TLog("AtManager ok!")
+				Log("Set Manager Contract Address %s OK\n", managerAddress.String())
+
 			} else if contractName == tinachain.ContractInterfaceBase {
+
 				if managerAddress.String() == tinachain.ZeroAddressString {
-					TLog("manager address empty!")
+
+					Log("Manager Address is Empty")
 					return
 				}
+
 				err = client.ContractDeploy(contract, managerAddress)
 				if err != nil {
-					TLog("Contract %s deploy fail err=%s", err.Error())
+
+					Log("Contract %s Deploy Fail Err %s", contractName, err.Error())
 					return
 				}
-				TLog("Contract %s deploye ok!", contract.Name)
+				Log("Contract %s Deploy Ok", contractName)
+
 				fJs.WriteString(fmt.Sprintf(format, contract.Name, contract.Abi, contract.Address.String(), contract.Name, contract.Name))
-				TLog("Contract %s manager address setting...", contract.Name)
+				Log("Contract %s Manager Address Setring...", contractName)
 				err = client.SetContract(contract.Name, contract.Address)
 				if err != nil {
-					TLog("Contract setContract fail err=%s", err.Error())
+
+					Log("Contract %s Manager Address Set Fail", contractName, err.Error())
 					return
 				}
-				TLog("Contract %s setContract ok!", contract.Name)
+				Log("Contract %s SetContract Ok", contract.Name)
 
 				contractOld := GetInterfaceBaseContract()
 				if "" != contractOld {
-					TLog("CancelBaseContracts contractOld=%s", contractOld)
+
+					Log("CancelBaseContracts Old Contract %s", contractOld)
 					err = client.CancelBaseContracts(tinachain.HexToAddress(contractOld))
 					if err != nil {
-						TLog("CancelBaseContracts err=%s address=%s", err.Error(), contractOld)
+
+						Log("CancelBaseContracts Err %s Address %s", err.Error(), contractOld)
 						return
 					}
 				}
 
-				TLog("SetBaseContracts address=%s", contract.Address.String())
+				Log("SetBaseContracts Address %s", contract.Address.String())
 				err = client.SetBaseContracts(contract.Address, contract.Abi)
 				if err != nil {
-					TLog("SetBaseContracts err=%s address=%s", err.Error(), contract.Address.String())
+
+					Log("SetBaseContracts Address %s Err %s", contract.Address.String(), err.Error())
 					return
 				}
 
-				TLog("SetBaseContracts ok! address=%s", contract.Address.String())
+				Log("SetBaseContracts Address %s Ok", contract.Address.String())
 				SaveInterfaceBaseContract(contract.Address.String())
-			} else if "RecipientSuccess" == contractName {
-				err = client.ContractDeploy(contract)
-				if err != nil {
-					TLog("Contract %s deploy fail err=%s", err.Error())
+
+				interfaceBaseAddress = contract.Address
+
+			} else if "CWAREToken" == contractName {
+
+				if managerAddress.String() == tinachain.ZeroAddressString {
+
+					Log("Manager Address is Empty")
 					return
 				}
-				TLog("Contract %s deploye ok!", contract.Name)
-				fJs.WriteString(fmt.Sprintf(format, contract.Name, contract.Abi, contract.Address.String(), contract.Name, contract.Name))
-			} else if "CWAREToken" == contractName {
+
+				var ownerAddress ethcommon.Address
+				ownerAddress = ethcommon.HexToAddress(chainwareCfg.CWAREToken.Owner)
+				Log("Deploy Contract %s %s", chainwareCfg.CWAREToken.Owner, ownerAddress.String())
+
+				// Chainware  ERC20;
 				err = client.ContractDeploy(
 					contract,
-					ethcommon.HexToAddress("0x1ceed12b103d9e76fea7de5410f08684eb5ef113"),
-					big.NewInt(100000),
-					"tina",
-					uint8(9),
-					"tina")
+					ownerAddress,
+					new(big.Int).SetUint64(chainwareCfg.CWAREToken.Supply),
+					chainwareCfg.CWAREToken.Name,
+					chainwareCfg.CWAREToken.Decimals,
+					chainwareCfg.CWAREToken.Symbol,
+					managerAddress)
 				if err != nil {
-					TLog("Contract %s deploy fail err=%s", err.Error())
+
+					Log("Deploy Contract %s Fail Err %s", contractName, err.Error())
 					return
 				}
+
 				CWARETokenAddress = contract.Address
-				TLog("Contract %s deploye ok!", contract.Name)
+				Log("Deploy Contract %s Ok", contract.Name)
 				fJs.WriteString(fmt.Sprintf(format, contract.Name, contract.Abi, contract.Address.String(), contract.Name, contract.Name))
-			} else if "Chainware" == contractName {
-				err = client.ContractDeploy(contract, CWARETokenAddress)
-				if err != nil {
-					TLog("Contract %s deploy fail err=%s", err.Error())
-					return
-				}
-				TLog("Contract %s deploye ok!", contract.Name)
-				fJs.WriteString(fmt.Sprintf(format, contract.Name, contract.Abi, contract.Address.String(), contract.Name, contract.Name))
-			} else {
-				if managerAddress.String() == tinachain.ZeroAddressString {
-					TLog("manager address empty!")
-					return
-				}
-				err = client.ContractDeploy(contract, managerAddress)
-				if err != nil {
-					TLog("Contract %s deploy fail err=%s", err.Error())
-					return
-				}
-				TLog("Contract %s deploye ok!", contract.Name)
-				fJs.WriteString(fmt.Sprintf(format, contract.Name, contract.Abi, contract.Address.String(), contract.Name, contract.Name))
-				TLog("Contract %s manager address setting...", contract.Name)
+
+				Log("Set Contract %s Address %s", contract.Name, contract.Address.String())
 				err = client.SetContract(contract.Name, contract.Address)
 				if err != nil {
-					TLog("Contract setContract fail err=%s", err.Error())
+
+					Log("Set Contract %s Address %s Fail Err %s", contract.Name, contract.Address, err.Error())
 					return
 				}
-				TLog("Contract %s setContract ok!", contract.Name)
+				Log("Set Contract %s Address %s Ok", contract.Name, contract.Address.String())
+
+			} else if "Chainware" == contractName {
+
+				if managerAddress.String() == tinachain.ZeroAddressString {
+
+					Log("Manager Address is Empty")
+					return
+				}
+
+				//Chainware Chainware
+				err = client.ContractDeploy(contract, CWARETokenAddress, managerAddress)
+				if err != nil {
+
+					Log("Deploy Contract %s Fail Err %s", contractName, err.Error())
+					return
+				}
+				Log("Deploy Contract %s Ok", contract.Name)
+
+				fJs.WriteString(fmt.Sprintf(format, contract.Name, contract.Abi, contract.Address.String(), contract.Name, contract.Name))
+				Log("SetContract %s Manager Address Setting...", contract.Name)
+				err = client.SetContract(contract.Name, contract.Address)
+				if err != nil {
+
+					Log("SetContract %s Manager Address Fail Err %s", contract.Name, err.Error())
+					return
+				}
+				Log("SetContract %s Manager Address %s Ok \n", contract.Name, contract.Address.String())
+
+			} else {
+				if managerAddress.String() == tinachain.ZeroAddressString {
+
+					Log("Manager Address Is Empty")
+					return
+				}
+
+				err = client.ContractDeploy(contract, managerAddress)
+				if err != nil {
+
+					Log("Deploy Contract %s Fail Err %s", contractName, err.Error())
+					return
+				}
+				Log("Deploy Contract %s Ok", contract.Name)
+
+				fJs.WriteString(fmt.Sprintf(format, contract.Name, contract.Abi, contract.Address.String(), contract.Name, contract.Name))
+				Log("SetContract %s Manager Address Setting...", contract.Name)
+				err = client.SetContract(contract.Name, contract.Address)
+				if err != nil {
+
+					Log("SetContract %s Manager Address Fail Err %s", contract.Name, err.Error())
+					return
+				}
+				Log("SetContract %s Manager Address %s Ok \n", contract.Name, contract.Address.String())
 			}
 
 		}
@@ -264,7 +360,7 @@ func main() {
 	checkVer := flag.Bool("V", false, "is ok")
 	flag.Parse()
 	if *checkVer {
-		verString := "Bokerchain Deploy Version: " + Version + "\r\n"
+		verString := "Chainware Deploy Version: " + Version + "\r\n"
 		verString += "Compile At:" + BuildTime + "\r\n"
 		fmt.Println(verString)
 		return
@@ -275,7 +371,7 @@ func main() {
 
 	//init log
 	common.InitLog()
-	defer log.Close()
+	//defer log.Close()
 
 	Deploy()
 }

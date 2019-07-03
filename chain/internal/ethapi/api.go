@@ -1587,30 +1587,6 @@ func (s *PublicBlockChainAPI) GetCurrentValidator(ctx context.Context, blockNr r
 	return nil, blockErr
 }
 
-// RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
-/*type RPCTransaction struct {
-	Major            protocol.TxMajor `json:"major"`
-	Minor            protocol.TxMinor `json:"minor"`
-	BlockHash        common.Hash      `json:"blockHash"`
-	BlockNumber      *hexutil.Big     `json:"blockNumber"`
-	From             common.Address   `json:"from"`
-	Gas              *hexutil.Big     `json:"gas"`
-	GasPrice         *hexutil.Big     `json:"gasPrice"`
-	Hash             common.Hash      `json:"hash"`
-	Input            hexutil.Bytes    `json:"input"`
-	Name             hexutil.Bytes    `json:"name"`
-	Word             string           `json:"word"`
-	Extra            hexutil.Bytes    `json:"extra"`
-	Ip               string           `json:"ip"`
-	Nonce            hexutil.Uint64   `json:"nonce"`
-	To               *common.Address  `json:"to"`
-	TransactionIndex hexutil.Uint     `json:"transactionIndex"`
-	Value            *hexutil.Big     `json:"value"`
-	V                *hexutil.Big     `json:"v"`
-	R                *hexutil.Big     `json:"r"`
-	S                *hexutil.Big     `json:"s"`
-}*/
-
 type RPCTransaction struct {
 	Major            protocol.TxMajor `json:"major"`
 	MajorNotes       string           `json:"majorNotes"`
@@ -1710,12 +1686,10 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	return result
 }
 
-// newRPCPendingTransaction returns a pending transaction that will serialize to the RPC representation
 func newRPCPendingTransaction(tx *types.Transaction) *RPCTransaction {
 	return newRPCTransaction(tx, common.Hash{}, 0, 0)
 }
 
-// newRPCTransactionFromBlockIndex returns a transaction that will serialize to the RPC representation.
 func newRPCTransactionFromBlockIndex(b *types.Block, index uint64) *RPCTransaction {
 	txs := b.Transactions()
 	if index >= uint64(len(txs)) {
@@ -1762,7 +1736,6 @@ func (s *PublicTransactionPoolAPI) GetBlockTransactionCountByNumber(ctx context.
 	return nil
 }
 
-// GetBlockTransactionCountByHash returns the number of transactions in the block with the given hash.
 func (s *PublicTransactionPoolAPI) GetBlockTransactionCountByHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
 	if block, _ := s.b.GetBlock(ctx, blockHash); block != nil {
 		n := hexutil.Uint(len(block.Transactions()))
@@ -1771,7 +1744,6 @@ func (s *PublicTransactionPoolAPI) GetBlockTransactionCountByHash(ctx context.Co
 	return nil
 }
 
-// GetTransactionByBlockNumberAndIndex returns the transaction for the given block number and index.
 func (s *PublicTransactionPoolAPI) GetTransactionByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) *RPCTransaction {
 	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
 		return newRPCTransactionFromBlockIndex(block, uint64(index))
@@ -1779,7 +1751,6 @@ func (s *PublicTransactionPoolAPI) GetTransactionByBlockNumberAndIndex(ctx conte
 	return nil
 }
 
-// GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
 func (s *PublicTransactionPoolAPI) GetTransactionByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) *RPCTransaction {
 	if block, _ := s.b.GetBlock(ctx, blockHash); block != nil {
 		return newRPCTransactionFromBlockIndex(block, uint64(index))
@@ -2029,9 +2000,7 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 //SendTransaction为给定的参数创建一个交易，对其进行签名并将其提交给交易池。
 func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
 
-	//这里需要将bin格式的Data进行转换，得到最后一个参数
-
-	//log.Info("****SendTransaction****", "Nonce", args.Nonce.String(), "from", args.From, "Gas", args.Gas, "GasPrice", args.GasPrice, "to", args.To, "json", args)
+	log.Info("(s *PublicTransactionPoolAPI) SendTransaction", "Nonce", args.Nonce.String(), "from", args.From, "Gas", args.Gas, "GasPrice", args.GasPrice, "to", args.To, "json", args)
 	account := accounts.Account{Address: args.From}
 	wallet, err := s.b.AccountManager().Find(account)
 	if err != nil {
@@ -2073,9 +2042,7 @@ func txHash(signer types.Signer, tx *types.Transaction) common.Hash {
 
 func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encodedTx hexutil.Bytes) (common.Hash, error) {
 
-	log.Info("(s *PublicTransactionPoolAPI) SendRawTransaction",
-		"len", len(encodedTx),
-		"encodedTx", encodedTx)
+	log.Info("(s *PublicTransactionPoolAPI) SendRawTransaction", "len", len(encodedTx), "encodedTx", encodedTx)
 
 	tx := new(types.Transaction)
 	if err := rlp.DecodeBytes(encodedTx, tx); err != nil {
@@ -2084,43 +2051,54 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encod
 		return common.Hash{}, err
 	}
 
-	if tx.To() != nil {
+	if tx.To() == nil {
 
-		txhash := txHash(types.HomesteadSigner{}, tx)
-		// 显示所有的数据大小;
 		log.Info("(s *PublicTransactionPoolAPI) SendRawTransaction DecodeBytes",
 			"major", tx.Major(),
 			"minor", tx.Minor(),
 			"nonce", tx.Nonce(),
 			"price", tx.GasPrice(),
 			"gaslimit", tx.Gas(),
-			"timestamp", tx.Time(),
-			"to", tx.To().Bytes(),
 			"value", tx.Value(),
-			"input", tx.Data(),
-			"extra", tx.Extra(),
 			"v", tx.V().Bytes(),
 			"s", tx.S().Bytes(),
 			"r", tx.R().Bytes(),
-			"hash", txhash.Bytes())
+			"hash", tx.Hash().String())
+	} else {
 
-		sender, err := types.Sender(types.HomesteadSigner{}, tx)
-		if err != nil {
-			panic(fmt.Errorf("invalid transaction: %v", err))
-		}
-
-		log.Info("(s *PublicTransactionPoolAPI) SendRawTransaction types.Sender",
-			"sender", sender.Bytes(),
-			"senderString", sender)
+		log.Info("(s *PublicTransactionPoolAPI) SendRawTransaction DecodeBytes",
+			"major", tx.Major(),
+			"minor", tx.Minor(),
+			"nonce", tx.Nonce(),
+			"price", tx.GasPrice(),
+			"gaslimit", tx.Gas(),
+			"to", tx.To().Bytes(),
+			"value", tx.Value(),
+			"v", tx.V().Bytes(),
+			"s", tx.S().Bytes(),
+			"r", tx.R().Bytes(),
+			"hash", tx.Hash().String())
 	}
 
-	//这里需要重新修正Time信息;
-	tx.SetTime()
-	log.Info("(s *PublicTransactionPoolAPI) SendRawTransaction tx.SetTime()",
-		"timestamp", tx.Time(),
-		"tx.Hash", tx.Hash().String())
+	sender, err := types.Sender(types.HomesteadSigner{}, tx)
+	if err != nil {
+		panic(fmt.Errorf("invalid transaction: %v", err))
+	}
+	log.Info("(s *PublicTransactionPoolAPI) SendRawTransaction types.Sender", "from", sender.String())
 
-	return SubmitTransaction(ctx, s.b, tx)
+	if protocol.Base != tx.Major() {
+		tx.SetTime()
+	}
+
+	//提交交易
+	hash, resultErr := SubmitTransaction(ctx, s.b, tx)
+	if resultErr == nil {
+		log.Info("(s *PublicTransactionPoolAPI) SendRawTransaction SubmitTransaction", "hash", hash.String(), "from", sender.String())
+	} else {
+		log.Error("(s *PublicTransactionPoolAPI) SendRawTransaction SubmitTransaction Err")
+	}
+
+	return hash, resultErr
 }
 
 // Sign calculates an ECDSA signature for:
@@ -2159,7 +2137,7 @@ type SignTransactionResult struct {
 // the given from address and it needs to be unlocked.
 func (s *PublicTransactionPoolAPI) SignTransaction(ctx context.Context, args SendTxArgs) (*SignTransactionResult, error) {
 
-	log.Info("****PublicTransactionPoolAPI SignTransaction****")
+	log.Info("(s *PublicTransactionPoolAPI) SignTransaction")
 
 	if args.Nonce == nil {
 		// Hold the addresse's mutex around signing to prevent concurrent assignment of

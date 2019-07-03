@@ -406,7 +406,7 @@ func AccumulateRewards(config *params.ChainConfig,
 	txs []*types.Transaction,
 	boker bokerapi.Api) {
 
-	log.Info("****AccumulateRewards****", "Number", header.Number.String(), "Time", header.Time)
+	log.Info("dpos.go AccumulateRewards", "Number", header.Number.String(), "Time", header.Time)
 
 	//根据块时间判断当前属于哪一个分币档次
 	tinaMultiple, userMultiple, maxSingle := getYear(header)
@@ -449,7 +449,7 @@ func AccumulateRewards(config *params.ChainConfig,
 //将交易放入到区块中
 func (d *Dpos) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt, dposContext *types.DposContext, boker bokerapi.Api) (*types.Block, error) {
 
-	log.Info("****Finalize****", "Number", header.Number.String())
+	log.Info("(d *Dpos) Finalize", "Number", header.Number.String())
 
 	//计算报酬
 	AccumulateRewards(chain.Config(), state, header, uncles, txs, boker)
@@ -521,7 +521,7 @@ func (d *Dpos) CheckProducer(lastBlock *types.Block, now int64, firstTimer int64
 //检测当前区块头中是否是当前的打包节点
 func (d *Dpos) SelfProducer(lastBlock *types.Block, producer common.Address) error {
 
-	log.Info("****SelfProducer****", "number", lastBlock.Header().Number, "hash", lastBlock.Header().Hash().String())
+	log.Info("(d *Dpos) SelfProducer", "number", lastBlock.Header().Number, "hash", lastBlock.Header().Hash().String())
 
 	if lastBlock.Header().Number.Int64() != 0 {
 		return protocol.ErrGenesisBlock

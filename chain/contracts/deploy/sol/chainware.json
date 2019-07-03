@@ -1,0 +1,9 @@
+{
+	"CWAREToken": {
+		"Owner": "4ef66b36a21a3041f8b30ec24724a2cfbe1a6371",
+		"Supply": 1000000000,
+		"Name": "ChainwareERC",
+		"Decimals": 18,
+		"Symbol": "ERC"
+	}
+}

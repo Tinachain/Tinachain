@@ -24,12 +24,14 @@ const (
 	InmemorySignatures = 4096         //保留在内存中的最近块签名的数量
 	ProducerInterval   = int64(10)    //打包时间间隔（秒）
 	TokenNoderInterval = int64(300)   //分配通证时间间隔(秒)
+	TimeoutInterval    = int64(300)   //超时周期
 	EpochInterval      = int64(86400) //一个周期的时间（86400秒 = 1天）
 	MaxValidatorSize   = 1            //DPOS的验证者数量
 	SafeSize           = 1            //安全的验证者数量
 	ConsensusSize      = 1            //共识确认验证者数量
 	BokerInterval      = time.Second  //分配通证时间间隔(秒)
 	AssignInterval     = time.Minute  //分配通证时间间隔单位
+	BlackInterval      = time.Minute  //黑名单间隔时间
 	AssignTimer        = 5
 )
 
@@ -40,6 +42,7 @@ const (
 	Normal TxMajor = iota //普通交易类型
 	Base                  //基础交易类型（不使用Gas的交易）
 	Extra                 //扩展交易类型（可以在区块中存放文件类型的）
+	Stock                 //股权类型，用来定义用户股票权益信息（没有Gas消费）
 )
 
 //次要交易类型
@@ -60,9 +63,27 @@ const (
 
 //扩展交易的次要类型
 const (
+	//文件类型;
 	Word    TxMinor = iota //交易中扩展字段为文字
 	Picture                //交易中扩展字段为图片
 	File                   //交易中扩展字段为文件
+)
+
+//股权类型的次要类型
+const (
+	StockSet      TxMinor = iota //设置股权
+	StockTransfer                //转移部分股权
+	StockClean                   //销毁股权(将股权从某个账号中强行销毁)
+	StockFrozen                  //冻结股权(股权冻结，则此股权将无法获得Gas收益)
+	StockUnFrozen                //解冻股权
+)
+
+//股权产生方式
+type StockCreate uint8
+
+const (
+	New      StockCreate = iota //设置股权
+	Transfer                    //转移部分股权
 )
 
 //新增合约类型
@@ -72,6 +93,13 @@ const (
 	BinaryContract   ContractType = iota //普通合约类型
 	SystemContract                       //系统基础合约
 	PersonalContract                     //个人基础合约
+)
+
+type StockState uint8
+
+const (
+	Run StockState = iota
+	Frozen
 )
 
 var (

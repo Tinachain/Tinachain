@@ -569,6 +569,18 @@ func (ec *Client) SetFile(ctx context.Context, file string) (common.Hash, error)
 	return txHash, nil
 }
 
+func (ec *Client) SetOwner(ctx context.Context, address common.Address) (common.Hash, error) {
+
+	log.Info("(ec *Client) SetOwner", "address", address.String())
+
+	var txHash common.Hash
+	err := ec.c.CallContext(ctx, &txHash, "eth_setOwner", address)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return txHash, nil
+}
+
 func (ec *Client) CheckTxSign(ctx context.Context) (common.Hash, error) {
 
 	log.Info("(ec *Client) CheckTxSign")

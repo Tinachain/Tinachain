@@ -292,6 +292,62 @@ func extraTransaction(config *params.ChainConfig,
 	return receipt, gas, err
 }
 
+//股权交易处理
+func stockTransaction(config *params.ChainConfig,
+	dposContext *types.DposContext,
+	bc *BlockChain,
+	author *common.Address,
+	gp *GasPool,
+	sp *big.Int,
+	statedb *state.StateDB,
+	header *types.Header,
+	tx *types.Transaction,
+	usedGas *big.Int,
+	cfg vm.Config,
+	msg types.Message,
+	boker bokerapi.Api) (*types.Receipt, *big.Int, error) {
+
+	log.Info("state_processor.go stockTransaction")
+
+	msg, err := tx.AsMessage(types.MakeSigner(config, header.Number))
+	if err != nil {
+
+		log.Error("state_processor.go stockTransaction AsMessage", "err", err)
+		return nil, nil, err
+	}
+	log.Info("state_processor.go stockTransaction", "Major", tx.Major(), "Minor", tx.Minor(), "Time", header.Time.Int64(), "Extra", tx.Extra())
+
+	//股权交易to不能为空
+	if nil == msg.To {
+		return nil, nil, errors.New("Stock Transaction To is nil")
+	}
+
+	context := NewEVMContext(msg, header, bc, author)
+	vmenv := vm.NewEVM(context, statedb, config, cfg)
+	_, gas, failed, err := StockMessage(vmenv, msg, gp, sp, boker)
+	if err != nil {
+		log.Error("state_processor.go stockTransaction failed", "err", err)
+		return nil, nil, err
+	}
+
+	var root []byte
+	if config.IsByzantium(header.Number) {
+		statedb.Finalise(true)
+	} else {
+		root = statedb.IntermediateRoot(config.IsEIP158(header.Number)).Bytes()
+	}
+	usedGas.Add(usedGas, gas)
+
+	receipt := types.NewReceipt(root, failed, usedGas)
+	receipt.TxHash = tx.Hash()
+	receipt.GasUsed = new(big.Int).Set(gas)
+	receipt.Logs = statedb.GetLogs(tx.Hash())
+	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+
+	log.Info("state_processor.go stockTransaction", "gas", gas)
+	return receipt, gas, err
+}
+
 //设置设置验证人
 func validatorTransaction(config *params.ChainConfig,
 	dposContext *types.DposContext,
@@ -402,33 +458,35 @@ func ApplyTransaction(config *params.ChainConfig,
 
 	if msg.Major() == protocol.Normal {
 
+		//普通交易类型
 		return normalTransaction(config, dposContext, bc, author, gp, sp, statedb, header, tx, usedGas, cfg, msg, boker)
 	} else if msg.Major() == protocol.Base {
 
+		//基础交易类型
 		if msg.To() == nil {
 			return nil, nil, protocol.ErrToIsNil
 		}
-
-		//根据交易类型来区分
 		switch msg.Minor() {
-
 		case protocol.SetSystemContract, protocol.CancelSystemContract:
-			//设置合约(已经测试)
 			return contractSetTransaction(config, dposContext, bc, author, gp, sp, statedb, header, tx, usedGas, cfg, msg, boker)
 		case protocol.VoteUser, protocol.VoteEpoch, protocol.RegisterCandidate: //基础交易(已经测试)
-
 			return baseTransaction(config, dposContext, bc, author, gp, sp, statedb, header, tx, usedGas, cfg, msg, boker)
-		case protocol.SetValidator: //设置验证人(已经测试)
-
+		case protocol.SetValidator:
 			return validatorTransaction(config, dposContext, bc, author, gp, sp, statedb, header, tx, usedGas, cfg, msg, boker)
 		default:
-
 			return nil, nil, protocol.ErrInvalidType
 		}
-	} else {
+	} else if protocol.Stock == msg.Major() {
 
+		//股权交易类型
+		return stockTransaction(config, dposContext, bc, author, gp, sp, statedb, header, tx, usedGas, cfg, msg, boker)
+
+	} else if protocol.Extra == msg.Major() {
+
+		//扩展交易类型
 		return extraTransaction(config, dposContext, bc, author, gp, sp, statedb, header, tx, usedGas, cfg, msg, boker)
 	}
+	return nil, nil, errors.New("Not Found Tx Major")
 }
 
 func (p *StateProcessor) SetBoker(boker bokerapi.Api) { p.boker = boker }

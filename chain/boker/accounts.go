@@ -57,21 +57,6 @@ func (a *BokerAccount) GetTeam() common.Address {
 	return a.teamAccount
 }
 
-func (a *BokerAccount) SetOwner(txAddress, ownerAddress common.Address) error {
-
-	if a.ownerAccount == common.HexToAddress("") {
-		a.ownerAccount = ownerAddress
-	} else {
-		if txAddress != a.ownerAccount {
-			return errors.New("")
-		} else {
-			a.ownerAccount = ownerAddress
-			return nil
-		}
-	}
-	return nil
-}
-
 func (a *BokerAccount) SetCommunity(txAddress, communityAddress common.Address) error {
 
 	if a.ownerAccount == common.HexToAddress("") {

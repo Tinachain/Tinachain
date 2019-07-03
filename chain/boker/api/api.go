@@ -37,11 +37,14 @@ type Api interface {
 	EncoderContext(context []byte, key []byte) (error, []byte)      //对内容进行编码
 	DecoderContext(context []byte, key []byte) (error, []byte)      //对内容进行解码
 
-	SetOwner(txAddress, ownerAddress common.Address) error           //设置所属者
-	SetCommunity(txAddress, communityAddress common.Address) error   //设置社区账号
-	SetFoundation(txAddress, foundationAddress common.Address) error //设置基金账号
-	SetTeam(txAddress, teamAddress common.Address) error             //设置团队账号
-	GetTeam() common.Address                                         //得到团队账号
+	GetBlacks() []common.Address                   //得到当前黑名单
+	SetBlacks(address []common.Address) error      //设置当前的黑名单
+	CheckBlackAddress(address common.Address) bool //检测地址是否在黑名单中
+
+	GetGasPool() uint64
+	AddGasPool(gas uint64) uint64
+	GetOwner() common.Address
+	SetOwner(operation common.Address, address common.Address) error
 }
 
 type SortableAddress struct {

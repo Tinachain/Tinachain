@@ -161,6 +161,17 @@ func ExtraMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, boker boke
 	return ret, gas, failed, err
 }
 
+//股权交易处理
+func StockMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
+
+	st := NewStateTransition(evm, msg, gp, sp)
+	ret, _, _, failed, err := st.StockTransitionDb(msg.Major(), msg.Minor(), boker)
+
+	var gas *big.Int = new(big.Int).SetUint64(0)
+	gas = gas.Mul(new(big.Int).SetUint64(0), new(big.Int).SetUint64(0))
+	return ret, gas, failed, err
+}
+
 //部署基础合约的消息
 func contractMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
 
@@ -282,11 +293,6 @@ func (st *StateTransition) getExtra(boker bokerapi.Api) string {
 		return ""
 	}
 
-	//判断合约是否是普通合约
-	/*if contractType <= protocol.BinaryContract {
-		return ""
-	}*/
-
 	//根据交易类型得到合约的abiJson格式和方法名称
 	var name, abiJson string
 	abiJson, name, err = boker.GetMethodName(st.msg.Minor())
@@ -313,7 +319,7 @@ func (st *StateTransition) getExtra(boker bokerapi.Api) string {
 //通过应用当前消息并返回结果来转换状态包括操作所需的气体以及用过的气体。 如果它返回错误失败了，表示存在共识问题。
 func (st *StateTransition) NormalTransitionDb(boker bokerapi.Api) (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
 
-	log.Info("****NormalTransitionDb****")
+	log.Info("(st *StateTransition) NormalTransitionDb")
 	if err = st.preCheck(); err != nil {
 		return
 	}
@@ -363,12 +369,9 @@ func (st *StateTransition) NormalTransitionDb(boker bokerapi.Api) (ret []byte, r
 	//退还Gas
 	st.refundGas()
 
-	//得到团队账号,将Gas费用转给团队账号下
 	if boker != nil {
-		team := boker.GetTeam()
-		st.state.AddBalance(team, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
-	} else {
-		st.state.AddBalance(common.BytesToAddress([]byte("0xd7fd311c8f97349670963d87f37a68794dfa80ff")), new(big.Int).Mul(st.gasUsed(), st.gasPrice))
+
+		boker.AddGasPool((new(big.Int).Mul(st.gasUsed(), st.gasPrice)).Uint64())
 	}
 
 	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
@@ -377,7 +380,7 @@ func (st *StateTransition) NormalTransitionDb(boker bokerapi.Api) (ret []byte, r
 //基本交易执行
 func (st *StateTransition) BaseTransitionDb(boker bokerapi.Api) (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
 
-	log.Info("****BaseTransitionDb****")
+	log.Info("(st *StateTransition) BaseTransitionDb")
 
 	if err = st.preCheck(); err != nil {
 		return
@@ -415,7 +418,7 @@ func (st *StateTransition) BaseTransitionDb(boker bokerapi.Api) (ret []byte, req
 //扩展交易执行
 func (st *StateTransition) ExtraTransitionDb(boker bokerapi.Api) (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
 
-	log.Info("****ExtraTransitionDb****")
+	log.Info("(st *StateTransition) ExtraTransitionDb")
 
 	if err = st.preCheck(); err != nil {
 		return
@@ -467,15 +470,40 @@ func (st *StateTransition) ExtraTransitionDb(boker bokerapi.Api) (ret []byte, re
 	//退还Gas
 	st.refundGas()
 
-	//得到团队账号,将Gas费用转给团队账号下
 	if boker != nil {
-		team := boker.GetTeam()
-		st.state.AddBalance(team, new(big.Int).Mul(st.gasUsed(), st.gasPrice))
-	} else {
-		st.state.AddBalance(common.BytesToAddress([]byte("0xd7fd311c8f97349670963d87f37a68794dfa80ff")), new(big.Int).Mul(st.gasUsed(), st.gasPrice))
+		boker.AddGasPool((new(big.Int).Mul(st.gasUsed(), st.gasPrice)).Uint64())
 	}
 
 	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
+}
+
+//股权交易执行
+func (st *StateTransition) StockTransitionDb(txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
+
+	log.Info("(st *StateTransition) StockTransitionDb")
+
+	if err = st.preCheck(); err != nil {
+		return
+	}
+
+	if txMinor == protocol.StockSet {
+		//设置股权
+		boker.SetContract(*st.msg.To(), protocol.SystemContract, false, string(st.extra))
+	} else if txMinor == protocol.StockTransfer {
+		//股权转让
+		boker.SetContract(*st.msg.To(), protocol.SystemContract, true, "")
+	} else if txMinor == protocol.StockClean {
+		//股权清空
+
+	} else if txMinor == protocol.StockFrozen {
+		//股权冻结
+
+	} else if txMinor == protocol.StockUnFrozen {
+		//股权解冻
+
+	}
+
+	return []byte(""), new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, nil
 }
 
 //部署基础合约执行
@@ -492,7 +520,7 @@ func (st *StateTransition) ContractTransitionDb(txMajor protocol.TxMajor, txMino
 	}
 
 	st.state.SetNonce(st.from().Address(), st.state.GetNonce(st.from().Address())+1)
-	return ret, new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, err
+	return []byte(""), new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, nil
 }
 
 //投票交易操作
@@ -502,7 +530,7 @@ func (st *StateTransition) VoteTransitionDb(txMajor protocol.TxMajor, txMinor pr
 		return
 	}
 	st.state.SetNonce(st.from().Address(), st.state.GetNonce(st.from().Address())+1)
-	return ret, new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, err
+	return []byte(""), new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, nil
 }
 
 //投票交易操作
@@ -512,26 +540,22 @@ func (st *StateTransition) ValidatorTransitionDb(txMajor protocol.TxMajor, txMin
 		return
 	}
 	st.state.SetNonce(st.from().Address(), st.state.GetNonce(st.from().Address())+1)
-	return ret, new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, err
+	return []byte(""), new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, nil
 }
 
 //退还Gas
 func (st *StateTransition) refundGas() {
-	// Return eth for remaining gas to the sender account,
-	// exchanged at the original rate.
-	sender := st.from() // err already checked
+
+	sender := st.from()
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
 	st.state.AddBalance(sender.Address(), remaining)
 
-	// Apply refund counter, capped to half of the used gas.
 	uhalf := remaining.Div(st.gasUsed(), common.Big2)
 	refund := math.BigMin(uhalf, st.state.GetRefund())
 	st.gas += refund.Uint64()
 
 	st.state.AddBalance(sender.Address(), refund.Mul(refund, st.gasPrice))
 
-	// Also return remaining gas to the block gas counter so it is
-	// available for the next transaction.
 	//将剩余的Gas归还给发送方
 	st.gp.AddGas(new(big.Int).SetUint64(st.gas))
 }

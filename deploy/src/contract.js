@@ -1,1 +1,0 @@
-var Ware = new Object();

@@ -7,12 +7,6 @@
             ]
         },
         {
-            "file": "BokerFinance.sol",
-            "contracts": [
-                "BokerFinance"
-            ]
-        },
-        {
             "file": "BokerLog.sol",
             "contracts": [
                 "BokerLog"
@@ -37,9 +31,8 @@
             ]
         },
 		{
-            "file": "chain_all.sol",
+            "file": "Chainware.sol",
             "contracts": [
-                "RecipientSuccess",
 				"CWAREToken",
 				"Chainware"
             ]

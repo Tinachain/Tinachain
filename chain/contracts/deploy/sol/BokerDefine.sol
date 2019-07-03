@@ -1,8 +1,10 @@
 pragma solidity ^0.4.8;
 
 contract BokerDefine {
+
     uint256 constant internal bobby = 1 ether;      //一个bobby币
     uint256 constant internal POWER = 1000;         //一个算力，
+    uint256 constant internal CfgTickTimer = 2 * 60 * 60;   //超时处理时间;
 
     //配置
     string constant CfgRegisterPowerAdd = "RegisterPowerAdd";
@@ -11,13 +13,12 @@ contract BokerDefine {
     string constant CfgInvitorPowerAdd = "InvitorPowerAdd";
     string constant CfgLoginDailyPowerAdd = "LoginDailyPowerAdd";
     string constant CfgCertificationPowerAdd = "CertificationPowerAdd";
-    string constant CfgAssignPeriod = "AssignPeriod";    
+    string constant CfgAssignPeriod = "AssignPeriod";
     string constant CfgAssignTokenPerCycle = "AssignTokenPerCycle";
     string constant CfgAssignTokenTotal = "AssignTokenTotal";
     string constant CfgUploadCountMax = "UploadCountMax";
     string constant CfgPowerWatchOwnerRatio = "PowerWatchOwnerRatio";
     string constant CfgAssignTokenLongtermRatio = "AssignTokenLongtermRatio";
-
     string constant CfgVoteLockup = "VoteLockup";
     string constant CfgVoteUnlockPrecision = "VoteUnlockPrecision";
     string constant CfgVoteCyclePeriod = "VoteCyclePeriod";
@@ -29,24 +30,19 @@ contract BokerDefine {
 
     //合约
     string constant ContractManager = "BokerManager";
-    string constant ContractDapp = "BokerDapp";
-    string constant ContractDappData = "BokerDappData";
-    string constant ContractFile = "BokerFile";
-    string constant ContractFileData = "BokerFileData";
-    string constant ContractFinance = "BokerFinance";
     string constant ContractLog = "BokerLog";
     string constant ContractLogData = "BokerLogData";
-    string constant ContractTokenPower = "BokerTokenPower";
-    string constant ContractTokenPowerData = "BokerTokenPowerData";
-    string constant ContractUser = "BokerUser";
-    string constant ContractUserData = "BokerUserData";
     string constant ContractNode = "BokerNode";
     string constant ContractNodeData = "BokerNodeData";
-    string constant ContractDataTransfer = "BokerDataTransfer";
     string constant ContractInterface = "BokerInterface";
     string constant ContractInterfaceBase = "BokerInterfaceBase";
-    
+    string constant ContractChainware = "Chainware";
+    string constant ContractCWAREToken = "CWAREToken";
+    string constant ContractTokenERC20 = "TokenERC20";
+    string constant ContractRecipientSuccess = "RecipientSuccess";
+
     enum Error {
+
         Ok,
         AddressIsContract,
         EventNotSupported,
@@ -54,7 +50,7 @@ contract BokerDefine {
         AlreadyDailyLogined,
         AlreadyBindDapp,
         AlreadyCertificated
-    }   
+    }
 
     enum UserEventType {
         Register,
@@ -62,27 +58,8 @@ contract BokerDefine {
         BindDapp,
         Watch,
         Upload,
-        Certification,       
-
+        Certification,
         End                      // end of event type, event type value should less than End
-    }
-
-    enum UserPowerType {
-        Longterm,
-        Shortterm
-    }
-
-    enum UserPowerReason {
-        Register,               //注册
-        Invited,                //被邀请，填写邀请码
-        Invitor,                //邀请别人
-        LoginDaily,             //每日登录
-        BindDapp,               //绑定渠道
-        Certification,          //实名认证
-        Watch,                  //观看视频
-        VideoWatched,           //视频被观看
-        Upload,                 //上传视频
-        ShorttermPowerReset     //临时算力重置
     }
 
     enum FinanceReason {
@@ -102,8 +79,4 @@ contract BokerDefine {
         Unlock
     }
 
-    uint256 constant DappTypeInvalid = 0;
-    uint256 constant DappTypeHardware = 1;
-    uint256 constant DappTypeDApp = 2;
-    uint256 constant DappTypeH5 = 3;
 }
