@@ -175,3 +175,7 @@ func (s *TinaStock) UnFrozenStock(operation common.Address, from common.Address)
 	fromStock.State = protocol.Run
 	return nil
 }
+
+func (s *TinaStock) ClearStock(operation common.Address) error {
+
+}

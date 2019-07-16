@@ -273,6 +273,17 @@ func (boker *BokerBackend) GetMethodName(txMinor protocol.TxMinor) (string, stri
 	}
 }
 
+//
+func (boker *BokerBackend) GetOwner() common.Address {
+
+	return boker.stock.GetOwner()
+}
+
+func (boker *BokerBackend) SetOwner(operation common.Address, address common.Address) error {
+
+	return boker.stock.SetOwner(operation, address)
+}
+
 func (boker *BokerBackend) GetGasPool() uint64 {
 
 	return boker.stock.GetGasPool()
@@ -283,12 +294,42 @@ func (boker *BokerBackend) AddGasPool(gas uint64) uint64 {
 	return boker.stock.AddGasPool(gas)
 }
 
-func (boker *BokerBackend) GetOwner() common.Address {
+func (boker *BokerBackend) GetStock(address common.Address) *StockAccount {
 
-	return boker.stock.GetOwner()
+	return boker.stock.GetStock(address)
 }
 
-func (boker *BokerBackend) SetOwner(operation common.Address, address common.Address) error {
+func (boker *BokerBackend) GetStocks() ([]*StockAccount, error) {
 
-	return boker.stock.SetOwner(operation, address)
+	return boker.stock.GetStocks()
+}
+
+func (boker *BokerBackend) SetStock(operation common.Address, address common.Address, number uint64) error {
+
+	return boker.stock.SetStock(operation, address, number)
+}
+
+func (boker *BokerBackend) TransferStock(operation common.Address, from common.Address, to common.Address, number uint64) error {
+
+	return boker.stock.TransferStock(operation, from, to, number)
+}
+
+func (boker *BokerBackend) CleanStock(operation common.Address, from common.Address) error {
+
+	return boker.stock.CleanStock(operation, from)
+}
+
+func (boker *BokerBackend) FrozenStock(operation common.Address, from common.Address) error {
+
+	return boker.stock.FrozenStock(operation, from)
+}
+
+func (boker *BokerBackend) UnFrozenStock(operation common.Address, from common.Address) error {
+
+	return boker.stock.UnFrozenStock(operation, from)
+}
+
+func (boker *BokerBackend) ClearStock(operation common.Address) error {
+
+	return boker.stock.ClearStock(operation)
 }
