@@ -166,7 +166,7 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 
 	// Check whether the genesis block is already written.
 	if genesis != nil {
-		block, _, _, _, _ := genesis.ToBlock()
+		block, _, _, _ := genesis.ToBlock()
 		hash := block.Hash()
 		if hash != stored {
 
@@ -223,7 +223,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 }
 
 //创建一个特定的创世区块状态
-func (g *Genesis) ToBlock() (*types.Block, *state.StateDB, *trie.Trie, *trie.Trie, *trie.Trie) {
+func (g *Genesis) ToBlock() (*types.Block, *state.StateDB, *trie.Trie, *trie.Trie) {
 
 	db, _ := ethdb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
@@ -245,12 +245,18 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB, *trie.Trie, *trie.Tri
 	log.Info("ToProto", "root", dposContextProto.Root().String())
 
 	//添加Tina链的设置
-	singleTrie, contractsTrie, abiTrie, err := initBoker(db)
+	singleContractTrie, contractsTrie, _, stocksTrie, ownerTrie, gasPoolTrie, err := initBoker(db)
 	if err != nil {
 		fmt.Errorf("initGenesisBoker error")
-		return nil, statedb, nil, nil, nil
+		return nil, statedb, nil, nil
 	}
-	bokerProto := protocol.ToBokerProto(singleTrie.Hash(), contractsTrie.Hash(), abiTrie.Hash())
+
+	bokerProto := protocol.ToBokerProto(singleContractTrie.Hash(),
+		contractsTrie.Hash(),
+		stocksTrie.Hash(),
+		ownerTrie.Hash(),
+		gasPoolTrie.Hash())
+
 	log.Info("ToBokerProto", "root", bokerProto.Root().String())
 
 	head := &types.Header{
@@ -278,24 +284,24 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB, *trie.Trie, *trie.Tri
 	block := types.NewBlock(head, nil, nil, nil)
 	block.DposContext = dposContext
 
-	return block, statedb, singleTrie, contractsTrie, abiTrie
+	return block, statedb, singleContractTrie, contractsTrie
 }
 
 // Commit writes the block and state of a genesis specification to the database.
 // The block is committed as the canonical head block.
 func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 
-	block, statedb, singleTrie, contractsTrie, abiTrie := g.ToBlock()
+	block, statedb, singleTrie, contractsTrie := g.ToBlock()
 
 	// add dposcontext
 	if _, err := block.DposContext.CommitTo(db); err != nil {
 		return nil, err
 	}
 	//新增Tina链数据保存
-	if err := commitBoker(singleTrie, contractsTrie, abiTrie, db); err != nil {
+	if err := commitBoker(singleTrie, contractsTrie, db); err != nil {
 		return nil, err
 	}
-	log.Info("Write Boker ", "singleTrieHash", singleTrie.Hash().String(), "ContractsHash", contractsTrie.Hash().String(), "abiTrieHash", abiTrie.Hash().String())
+	log.Info("Write Boker ", "singleTrieHash", singleTrie.Hash().String(), "ContractsHash", contractsTrie.Hash().String())
 
 	if block.Number().Sign() != 0 {
 		return nil, fmt.Errorf("can't commit genesis block with number > 0")
@@ -381,7 +387,7 @@ func initGenesisDposContext(g *Genesis, db ethdb.Database) *types.DposContext {
 	dc.SetEpochTrie(validators)
 
 	var producers []common.Address
-	validatorsRLP := dc.EpochTrie().Get(protocol.ValidatorsKey)
+	validatorsRLP := dc.EpochTrie().Get(protocol.ValidatorsPrefix)
 	if err := rlp.DecodeBytes(validatorsRLP, &producers); err != nil {
 
 		log.Info("failed to decode validators", "error", err)
@@ -391,66 +397,93 @@ func initGenesisDposContext(g *Genesis, db ethdb.Database) *types.DposContext {
 	return dc
 }
 
-//****创建Tina链相关Hash树信息****//
-func initBoker(db ethdb.Database) (*trie.Trie, *trie.Trie, *trie.Trie, error) {
+func initBoker(db ethdb.Database) (*trie.Trie, *trie.Trie, *trie.Trie, *trie.Trie, *trie.Trie, *trie.Trie, error) {
 
-	log.Info("****initBoker****")
+	log.Info("genesis.go initBoker")
 
-	var singleTrie, contractsTrie, abiTrie *trie.Trie
+	var singleContractTrie, contractsTrie *trie.Trie
+	var singleStockTrie, stocksTrie, ownerTrie, gasPoolTrie *trie.Trie
 	var err error
 	var root common.Hash
 
-	//创建基础合约树
-	if singleTrie, err = trie.NewTrieWithPrefix(root, protocol.SinglePrefix, db); err != nil {
-		return nil, nil, nil, err
+	//单独合约树
+	if singleContractTrie, err = trie.NewTrieWithPrefix(root, protocol.SingleContractPrefix, db); err != nil {
+		return nil, nil, nil, nil, nil, nil, err
 	}
 	var bases []common.Address = make([]common.Address, 0)
 	basesRLP, err := rlp.EncodeToBytes(bases)
 	if err != nil {
 		log.Error("failed to encode contract to rlp", "error", err)
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, err
 	}
-	singleTrie.Update(protocol.SinglePrefix, basesRLP)
+	singleContractTrie.Update(protocol.SingleContractPrefix, basesRLP)
 
-	//创建合约总和树
-	if contractsTrie, err = trie.NewTrieWithPrefix(root, protocol.Contracts, db); err != nil {
-		return nil, nil, nil, err
+	//所有合约树
+	if contractsTrie, err = trie.NewTrieWithPrefix(root, protocol.ContractsPrefix, db); err != nil {
+		return nil, nil, nil, nil, nil, nil, err
 	}
 	var contracts []common.Address = make([]common.Address, 0)
 	contractsRLP, err := rlp.EncodeToBytes(contracts)
 	if err != nil {
-		log.Error("failed to encode contracts to rlp", "error", err)
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, err
 	}
-	contractsTrie.Update(protocol.Contracts, contractsRLP)
+	contractsTrie.Update(protocol.ContractsPrefix, contractsRLP)
 
-	//创建合约abi树
-	if abiTrie, err = trie.NewTrieWithPrefix(root, protocol.AbiPrefix, db); err != nil {
-		return nil, nil, nil, err
+	//单个股权树
+	if singleStockTrie, err = trie.NewTrieWithPrefix(root, protocol.SingleStockPrefix, db); err != nil {
+		return nil, nil, nil, nil, nil, nil, err
 	}
-	var abi []common.Address = make([]common.Address, 0)
-	abiRLP, err := rlp.EncodeToBytes(abi)
+	var stock protocol.StockAccount
+	stockRLP, err := rlp.EncodeToBytes(stock)
 	if err != nil {
-		log.Error("failed to encode contracts to rlp", "error", err)
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, err
 	}
-	abiTrie.Update(protocol.AbiPrefix, abiRLP)
+	singleStockTrie.Update(protocol.SingleStockPrefix, stockRLP)
 
-	return singleTrie, contractsTrie, abiTrie, nil
+	//所有股权树
+	if stocksTrie, err = trie.NewTrieWithPrefix(root, protocol.StocksPrefix, db); err != nil {
+		return nil, nil, nil, nil, nil, nil, err
+	}
+	var stocks []common.Address = make([]common.Address, 0)
+	stocksRLP, err := rlp.EncodeToBytes(stocks)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, err
+	}
+	stocksTrie.Update(protocol.StocksPrefix, stocksRLP)
+
+	//所有者账户树
+	if ownerTrie, err = trie.NewTrieWithPrefix(root, protocol.OwnerPrefix, db); err != nil {
+		return nil, nil, nil, nil, nil, nil, err
+	}
+	var ownerAccount common.Address
+	ownerRLP, err := rlp.EncodeToBytes(ownerAccount)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, err
+	}
+	ownerTrie.Update(protocol.OwnerPrefix, ownerRLP)
+
+	//Gas池树
+	if gasPoolTrie, err = trie.NewTrieWithPrefix(root, protocol.GasPoolPrefix, db); err != nil {
+		return nil, nil, nil, nil, nil, nil, err
+	}
+	gasPool := 0
+	gasPoolRLP, err := rlp.EncodeToBytes(gasPool)
+	if err != nil {
+		return nil, nil, nil, nil, nil, nil, err
+	}
+	gasPoolTrie.Update(protocol.GasPoolPrefix, gasPoolRLP)
+
+	return singleContractTrie, contractsTrie, singleStockTrie, stocksTrie, ownerTrie, gasPoolTrie, nil
 }
 
-//****创建Tina链相关Hash树信息****//
-func commitBoker(singleTrie *trie.Trie, contractsTrie *trie.Trie, abiTrie *trie.Trie, db ethdb.Database) error {
+func commitBoker(singleTrie *trie.Trie, contractsTrie *trie.Trie, db ethdb.Database) error {
 
-	log.Info("****commitBoker****")
+	log.Info("genesis.go commitBoker")
 
 	if _, err := singleTrie.CommitTo(db); err != nil {
 		return err
 	}
 	if _, err := contractsTrie.CommitTo(db); err != nil {
-		return err
-	}
-	if _, err := abiTrie.CommitTo(db); err != nil {
 		return err
 	}
 	return nil

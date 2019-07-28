@@ -400,24 +400,19 @@ func (self *worker) wait() {
 	}
 }
 
-func newBokerFromProto(db ethdb.Database, bokerProto *protocol.BokerBackendProto) (*trie.Trie, *trie.Trie, *trie.Trie, error) {
+func newBokerFromProto(db ethdb.Database, bokerProto *protocol.BokerBackendProto) (*trie.Trie, *trie.Trie, error) {
 
-	singleTrie, err := trie.NewTrieWithPrefix(bokerProto.SingleHash, protocol.SinglePrefix, db)
+	singleTrie, err := trie.NewTrieWithPrefix(bokerProto.SingleHash, protocol.SingleContractPrefix, db)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	contractsTrie, err := trie.NewTrieWithPrefix(bokerProto.ContractsHash, protocol.Contracts, db)
+	contractsTrie, err := trie.NewTrieWithPrefix(bokerProto.ContractsHash, protocol.ContractsPrefix, db)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	abiTrie, err := trie.NewTrieWithPrefix(bokerProto.ContracAbiHash, protocol.AbiPrefix, db)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	return singleTrie, contractsTrie, abiTrie, nil
+	return singleTrie, contractsTrie, nil
 }
 
 //为当前周期创建一个新环境。

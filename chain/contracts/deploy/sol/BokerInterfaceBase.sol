@@ -2,50 +2,49 @@ pragma solidity ^0.4.8;
 
 
 import "./BokerCommon.sol";
-
 import "./BokerManager.sol";
-
 
 interface INode {
 
     //About Node
-    function getVoteRound() external view  returns(uint256 round);
-    function checkVote() external view returns (bool);
-    function rotateVote() external;
     function getCandidates() external view  returns(address[] memory addresses, uint256[] memory tickets);
     function getBlacks() external view returns (address[] memory addresses);
-    function tickTimeout() external;
+    function tickTimeout(uint256 nowTimer) external;
+    function rotateVote(uint256 nowTimer) external;
 }
 
-
 contract BokerInterfaceBase is BokerManaged{
-
     constructor(address addrManager) BokerManaged(addrManager) public {
+
+        testCandidateArray.push(address(0));
     }
 
-    function () public payable {
-
+    //为了方便测试添加的功能;
+    uint256 isTest = 1;
+    uint256 public setSize = 0;
+    struct TestCandidate {
+        uint256 index;
+        address addr;
+        uint256 tickets;
     }
-
-    function getVoteRound() external view  returns(uint256 round) {
-
-        return INode(contractAddress(ContractNode)).getVoteRound();
-    }
+    mapping (address => TestCandidate) public testCandidates;
+    address[] public testCandidateArray;
 
     function getCandidates() external view returns(address[] memory addresses, uint256[] memory tickets) {
 
-        return INode(contractAddress(ContractNode)).getCandidates();
-    }
+        if(isTest == 0){
+            return INode(contractAddress(ContractNode)).getCandidates();
+        }else{
 
-
-    function tickVote() external view returns (bool) {
-
-        return INode(contractAddress(ContractNode)).checkVote();
-    }
-
-    function rotateVote() external whenNotPaused  {
-
-        INode(contractAddress(ContractNode)).rotateVote();
+            uint256 len = testCandidateArray.length;
+            addresses = new address[](len - 1);
+            tickets = new uint256[](len - 1);
+            for(uint256 index = 1; index < len; index++) {
+                address addr = testCandidateArray[index];
+                addresses[index - 1] = addr;
+                tickets[index - 1] = testCandidates[addr].tickets;
+            }
+        }
     }
 
     function getBlacks() external view returns (address[] memory addresses){
@@ -53,9 +52,29 @@ contract BokerInterfaceBase is BokerManaged{
         return INode(contractAddress(ContractNode)).getBlacks();
     }
 
-    function tickTimeout() external{
+    function tickTimeout(uint256 nowTimer) external{
 
-        return INode(contractAddress(ContractNode)).tickTimeout();
+        return INode(contractAddress(ContractNode)).tickTimeout(nowTimer);
+    }
+
+    function rotateVote(uint256 nowTimer) external {
+
+        return INode(contractAddress(ContractNode)).rotateVote(nowTimer);
+    }
+
+    function setCandidates(address nodeAddress, uint256 tickets) external returns(bool){
+
+        TestCandidate storage testCandidate = testCandidates[nodeAddress];
+        if(testCandidate.index > 0) {
+            return false;
+        }
+        testCandidate.addr = nodeAddress;
+        testCandidate.index = testCandidateArray.length;
+        testCandidate.tickets = tickets;
+        testCandidateArray.push(nodeAddress);
+
+        setSize++;
+        return true;
     }
 
 }

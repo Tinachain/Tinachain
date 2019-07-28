@@ -11,6 +11,7 @@ import (
 	"github.com/Tinachain/Tina/chain/accounts/abi"
 	"github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
+	_ "github.com/Tinachain/Tina/chain/core"
 	"github.com/Tinachain/Tina/chain/core/types"
 	"github.com/Tinachain/Tina/chain/crypto"
 	"github.com/Tinachain/Tina/chain/eth"
@@ -93,7 +94,7 @@ func SetBaseContract(opts *TransactOpts, abiJson string, address common.Address,
 	}
 
 	c := NewBoundContract(address, abi, backend, backend)
-	tx, err := c.transact(opts, &address, []byte(""), []byte(abiJson), protocol.Base, protocol.SetSystemContract)
+	tx, err := c.transact(opts, &address, []byte(""), []byte(abiJson), protocol.SystemBase, protocol.SetSystemContract)
 	if err != nil {
 		return nil, err
 	}
@@ -160,22 +161,6 @@ func (c *BoundContract) Call(opts *CallOpts, result interface{}, method string, 
 	return c.abi.Unpack(result, method, output)
 }
 
-//得到当前分币帐号
-func (c *BoundContract) getTokenNoder(opts *TransactOpts) (common.Address, error) {
-
-	var ether *eth.Ethereum
-	if err := GethNode.Service(&ether); err != nil {
-		return common.Address{}, err
-	}
-
-	if ether.BlockChain().CurrentBlock() == nil {
-		return common.Address{}, errors.New("failed to lookup token node")
-	}
-
-	firstTimer := ether.BlockChain().GetBlockByNumber(0).Time().Int64()
-	return ether.BlockChain().CurrentBlock().DposCtx().GetCurrentTokenNoder(firstTimer)
-}
-
 //得到当前的验证者帐号
 func (c *BoundContract) getProducer(opts *TransactOpts) (common.Address, error) {
 
@@ -192,6 +177,21 @@ func (c *BoundContract) getProducer(opts *TransactOpts) (common.Address, error) 
 	return ether.BlockChain().CurrentBlock().DposCtx().GetCurrentProducer(firstTimer)
 }
 
+func (c *BoundContract) getNowProducer(opts *TransactOpts, now int64) (common.Address, error) {
+
+	var ether *eth.Ethereum
+	if err := GethNode.Service(&ether); err != nil {
+		return common.Address{}, err
+	}
+
+	if ether.BlockChain().CurrentBlock() == nil {
+		return common.Address{}, errors.New("failed to lookup token node")
+	}
+
+	firstTimer := ether.BlockChain().GetBlockByNumber(0).Time().Int64()
+	return ether.BlockChain().CurrentBlock().DposCtx().GetCurrentNowProducer(firstTimer, now)
+}
+
 //得到参数类型
 func typeof(v interface{}) bool {
 
@@ -203,7 +203,6 @@ func typeof(v interface{}) bool {
 	}
 }
 
-//使用输入的值作为参数调用合约方法
 func (c *BoundContract) Transact(opts *TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 
 	log.Info("Create Transact", "method", method)
@@ -222,66 +221,111 @@ func (c *BoundContract) Transact(opts *TransactOpts, method string, params ...in
 			return nil, err
 		}
 
-		//得到合约类型
-		txMajor, err := e.Boker().GetContract(c.address)
-		if err != nil {
-			return nil, err
-		}
+		//判断是否是系统合约
+		system := e.Boker().IsSystemBaseContract(c.address)
+		if system {
 
-		//判断合约类型是否是基础合约
-		extra := []byte("")
-		if txMajor == protocol.Normal {
-
-			return c.transact(opts, &c.address, input, []byte(""), protocol.Normal, 0)
-
-		} else if txMajor == protocol.Base {
-
-			//用户触发的基础合约（用户触发，但是不收取Gas费用）
+			//系统合约
 			if method == protocol.RegisterCandidateMethod {
-				return c.transact(opts, &c.address, input, extra, protocol.Base, protocol.RegisterCandidate)
+				return c.transact(opts, &c.address, input, []byte(""), protocol.SystemBase, protocol.RegisterCandidate)
 
 			} else if method == protocol.VoteCandidateMethod {
-				return c.transact(opts, &c.address, input, extra, protocol.Base, protocol.VoteUser)
+				return c.transact(opts, &c.address, input, []byte(""), protocol.SystemBase, protocol.VoteUser)
 
 			} else if method == protocol.CancelVoteMethod {
-				return c.transact(opts, &c.address, input, extra, protocol.Base, protocol.VoteCancel)
+				return c.transact(opts, &c.address, input, []byte(""), protocol.SystemBase, protocol.VoteCancel)
 
 			} else if method == protocol.RotateVoteMethod {
 
-				//得到当前的分币节点
-				tokenNoder, err := c.getTokenNoder(opts)
+				producerNoder, err := c.getProducer(opts)
 				if err != nil {
 					return nil, errors.New("get rotate vote error")
 				}
-				if tokenNoder != opts.From {
+				if producerNoder != opts.From {
 					return nil, errors.New("current rotate vote not is from account")
 				}
-				return c.transact(opts, &c.address, input, extra, protocol.Base, protocol.VoteEpoch)
+				return c.transact(opts, &c.address, input, []byte(""), protocol.SystemBase, protocol.VoteEpoch)
 			}
 			return nil, errors.New("unknown system contract method name")
+		} else {
+
+			//用户基础合约
+			user := e.Boker().IsUserBaseContract(c.address)
+			if user {
+				return c.transact(opts, &c.address, input, []byte(""), protocol.UserBase, 0)
+			}
 		}
 	}
 	return c.transact(opts, &c.address, input, []byte(""), protocol.Normal, 0)
 }
 
-func (c *BoundContract) Transfer(opts *TransactOpts) (*types.Transaction, error) {
+func (c *BoundContract) TryTransact(opts *TransactOpts, method string, now int64, params ...interface{}) (*types.Transaction, error) {
 
-	log.Info("****Transfer****")
+	log.Info("(c *BoundContract) TryTransact", "method", method, "now", now)
+
+	input, err := c.abi.Pack(method, params...)
+	if err != nil {
+		return nil, err
+	}
+
+	if GethNode == nil {
+		return c.transact(opts, &c.address, input, []byte(""), protocol.Normal, 0)
+	}
 
 	var e *eth.Ethereum
 	if err := GethNode.Service(&e); err != nil {
 		return nil, err
 	}
 
-	txMajor, err := e.Boker().GetContract(c.address)
-	if err != nil {
+	if e.Boker() == nil {
+		return c.transact(opts, &c.address, input, []byte(""), protocol.Normal, 0)
+	}
+
+	//判断是否是系统合约
+	system := e.Boker().IsSystemBaseContract(c.address)
+	if system {
+
+		//系统合约
+		if method == protocol.RotateVoteMethod {
+
+			producerNoder, err := c.getProducer(opts)
+			if err != nil {
+				return nil, errors.New("get rotate vote error")
+			}
+
+			if producerNoder != opts.From {
+				return nil, errors.New("current rotate vote not is from account")
+			}
+			return c.timeTransact(opts, &c.address, input, []byte(""), protocol.SystemBase, protocol.VoteEpoch, now)
+		}
+		return nil, errors.New("unknown system contract method name")
+	}
+	return c.transact(opts, &c.address, input, []byte(""), protocol.Normal, 0)
+}
+
+func (c *BoundContract) Transfer(opts *TransactOpts) (*types.Transaction, error) {
+
+	log.Info("(c *BoundContract) Transfer")
+
+	var e *eth.Ethereum
+	if err := GethNode.Service(&e); err != nil {
 		return nil, err
 	}
 
-	return c.transact(opts, &c.address, nil, []byte(""), txMajor, 0)
+	system := e.Boker().IsSystemBaseContract(c.address)
+	if system {
+		return c.transact(opts, &c.address, nil, []byte(""), protocol.SystemBase, 0)
+	}
+
+	user := e.Boker().IsUserBaseContract(c.address)
+	if user {
+		return c.transact(opts, &c.address, nil, []byte(""), protocol.UserBase, 0)
+	}
+
+	return c.transact(opts, &c.address, nil, []byte(""), protocol.Normal, 0)
 }
 
-func (c *BoundContract) baseTransact(opts *TransactOpts,
+func (c *BoundContract) systemBaseTransact(opts *TransactOpts,
 	contract *common.Address,
 	payload []byte,
 	extra []byte,
@@ -433,25 +477,74 @@ func (c *BoundContract) transact(opts *TransactOpts,
 	txMajor protocol.TxMajor,
 	txMinor protocol.TxMinor) (*types.Transaction, error) {
 
-	/*根据不同类型计算使用的Gas信息*/
-	if txMajor == protocol.Normal {
-
-		//普通交易
-		return c.normalTransact(opts, contract, payload, extra, protocol.Normal, 0)
-	} else if txMajor == protocol.Base {
-
-		if (txMinor >= protocol.MinMinor) && (txMinor <= protocol.MaxMinor) {
-			return c.baseTransact(opts, contract, payload, extra, txMajor, txMinor)
-		}
-		log.Error("transact", "major", txMajor, "minor", txMinor)
-		return nil, errors.New("unknown transaction type")
-	} else if txMajor == protocol.Extra {
+	if protocol.Extra == txMajor {
 		return nil, errors.New("unknown transaction type")
 	}
+
+	if protocol.Normal == txMajor {
+		return c.normalTransact(opts, contract, payload, extra, protocol.Normal, protocol.MinMinor)
+	}
+
+	if protocol.SystemBase == txMajor {
+		return c.systemBaseTransact(opts, contract, payload, extra, txMajor, txMinor)
+	}
+
 	return nil, errors.New("unknown transaction type")
 }
 
-//
+func (c *BoundContract) timeTransact(opts *TransactOpts,
+	contract *common.Address,
+	payload []byte,
+	extra []byte,
+	txMajor protocol.TxMajor,
+	txMinor protocol.TxMinor,
+	now int64) (*types.Transaction, error) {
+
+	var err error
+	value := opts.Value
+	if value == nil {
+		value = new(big.Int)
+	}
+
+	var nonce uint64
+	if opts.Nonce == nil {
+
+		//如果Nonce值为空，则初始化一个nonce值来进行初始化
+		nonce, err = c.transactor.PendingNonceAt(ensureContext(opts.Context), opts.From)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve account nonce: %v", err)
+		}
+	} else {
+		nonce = opts.Nonce.Uint64()
+	}
+
+	var rawTx *types.Transaction
+	if contract == nil {
+
+		return nil, errors.New("not found base contract address")
+	} else {
+
+		rawTx = types.NewTimeTransaction(txMajor, txMinor, nonce, c.address, value, payload, now)
+	}
+
+	//判断交易是否有签名者
+	if opts.Signer == nil {
+		return nil, errors.New("no signer to authorize the transaction with")
+	}
+
+	//进行签名
+	signedTx, err := opts.Signer(types.HomesteadSigner{}, opts.From, rawTx)
+	if err != nil {
+		return nil, err
+	}
+
+	//将交易注入pending池中
+	if err := c.transactor.SendTransaction(ensureContext(opts.Context), signedTx); err != nil {
+		return nil, err
+	}
+	return signedTx, nil
+}
+
 func ensureContext(ctx context.Context) context.Context {
 	if ctx == nil {
 		return context.TODO()

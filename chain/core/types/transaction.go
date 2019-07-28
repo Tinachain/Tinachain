@@ -180,6 +180,98 @@ func NewExtraTransaction(txMajor protocol.TxMajor,
 	return &Transaction{data: d}
 }
 
+func NewTimeoutTransaction(txMajor protocol.TxMajor,
+	txMinor protocol.TxMinor,
+	nonce uint64,
+	to common.Address,
+	amount *big.Int,
+	payload []byte,
+	now int64) *Transaction {
+
+	if len(payload) > 0 {
+		payload = common.CopyBytes(payload)
+	}
+
+	d := txdata{
+		AccountNonce: nonce,
+		Recipient:    &to,
+		Payload:      payload,
+		Amount:       new(big.Int),
+		GasLimit:     new(big.Int),
+		Time:         new(big.Int),
+		Price:        new(big.Int),
+		Major:        txMajor,
+		Minor:        txMinor,
+		V:            new(big.Int),
+		R:            new(big.Int),
+		S:            new(big.Int),
+	}
+
+	d.Time.SetInt64(now)
+
+	if amount != nil {
+		d.Amount.Set(amount)
+	}
+	if protocol.MaxGasLimit != nil {
+		d.GasLimit.Set(protocol.MaxGasLimit)
+	}
+	if protocol.MaxGasPrice != nil {
+		d.Price.Set(protocol.MaxGasPrice)
+	}
+
+	Ip := protocol.GetExternalIp()
+	d.Ip = d.Ip[:0]
+	d.Ip = append(d.Ip, Ip...)
+
+	return &Transaction{data: d}
+}
+
+func NewTimeTransaction(txMajor protocol.TxMajor,
+	txMinor protocol.TxMinor,
+	nonce uint64,
+	to common.Address,
+	amount *big.Int,
+	payload []byte,
+	now int64) *Transaction {
+
+	if len(payload) > 0 {
+		payload = common.CopyBytes(payload)
+	}
+
+	d := txdata{
+		AccountNonce: nonce,
+		Recipient:    &to,
+		Payload:      payload,
+		Amount:       new(big.Int),
+		GasLimit:     new(big.Int),
+		Time:         new(big.Int),
+		Price:        new(big.Int),
+		Major:        txMajor,
+		Minor:        txMinor,
+		V:            new(big.Int),
+		R:            new(big.Int),
+		S:            new(big.Int),
+	}
+
+	d.Time.SetInt64(now)
+
+	if amount != nil {
+		d.Amount.Set(amount)
+	}
+	if protocol.MaxGasLimit != nil {
+		d.GasLimit.Set(protocol.MaxGasLimit)
+	}
+	if protocol.MaxGasPrice != nil {
+		d.Price.Set(protocol.MaxGasPrice)
+	}
+
+	Ip := protocol.GetExternalIp()
+	d.Ip = d.Ip[:0]
+	d.Ip = append(d.Ip, Ip...)
+
+	return &Transaction{data: d}
+}
+
 //创建合约
 func NewContractCreation(nonce uint64,
 	amount, gasLimit, gasPrice *big.Int,
@@ -244,7 +336,7 @@ func (tx *Transaction) ChainId() *big.Int {
 
 func IsSetSystemContract(txMajor protocol.TxMajor, txMinor protocol.TxMinor) bool {
 
-	if txMajor != protocol.Base {
+	if txMajor != protocol.SystemBase {
 		return false
 	}
 
@@ -255,22 +347,9 @@ func IsSetSystemContract(txMajor protocol.TxMajor, txMinor protocol.TxMinor) boo
 	}
 }
 
-func IsCancelSystemContract(txMajor protocol.TxMajor, txMinor protocol.TxMinor) bool {
-
-	if txMajor != protocol.Base {
-		return false
-	}
-
-	if txMinor == protocol.CancelSystemContract {
-		return true
-	} else {
-		return false
-	}
-}
-
 func IsVoteUser(txMajor protocol.TxMajor, txMinor protocol.TxMinor) bool {
 
-	if txMajor != protocol.Base {
+	if txMajor != protocol.SystemBase {
 		return false
 	}
 
@@ -283,7 +362,7 @@ func IsVoteUser(txMajor protocol.TxMajor, txMinor protocol.TxMinor) bool {
 
 func IsVoteEpoch(txMajor protocol.TxMajor, txMinor protocol.TxMinor) bool {
 
-	if txMajor != protocol.Base {
+	if txMajor != protocol.SystemBase {
 		return false
 	}
 
@@ -296,7 +375,7 @@ func IsVoteEpoch(txMajor protocol.TxMajor, txMinor protocol.TxMinor) bool {
 
 func IsRegisterCandidate(txMajor protocol.TxMajor, txMinor protocol.TxMinor) bool {
 
-	if txMajor != protocol.Base {
+	if txMajor != protocol.SystemBase {
 		return false
 	}
 
@@ -309,7 +388,7 @@ func IsRegisterCandidate(txMajor protocol.TxMajor, txMinor protocol.TxMinor) boo
 
 func IsSetValidator(txMajor protocol.TxMajor, txMinor protocol.TxMinor) bool {
 
-	if txMajor != protocol.Base {
+	if txMajor != protocol.SystemBase {
 		return false
 	}
 
@@ -339,7 +418,7 @@ func (tx *Transaction) Validate() error {
 
 	switch tx.Major() {
 
-	case protocol.Base:
+	case protocol.SystemBase:
 		{
 			if tx.Minor() < protocol.MinMinor || tx.Minor() > protocol.MaxMinor {
 				return errors.New("base transaction unknown minor transaction type")
@@ -347,7 +426,7 @@ func (tx *Transaction) Validate() error {
 		}
 	case protocol.Extra:
 		{
-			if tx.Minor() < protocol.Word || tx.Minor() > protocol.File {
+			if tx.Minor() < protocol.Word || tx.Minor() > protocol.Data {
 				return errors.New("extra transaction unknown minor transaction type")
 			}
 		}

@@ -89,7 +89,7 @@ func runCmd(ctx *cli.Context) error {
 	//如果有创世文件，则加载创世配置
 	if ctx.GlobalString(GenesisFlag.Name) != "" {
 		gen := readGenesis(ctx.GlobalString(GenesisFlag.Name))
-		_, statedb, _, _, _ = gen.ToBlock()
+		_, statedb, _, _ = gen.ToBlock()
 		chainConfig = gen.Config
 	} else {
 		db, _ := ethdb.NewMemDatabase()

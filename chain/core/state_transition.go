@@ -161,7 +161,6 @@ func ExtraMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, boker boke
 	return ret, gas, failed, err
 }
 
-//股权交易处理
 func StockMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
 
 	st := NewStateTransition(evm, msg, gp, sp)
@@ -172,15 +171,20 @@ func StockMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, boker boke
 	return ret, gas, failed, err
 }
 
-//部署基础合约的消息
-func contractMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
+func systemContractMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
 
 	st := NewStateTransition(evm, msg, gp, sp)
-	ret, _, _, failed, err := st.ContractTransitionDb(txMajor, txMinor, boker)
+	ret, _, _, failed, err := st.SystemContractTransitionDb(txMajor, txMinor, boker)
 	return ret, new(big.Int).SetInt64(0), failed, err
 }
 
-//通证分配合约的消息
+func userContractMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
+
+	st := NewStateTransition(evm, msg, gp, sp)
+	ret, _, _, failed, err := st.UserContractTransitionDb(txMajor, txMinor, boker)
+	return ret, new(big.Int).SetInt64(0), failed, err
+}
+
 func validatorMessage(evm *vm.EVM, msg Message, gp *GasPool, sp *big.Int, txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) ([]byte, *big.Int, bool, error) {
 
 	st := NewStateTransition(evm, msg, gp, sp)
@@ -279,7 +283,7 @@ func (st *StateTransition) preCheck() error {
 	return st.buyGas()
 }
 
-func (st *StateTransition) getExtra(boker bokerapi.Api) string {
+/*func (st *StateTransition) getExtra(boker bokerapi.Api) string {
 
 	var err error
 
@@ -314,7 +318,7 @@ func (st *StateTransition) getExtra(boker bokerapi.Api) string {
 
 	//得到最后一个输入参数内容
 	return methodJson.Params[len(methodJson.Params)-1].Value
-}
+}*/
 
 //通过应用当前消息并返回结果来转换状态包括操作所需的气体以及用过的气体。 如果它返回错误失败了，表示存在共识问题。
 func (st *StateTransition) NormalTransitionDb(boker bokerapi.Api) (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
@@ -486,7 +490,7 @@ func (st *StateTransition) StockTransitionDb(txMajor protocol.TxMajor, txMinor p
 		return
 	}
 
-	if txMinor == protocol.StockSet {
+	/*if txMinor == protocol.StockSet {
 		//设置股权
 		boker.SetContract(*st.msg.To(), protocol.SystemContract, false, string(st.extra))
 	} else if txMinor == protocol.StockTransfer {
@@ -501,27 +505,52 @@ func (st *StateTransition) StockTransitionDb(txMajor protocol.TxMajor, txMinor p
 	} else if txMinor == protocol.StockUnFrozen {
 		//股权解冻
 
-	}
+	}*/
 
 	return []byte(""), new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, nil
 }
 
-//部署基础合约执行
-func (st *StateTransition) ContractTransitionDb(txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
+func (st *StateTransition) SystemContractTransitionDb(txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
 
 	if err = st.preCheck(); err != nil {
 		return
 	}
 
 	if txMinor == protocol.SetSystemContract {
-		boker.SetContract(*st.msg.To(), protocol.SystemContract, false, string(st.extra))
-	} else if txMinor == protocol.CancelSystemContract {
-		boker.SetContract(*st.msg.To(), protocol.SystemContract, true, "")
+		boker.SetSystemContract(*st.msg.To(), st.from().Address())
 	}
 
 	st.state.SetNonce(st.from().Address(), st.state.GetNonce(st.from().Address())+1)
 	return []byte(""), new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, nil
 }
+
+func (st *StateTransition) UserContractTransitionDb(txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
+
+	if err = st.preCheck(); err != nil {
+		return
+	}
+
+	if txMinor == protocol.SetSystemContract {
+		boker.SetUserBaseContract(*st.msg.To(), st.from().Address())
+	}
+
+	st.state.SetNonce(st.from().Address(), st.state.GetNonce(st.from().Address())+1)
+	return []byte(""), new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, nil
+}
+
+/*func (st *StateTransition) ContractTransitionDb(txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
+
+	if err = st.preCheck(); err != nil {
+		return
+	}
+
+	if txMinor == protocol.SetSystemContract {
+		boker.SetContract(*st.msg.To(), protocol.System, false, string(st.extra))
+	}
+
+	st.state.SetNonce(st.from().Address(), st.state.GetNonce(st.from().Address())+1)
+	return []byte(""), new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, nil
+}*/
 
 //投票交易操作
 func (st *StateTransition) VoteTransitionDb(txMajor protocol.TxMajor, txMinor protocol.TxMinor, boker bokerapi.Api) (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {

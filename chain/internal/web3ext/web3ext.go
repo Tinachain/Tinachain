@@ -433,26 +433,14 @@ web3._extend({
 			params: 2,
 			inputFormatter: [web3._extend.formatters.inputBlockNumberFormatter, web3._extend.utils.toHex]
 		}),
-		
-		
 		new web3._extend.Method({
 			name: 'getLastProducer',
 			call: 'eth_getLastProducer',
 			params: 0,
 		}),
 		new web3._extend.Method({
-			name: 'getLastTokenNoder',
-			call: 'eth_getLastTokenNoder',
-			params: 0,
-		}),
-		new web3._extend.Method({
 			name: 'getNextProducer',
 			call: 'eth_getNextProducer',
-			params: 0,
-		}),
-		new web3._extend.Method({
-			name: 'getNextTokenNoder',
-			call: 'eth_getNextTokenNoder',
 			params: 0,
 		}),
 		new web3._extend.Method({
@@ -482,13 +470,8 @@ web3._extend({
 			params: 1,
 		}),
 		new web3._extend.Method({
-			name: 'setPicture',
-			call: 'eth_setPicture',
-			params: 1,
-		}),
-		new web3._extend.Method({
-			name: 'setFile',
-			call: 'eth_setFile',
+			name: 'setData',
+			call: 'eth_setData',
 			params: 1,
 		}),
 		new web3._extend.Method({
@@ -497,13 +480,8 @@ web3._extend({
 			params: 1,
 		}),
 		new web3._extend.Method({
-			name: 'getPicture',
-			call: 'eth_getPicture',
-			params: 2,
-		}),
-		new web3._extend.Method({
-			name: 'getFile',
-			call: 'eth_getFile',
+			name: 'getData',
+			call: 'eth_getData',
 			params: 2,
 		}),
 		new web3._extend.Method({

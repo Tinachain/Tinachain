@@ -169,6 +169,44 @@ Tinachain is a vertical blockchain platform specifically designed for preservati
 
     miner.start()
 	
+### Tina链子节点接入流程
+
+第一步:得到主节点节点信息
+
+	admin.nodeInfo
+
+	返回
+	{
+	  enode: "enode://97730b179a8c1af4c21613c78fcc9c607f2ce9614ec927ab2f788e0c1faab2c3a4f532fa326220a589b59af421ea30c0e7224c6c0837b66a2ff4e391314da679@[::]:30304?discport=0",
+	  id: "97730b179a8c1af4c21613c78fcc9c607f2ce9614ec927ab2f788e0c1faab2c3a4f532fa326220a589b59af421ea30c0e7224c6c0837b66a2ff4e391314da679",
+	  ip: "::",
+	  listenAddr: "[::]:30304",
+	  name: "Geth/bokerchain--rpc/v1.7.4-stable/linux-amd64/go1.9.2",
+	  ports: {
+		discovery: 0,
+		listener: 30304
+	  },
+	  protocols: {
+		eth: {
+		  difficulty: 28684,
+		  genesis: "0xb0a53b645ea52f7971d06ada36e004a9961105d4acb013f7e2d337a4ce90e280",
+		  head: "0x73d7519a2edc78be4b12c8137d92266f234631ebf976a08bb79d55614b0b0c20",
+		  network: 66666
+		}
+	  }
+	}
+	
+第二步:在子节点中加入主节点
+
+	admin.addPeer("enode://97730b179a8c1af4c21613c78fcc9c607f2ce9614ec927ab2f788e0c1faab2c3a4f532fa326220a589b59af421ea30c0e7224c6c0837b66a2ff4e391314da679@192.168.22.135:30303")
+	此处注意IP信息和端口均为主节点对外开放可以进行访问的信息
+	
+第三步:等待区块同步可以使用指令查询
+	eth.blockNumber
+	
+查询节点信息
+	admin.peers
+	
 	
 ### RPC 指令
 
@@ -182,13 +220,3 @@ Tinachain is a vertical blockchain platform specifically designed for preservati
 
     eth.getWord("0x8c52e28e4819d28f215563635e7a4971cddd5ad48d21424383c832ff03b12800")
 
-
-#### 图片上链
-
-1：将图片上链（其中：/projects/tina/1.jpg 是节点上地址）
-
-    eth.setPicture("/projects/tina/1.jpg")
-	
-2：从链上获取图片（其中：交易Hash、保存图片的节点目录，文件名使用链上的文件名，例如设置/projects/tina则保存的图片地址为：/projects/tina/1.jpg）
-
-    eth.getPicture("0x26635445ae6e1f20bc2a7ed5be45c3a0b7e847e1c79167c9b1564fe77ef72094", "/projects/tina")

@@ -48,6 +48,7 @@ var (
 	ErrOversizedData = errors.New("oversized data")           //超大数据
 	ErrOverExtraData = errors.New("over extra data")          //超大扩展数据
 	ErrInvalidType   = errors.New("unknown transaction type") //未知交易类型
+	ErrBlackSender   = errors.New("transaction sender is black address")
 )
 
 var (
@@ -653,7 +654,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 		"tx Nonce", tx.Nonce(),
 		"local", local)
 
-	if protocol.Normal == tx.Major() || protocol.Base == tx.Major() {
+	if protocol.Normal == tx.Major() || protocol.SystemBase == tx.Major() {
 
 		//为了防止Dos攻击，因此对于普通交易和基础交易的交易大小设置最大不能超过32KB
 		if tx.Size() > protocol.MaxNormalSize {
@@ -677,7 +678,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 		//普通交易类型检测
 		return pool.normalValidateTx(tx, local)
-	} else if protocol.Base == tx.Major() {
+	} else if protocol.SystemBase == tx.Major() {
 
 		//基础交易类型检测
 		if (tx.Minor() >= protocol.MinMinor) && (tx.Minor() <= protocol.MaxMinor) {
@@ -687,7 +688,7 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	} else if protocol.Extra == tx.Major() {
 
 		//扩展交易类型检测
-		if (tx.Minor() >= protocol.Word) && (tx.Minor() <= protocol.File) {
+		if (tx.Minor() >= protocol.Word) && (tx.Minor() <= protocol.Data) {
 
 			return pool.extraValidateTx(tx, local)
 		}

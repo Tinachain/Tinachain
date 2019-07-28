@@ -149,7 +149,7 @@ func (t *BokerTransaction) SubmitBokerTransaction(ctx context.Context,
 		var tx *types.Transaction
 
 		//根据交易类型进行区分
-		if protocol.Base == txMajor {
+		if protocol.SystemBase == txMajor || protocol.UserBase == txMajor {
 
 			tx = types.NewBaseTransaction(args.Major,
 				args.Minor,

@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	_ "io/ioutil"
 	"math/big"
-	"os"
-	"path/filepath"
+	_ "os"
+	_ "path/filepath"
 	"strings"
 	"time"
 
@@ -565,8 +565,6 @@ func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.A
 	return res[:], state.Error()
 }
 
-//****Tina链新增处理****
-
 //得到最后一次的出块节点
 func (s *PublicBlockChainAPI) GetLastProducer(ctx context.Context) (common.Address, error) {
 
@@ -580,16 +578,6 @@ func (s *PublicBlockChainAPI) GetLastProducer(ctx context.Context) (common.Addre
 
 	}
 	return common.Address{}, errors.New("failed get last producer")
-}
-
-//得到最后一次的分币节点
-func (s *PublicBlockChainAPI) GetLastTokenNoder(ctx context.Context) (common.Address, error) {
-
-	block := s.b.CurrentBlock()
-	if block != nil {
-		return block.DposContext.GetLastTokenNoder(-1)
-	}
-	return common.Address{}, errors.New("failed get last token noder")
 }
 
 //得到下一次的出块节点
@@ -609,24 +597,10 @@ func (s *PublicBlockChainAPI) GetNextProducer(ctx context.Context) (common.Addre
 	return common.Address{}, errors.New("failed get next producer")
 }
 
-//得到下一次的分币节点
-func (s *PublicBlockChainAPI) GetNextTokenNoder(ctx context.Context) (common.Address, error) {
-
-	block := s.b.CurrentBlock()
-	if block != nil {
-
-		firstBlock, err := s.b.BlockByNumber(ctx, 0)
-		if err != nil {
-			return block.DposContext.GetCurrentTokenNoder(firstBlock.Time().Int64())
-		}
-	}
-	return common.Address{}, errors.New("failed get next token noder")
-}
-
 //Tina链新增函数处理，设置当前基础合约
-func (s *PublicBlockChainAPI) SetBaseContracts(ctx context.Context, address common.Address, contractType protocol.ContractType, abiJson string) (common.Hash, error) {
+func (s *PublicBlockChainAPI) SetSystemContract(ctx context.Context, address common.Address) (common.Hash, error) {
 
-	log.Info("(s *PublicBlockChainAPI) SetBaseContracts")
+	log.Info("(s *PublicBlockChainAPI) SetSystemContract")
 
 	//检测节点信息
 	if err := s.checkContract(); err != nil {
@@ -635,17 +609,47 @@ func (s *PublicBlockChainAPI) SetBaseContracts(ctx context.Context, address comm
 	}
 
 	//检测交易类型
-	if err := s.isExitsTxType(contractType, protocol.SystemContract, protocol.PersonalContract); err != nil {
+	/*if err := s.isExitsTxType(contractType, protocol.SystemContract, protocol.PersonalContract); err != nil {
 		log.Error("SetBaseContracts isExitsTxType", "err", err)
+		return common.Hash{}, err
+	}*/
+
+	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
+		protocol.SystemBase,
+		protocol.SetSystemContract,
+		address,
+		[]byte(""),
+		[]byte(""),
+		0)
+
+	log.Info("(s *PublicBlockChainAPI) SetBaseContracts",
+		"Nonce", tx.Nonce(),
+		"To", tx.To(),
+		"tx.Hash", tx.Hash().String())
+
+	if resultErr != nil {
+		return common.Hash{}, resultErr
+	} else {
+		return tx.Hash(), nil
+	}
+}
+
+func (s *PublicBlockChainAPI) SetUserContract(ctx context.Context, address common.Address) (common.Hash, error) {
+
+	log.Info("(s *PublicBlockChainAPI) SetUserContract")
+
+	//检测节点信息
+	if err := s.checkContract(); err != nil {
+		log.Error("SetBaseContracts checkContract", "err", err)
 		return common.Hash{}, err
 	}
 
 	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-		protocol.Base,
-		protocol.SetSystemContract,
+		protocol.SystemBase,
+		protocol.SetUserContract,
 		address,
 		[]byte(""),
-		[]byte(abiJson),
+		[]byte(""),
 		0)
 
 	log.Info("(s *PublicBlockChainAPI) SetBaseContracts",
@@ -661,9 +665,9 @@ func (s *PublicBlockChainAPI) SetBaseContracts(ctx context.Context, address comm
 }
 
 //Tina链新增函数处理，取消一个基础合约
-func (s *PublicBlockChainAPI) CancelBaseContracts(ctx context.Context, address common.Address, contractType protocol.ContractType) (common.Hash, error) {
+func (s *PublicBlockChainAPI) CancelUserContract(ctx context.Context, address common.Address) (common.Hash, error) {
 
-	log.Info("****CancelBaseContracts****", "address", address.String(), "contractType", contractType)
+	log.Info("(s *PublicBlockChainAPI) CancelBaseContracts", "address", address.String())
 
 	//检测节点信息
 	if err := s.checkContract(); err != nil {
@@ -671,15 +675,9 @@ func (s *PublicBlockChainAPI) CancelBaseContracts(ctx context.Context, address c
 		return common.Hash{}, err
 	}
 
-	//检测交易类型
-	if err := s.isExitsTxType(contractType, protocol.SystemContract, protocol.PersonalContract); err != nil {
-		log.Error("CancelBaseContracts isExitsTxType", "err", err)
-		return common.Hash{}, err
-	}
-
 	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-		protocol.Base,
-		protocol.CancelSystemContract,
+		protocol.SystemBase,
+		protocol.CancelUserContract,
 		address,
 		[]byte(""),
 		[]byte(""),
@@ -691,247 +689,56 @@ func (s *PublicBlockChainAPI) CancelBaseContracts(ctx context.Context, address c
 	}
 }
 
-//Tina链新增函数处理，设置文字到交易的扩展字段中
 func (s *PublicBlockChainAPI) SetWord(ctx context.Context, word string) (common.Hash, error) {
 
 	log.Info("(s *PublicBlockChainAPI) SetWord", "word", word)
-	var key string = ""
+	//var key string = ""
 	//检测保存文字的大小是否越界
 	if len(word) > int(protocol.MaxWordSize) {
 
 		return common.Hash{}, errors.New("Setword More Than MaxWordSize(1MB)")
 	}
 
-	if key != "" {
+	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
+		protocol.Extra,
+		protocol.Word,
+		common.Address{},
+		[]byte(""),
+		[]byte(word),
+		0)
 
-		err, buffer := s.b.Boker().EncoderContext([]byte(word), []byte(key))
-		if err != nil {
-
-			log.Info("SetWord", "err", err)
-			return common.Hash{}, errors.New("Setword Encoder Failed")
-		}
-
-		tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-			protocol.Extra,
-			protocol.Word,
-			common.Address{},
-			[]byte(""),
-			buffer,
-			1)
-
-		if resultErr != nil {
-			return common.Hash{}, resultErr
-		} else {
-			return tx.Hash(), nil
-		}
-
+	if resultErr != nil {
+		return common.Hash{}, resultErr
 	} else {
-		tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-			protocol.Extra,
-			protocol.Word,
-			common.Address{},
-			[]byte(""),
-			[]byte(word),
-			0)
-
-		if resultErr != nil {
-			return common.Hash{}, resultErr
-		} else {
-			return tx.Hash(), nil
-		}
+		return tx.Hash(), nil
 	}
 }
 
-// 判断所给路径文件/文件夹是否存在
-func (s *PublicBlockChainAPI) existsPicture(path string) bool {
+func (s *PublicBlockChainAPI) SetData(ctx context.Context, data []byte) (common.Hash, error) {
 
-	_, err := os.Stat(path)
-	if err != nil {
+	log.Info("(s *PublicBlockChainAPI) SetData", "len", len(data))
+	//var key string = ""
 
-		if os.IsExist(err) {
-			return true
-		}
-		return false
+	if len(data) > protocol.MaxDataSize {
+
+		return common.Hash{}, errors.New("SetData Length More Than MaxDataSize(1MB)")
 	}
-	return true
-}
 
-func (s *PublicBlockChainAPI) pictureSize(path string) int64 {
+	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
+		protocol.Extra,
+		protocol.Data,
+		common.Address{},
+		[]byte(""),
+		data,
+		0)
 
-	fileInfo, err := os.Stat(path)
-	if nil == err {
-
-		return fileInfo.Size()
-	}
-	return 0
-}
-
-//Tina链新增函数处理，设置图片到交易的扩展字段中
-func (s *PublicBlockChainAPI) SetPicture(ctx context.Context, picture string) (common.Hash, error) {
-
-	log.Info("SetPicture", "picture", picture)
-	var key string = ""
-
-	if s.existsPicture(picture) {
-
-		fileSize := s.pictureSize(picture)
-		log.Info("SetPicture", "fileSize", fileSize)
-
-		//判断图片文件是否大于2MB
-		if fileSize > protocol.MaxPictureSize {
-
-			return common.Hash{}, errors.New("SetPicture Picture More Than MaxPictureSize(1MB)")
-		}
-
-		//得到文件名称
-		name := filepath.Base(picture)
-
-		//读取文件
-		picBuffer, err := ioutil.ReadFile(picture)
-		if err != nil {
-
-			return common.Hash{}, errors.New("SetPicture Function ReadFile Failed")
-		}
-
-		if key != "" {
-
-			err, buffer := s.b.Boker().EncoderContext(picBuffer, []byte(key))
-			if err != nil {
-				return common.Hash{}, errors.New("SetPicture Encoder Failed")
-			}
-
-			tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-				protocol.Extra,
-				protocol.Word,
-				common.Address{},
-				[]byte(""),
-				buffer,
-				1)
-
-			if resultErr != nil {
-				return common.Hash{}, resultErr
-			} else {
-				return tx.Hash(), nil
-			}
-
-		} else {
-
-			tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-				protocol.Extra,
-				protocol.Picture,
-				common.Address{},
-				[]byte(name),
-				picBuffer,
-				0)
-
-			if resultErr != nil {
-				return common.Hash{}, resultErr
-			} else {
-				return tx.Hash(), nil
-			}
-		}
-
+	if resultErr != nil {
+		return common.Hash{}, resultErr
 	} else {
-
-		return common.Hash{}, errors.New("Not Found Picture File")
+		return tx.Hash(), nil
 	}
 }
 
-// 判断所给路径文件/文件夹是否存在
-func (s *PublicBlockChainAPI) existsFile(path string) bool {
-
-	_, err := os.Stat(path)
-	if err != nil {
-
-		if os.IsExist(err) {
-			return true
-		}
-		return false
-	}
-	return true
-}
-
-func (s *PublicBlockChainAPI) fileSize(path string) int64 {
-
-	fileInfo, err := os.Stat(path)
-	if nil == err {
-
-		return fileInfo.Size()
-	}
-	return 0
-}
-
-//Tina链新增函数处理，设置文件分块到交易的扩展字段中
-func (s *PublicBlockChainAPI) SetFile(ctx context.Context, filePath string) (common.Hash, error) {
-
-	log.Info("SetFile", "File", filePath)
-
-	var key string = ""
-	if s.existsFile(filePath) {
-
-		size := s.fileSize(filePath)
-		log.Info("SetFile", "fileSize", size)
-
-		if size > protocol.MaxExtraSize {
-
-			return common.Hash{}, errors.New("SetFile File More Than MaxExtraSize(5MB)")
-		}
-
-		//得到文件名称
-		//_, fileName := filepath.Split(filePath)
-		name := filepath.Base(filePath)
-
-		//读取文件
-		fileBuffer, err := ioutil.ReadFile(filePath)
-		if err != nil {
-
-			return common.Hash{}, errors.New("SetFile Function ReadFile Failed")
-		}
-
-		if key != "" {
-
-			err, buffer := s.b.Boker().EncoderContext(fileBuffer, []byte(key))
-			if err != nil {
-				return common.Hash{}, errors.New("SetFile Encoder Failed")
-			}
-
-			tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-				protocol.Extra,
-				protocol.Word,
-				common.Address{},
-				[]byte(""),
-				buffer,
-				1)
-
-			if resultErr != nil {
-				return common.Hash{}, resultErr
-			} else {
-				return tx.Hash(), nil
-			}
-		} else {
-
-			tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-				protocol.Extra,
-				protocol.File,
-				common.Address{},
-				[]byte(name),
-				fileBuffer,
-				0)
-
-			if resultErr != nil {
-				return common.Hash{}, resultErr
-			} else {
-				return tx.Hash(), nil
-			}
-		}
-
-	} else {
-
-		return common.Hash{}, errors.New("Not Found File")
-	}
-}
-
-//Tina链新增函数处理，设置文件分块到交易的扩展字段中
 func (s *PublicBlockChainAPI) CheckTxSign(ctx context.Context) (common.Hash, error) {
 
 	log.Info("(s *PublicBlockChainAPI) CheckTxSign")
@@ -951,29 +758,10 @@ func (s *PublicBlockChainAPI) CheckTxSign(ctx context.Context) (common.Hash, err
 	}
 }
 
-func pathExists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
-}
-
-func fileExist(filename string) bool {
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return false
-	}
-	return true
-}
-
-//func (s *PublicBlockChainAPI) GetWord(ctx context.Context, hash common.Hash, key string) (string, error) {
 func (s *PublicBlockChainAPI) GetWord(ctx context.Context, hash common.Hash) (string, error) {
 
-	log.Info("RPC GetWord", "hash", hash)
-	var key string = ""
+	log.Info("(s *PublicBlockChainAPI) GetWord", "hash", hash)
+	//var key string = ""
 
 	if tx, _, _, _ := core.GetTransaction(s.b.ChainDb(), hash); tx != nil {
 
@@ -989,7 +777,7 @@ func (s *PublicBlockChainAPI) GetWord(ctx context.Context, hash common.Hash) (st
 		if 0 == tx.Encryption() {
 
 			return string(tx.Extra()[:]), nil
-		} else {
+		} /* else {
 
 			err, buffer := s.b.Boker().DecoderContext(tx.Extra(), []byte(key))
 			if err != nil {
@@ -998,157 +786,45 @@ func (s *PublicBlockChainAPI) GetWord(ctx context.Context, hash common.Hash) (st
 			}
 
 			return string(buffer[:]), nil
-		}
+		}*/
 	}
 
 	return "", fmt.Errorf("RPC GetWord Not Found Transaction From Hash")
 }
 
-//func (s *PublicBlockChainAPI) GetPicture(ctx context.Context, hash common.Hash, savePath string, key string) error {
-func (s *PublicBlockChainAPI) GetPicture(ctx context.Context, hash common.Hash, savePath string) error {
+func (s *PublicBlockChainAPI) GetData(ctx context.Context, hash common.Hash) ([]byte, error) {
 
-	log.Info("RPC GetPicture", "hash", hash, "savePath", savePath)
+	log.Info("(s *PublicBlockChainAPI) GetData", "hash", hash)
 
-	var key string = ""
+	//var key string = ""
 
 	if tx, _, _, _ := core.GetTransaction(s.b.ChainDb(), hash); tx != nil {
 
 		if tx.Major() != protocol.Extra {
-			return fmt.Errorf("RPC GetPicture Transaction from hash Major not is Extra type")
+			return []byte(""), fmt.Errorf("(s *PublicBlockChainAPI) GetData Transaction from hash Major not is Extra type")
 		}
 
-		if tx.Minor() != protocol.Picture {
-			return fmt.Errorf("RPC GetPicture Transaction from hash Minor not is Picture type")
-		}
-
-		_, err := pathExists(savePath)
-		if err != nil {
-			return fmt.Errorf("RPC GetPicture Not Found Dir")
-		}
-
-		//得到文件名称
-		filePath := savePath + "/" + string(tx.Name())
-		f, fileErr := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
-		if fileErr != nil {
-
-			return fmt.Errorf("RPC GetPicture OpenFile Failed", "filePath", filePath)
+		if tx.Minor() != protocol.Data {
+			return []byte(""), fmt.Errorf("(s *PublicBlockChainAPI) GetData Transaction from hash Minor not is Data type")
 		}
 
 		// 解密, 文件的写入
 		if 0 == tx.Encryption() {
 
-			_, writeEr := f.Write(tx.Extra())
-			if writeEr != nil {
-
-				f.Close()
-				return fmt.Errorf("RPC GetPicture Write Failed", "filePath", filePath)
-			}
-		} else {
+			return tx.Extra(), nil
+		} /*else {
 
 			err, buffer := s.b.Boker().DecoderContext(tx.Extra(), []byte(key))
 			if err != nil {
 
-				return fmt.Errorf("RPC GetPicture Transaction from hash Decoder Failed")
+				return []byte(""), fmt.Errorf("RPC GetPicture Transaction from hash Decoder Failed")
 			}
 
-			_, writeEr := f.Write(buffer)
-			if writeEr != nil {
-
-				f.Close()
-				return fmt.Errorf("RPC GetPicture Write Failed", "filePath", filePath)
-			}
-		}
-
-		//关闭文件
-		if fileErr = f.Close(); fileErr != nil {
-
-			return fmt.Errorf("RPC GetPicture Close Failed", "filePath", filePath)
-		}
-
-		log.Info("RPC GetPicture Success", "hash", hash, "filePath", filePath)
-
-		return nil
+			return buffer, nil
+		}*/
 	}
 
-	return fmt.Errorf("RPC GetPicture Not Found Transaction From Hash")
-}
-
-//func (s *PublicBlockChainAPI) GetFile(ctx context.Context, hash common.Hash, saveFile string, key string) error {
-func (s *PublicBlockChainAPI) GetFile(ctx context.Context, hash common.Hash, saveFile string) error {
-
-	log.Info("RPC GetFile", "hash", hash, "saveFile", saveFile)
-
-	var key string = ""
-
-	if tx, _, _, _ := core.GetTransaction(s.b.ChainDb(), hash); tx != nil {
-
-		if tx.Major() != protocol.Extra {
-			return fmt.Errorf("RPC GetFile Transaction from hash Major not is Extra type")
-		}
-
-		if tx.Minor() != protocol.File {
-			return fmt.Errorf("RPC GetFile Transaction from hash Minor not is File type")
-		}
-
-		f, fileErr := os.OpenFile(saveFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
-		if fileErr != nil {
-
-			return fmt.Errorf("RPC GetFile OpenFile Failed", "saveFile", saveFile)
-		}
-
-		// 解密, 文件的写入
-		if 0 == tx.Encryption() {
-
-			_, writeEr := f.Write(tx.Extra())
-			if writeEr != nil {
-
-				f.Close()
-				return fmt.Errorf("RPC GetFile Write Failed", "saveFile", saveFile)
-			}
-		} else {
-
-			err, buffer := s.b.Boker().DecoderContext(tx.Extra(), []byte(key))
-			if err != nil {
-
-				return fmt.Errorf("RPC GetFile Transaction from hash Decoder Failed")
-			}
-
-			_, writeEr := f.Write(buffer)
-			if writeEr != nil {
-
-				f.Close()
-				return fmt.Errorf("RPC GetFile Write Failed", "saveFile", saveFile)
-			}
-		}
-
-		//关闭文件
-		if fileErr = f.Close(); fileErr != nil {
-
-			return fmt.Errorf("RPC GetFile Close Failed", "saveFile", saveFile)
-		}
-
-		log.Info("RPC GetFile Success", "hash", hash, "saveFile", saveFile)
-
-		return nil
-	}
-
-	return fmt.Errorf("RPC GetPicture Not Found Transaction From Hash")
-}
-
-func (s *PublicBlockChainAPI) isExitsTxType(contractType protocol.ContractType, needTypes ...protocol.ContractType) error {
-
-	var judge bool = false
-	for _, needType := range needTypes {
-
-		if needType == contractType {
-			judge = true
-			break
-		}
-	}
-	if !judge {
-		return errors.New("CoinBase Not`s Set Base Contracts Account")
-	}
-	return nil
+	return []byte(""), fmt.Errorf("(s *PublicBlockChainAPI) GetData Not Found Transaction From Hash")
 }
 
 func (s *PublicBlockChainAPI) checkContract() error {
@@ -1224,7 +900,7 @@ func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.A
 		if localCoinbase == coinbase {
 
 			tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-				protocol.Base,
+				protocol.SystemBase,
 				protocol.SetValidator,
 				address,
 				[]byte(""),
@@ -1238,14 +914,10 @@ func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.A
 
 		} else {
 
-			txMajor, err := s.b.Boker().GetAccount(coinbase)
-			if err != nil {
-				return common.Hash{}, err
-			}
-
-			//判断此账号是否具有设置验证者权限
-			if txMajor != protocol.Base {
-				return common.Hash{}, errors.New("CoinBase Not`s Add Validator")
+			//txMajor, err := s.b.Boker().GetAccount(coinbase)
+			owner := s.b.Boker().GetOwner()
+			if coinbase != owner {
+				return common.Hash{}, errors.New("CoinBase Not`s Owner And Can`t Add Validator")
 			}
 
 			//判断此账号是否已经是验证者
@@ -1259,7 +931,7 @@ func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.A
 			}
 
 			tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-				protocol.Base,
+				protocol.SystemBase,
 				protocol.SetValidator,
 				address,
 				[]byte(""),
@@ -1278,7 +950,7 @@ func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.A
 //Tina链新增函数处理，添加一个验证者信息
 func (s *PublicBlockChainAPI) DecodeAbi(ctx context.Context, abiJson string, method string, payload string) error {
 
-	log.Info("****DecodeAbi****", "abiJson", abiJson, "method", method, "payload", payload)
+	log.Info("(s *PublicBlockChainAPI) DecodeAbi", "abiJson", abiJson, "method", method, "payload", payload)
 
 	_, err := protocol.DecodeAbi(abiJson, method, payload)
 	if err != nil {
@@ -1645,16 +1317,18 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	case protocol.Normal:
 		result.MajorNotes = "Normal"
 		result.MinorNotes = ""
-	case protocol.Base:
-		result.MajorNotes = "Base"
+	case protocol.SystemBase:
+		result.MajorNotes = "SystemBase"
 
 		switch result.Minor {
 		case protocol.SetValidator:
 			result.MinorNotes = "SetValidator"
 		case protocol.SetSystemContract:
 			result.MinorNotes = "SetSystemContract"
-		case protocol.CancelSystemContract:
-			result.MinorNotes = "CancelSystemContract"
+		case protocol.SetUserContract:
+			result.MinorNotes = "SetUserContract"
+		case protocol.CancelUserContract:
+			result.MinorNotes = "CancelUserContract"
 		case protocol.RegisterCandidate:
 			result.MinorNotes = "RegisterCandidate"
 		case protocol.VoteUser:
@@ -1666,15 +1340,16 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		default:
 			result.MinorNotes = ""
 		}
+	case protocol.UserBase:
+		result.MajorNotes = "UserBase"
+		result.MinorNotes = ""
 	case protocol.Extra:
 		result.MajorNotes = "Extra"
 		switch result.Minor {
 		case protocol.Word:
 			result.MinorNotes = "Word"
-		case protocol.Picture:
-			result.MinorNotes = "Picture"
-		case protocol.File:
-			result.MinorNotes = "File"
+		case protocol.Data:
+			result.MinorNotes = "Data"
 		}
 	}
 
@@ -1937,19 +1612,16 @@ func (args *SendTxArgs) ToTransaction() (*types.Transaction, error) {
 	//判断交易地址是否为空
 	if args.To == nil {
 
-		if args.Major == protocol.Base {
+		if args.Major == protocol.SystemBase {
 
-			if (args.Minor >= protocol.MinMinor) && (args.Minor <= protocol.MaxMinor) {
-				return nil, errors.New("base contract transaction type not found contract address")
-			}
+			return nil, errors.New("System Base contract transaction type not found contract address")
+		} else if args.Major == protocol.SystemBase {
+			return nil, errors.New("User Base contract transaction type not found contract address")
 		} else if args.Major == protocol.Normal {
-
 			return types.NewContractCreation(uint64(*args.Nonce), (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data), nil
 		} else if args.Major == protocol.Extra {
-
 			return nil, nil
 		} else {
-
 			return nil, errors.New("unknown transaction type")
 		}
 	}
@@ -2086,7 +1758,7 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encod
 	}
 	log.Info("(s *PublicTransactionPoolAPI) SendRawTransaction types.Sender", "from", sender.String())
 
-	if protocol.Base != tx.Major() {
+	if protocol.SystemBase != tx.Major() {
 		tx.SetTime()
 	}
 

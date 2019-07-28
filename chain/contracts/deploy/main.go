@@ -306,7 +306,7 @@ Ware.%s = web3.eth.contract(%s).at('%s', function(error, contract){
 				}
 
 				//Chainware Chainware
-				err = client.ContractDeploy(contract, CWARETokenAddress, managerAddress)
+				err = client.ContractDeploy(contract, managerAddress, CWARETokenAddress)
 				if err != nil {
 
 					Log("Deploy Contract %s Fail Err %s", contractName, err.Error())

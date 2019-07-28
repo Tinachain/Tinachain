@@ -1497,7 +1497,6 @@ func (d *Downloader) syncBokerContextState(context *protocol.BokerBackendProto) 
 	roots := []common.Hash{
 		context.SingleHash,
 		context.ContractsHash,
-		context.ContracAbiHash,
 	}
 	for _, root := range roots {
 		if err := d.syncState(root).Wait(); err != nil {

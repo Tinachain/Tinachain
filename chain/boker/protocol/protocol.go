@@ -19,30 +19,31 @@ import (
 )
 
 const (
-	ExtraVanity        = 32           //扩展字段的前缀字节数量
-	ExtraSeal          = 65           //扩展字段的后缀字节数量
-	InmemorySignatures = 4096         //保留在内存中的最近块签名的数量
-	ProducerInterval   = int64(10)    //打包时间间隔（秒）
-	TokenNoderInterval = int64(300)   //分配通证时间间隔(秒)
-	TimeoutInterval    = int64(300)   //超时周期
-	EpochInterval      = int64(86400) //一个周期的时间（86400秒 = 1天）
-	MaxValidatorSize   = 1            //DPOS的验证者数量
-	SafeSize           = 1            //安全的验证者数量
-	ConsensusSize      = 1            //共识确认验证者数量
-	BokerInterval      = time.Second  //分配通证时间间隔(秒)
-	AssignInterval     = time.Minute  //分配通证时间间隔单位
-	BlackInterval      = time.Minute  //黑名单间隔时间
-	AssignTimer        = 5
+	ExtraVanity         = 32         //扩展字段的前缀字节数量
+	ExtraSeal           = 65         //扩展字段的后缀字节数量
+	InmemorySignatures  = 4096       //保留在内存中的最近块签名的数量
+	ProducerInterval    = int64(10)  //打包时间间隔（秒）
+	TimeoutInterval     = int64(300) //超时周期
+	BlacksInterval      = int64(300)
+	EpochInterval       = int64(86400) //一个周期的时间（86400秒 = 1天）
+	MaxValidatorSize    = 1            //DPOS的验证者数量
+	SafeSize            = 1            //安全的验证者数量
+	ConsensusSize       = 1            //共识确认验证者数量
+	BokerInterval       = time.Second  //分配通证时间间隔(秒)
+	AssignInterval      = time.Minute  //分配通证时间间隔单位
+	BlackInterval       = time.Minute  //黑名单间隔时间
+	MillisecondInterval = time.Millisecond
 )
 
 //主要交易类型
 type TxMajor uint8
 
 const (
-	Normal TxMajor = iota //普通交易类型
-	Base                  //基础交易类型（不使用Gas的交易）
-	Extra                 //扩展交易类型（可以在区块中存放文件类型的）
-	Stock                 //股权类型，用来定义用户股票权益信息（没有Gas消费）
+	Normal     TxMajor = iota //普通交易类型
+	SystemBase                //基础交易类型（不使用Gas的交易）
+	UserBase                  //用户基础交易
+	Extra                     //扩展交易类型（可以在区块中存放文件类型的）
+	Stock                     //股权类型，用来定义用户股票权益信息（没有Gas消费）
 )
 
 //次要交易类型
@@ -50,23 +51,24 @@ type TxMinor uint8
 
 //基础交易的次要类型
 const (
-	MinMinor             TxMinor = iota
-	SetValidator                 //设置验证者
-	SetSystemContract            //设置基础合约
-	CancelSystemContract         //取消设置基础合约
-	RegisterCandidate            //注册成为候选人(用户注册为候选人)
-	VoteUser                     //用户投票
-	VoteCancel                   //用户取消投票
-	VoteEpoch                    //产生当前的出块节点(在每次周期产生的时候触发)
+	MinMinor          TxMinor = iota
+	SetValidator              //设置验证者
+	SetSystemContract         //设置基础合约
+	SetUserContract
+	CancelUserContract //取消设置基础合约
+	RegisterCandidate  //注册成为候选人(用户注册为候选人)
+	VoteUser           //用户投票
+	VoteCancel         //用户取消投票
+	VoteEpoch          //产生当前的出块节点(在每次周期产生的时候触发)
+	Timeout
 	MaxMinor
 )
 
 //扩展交易的次要类型
 const (
 	//文件类型;
-	Word    TxMinor = iota //交易中扩展字段为文字
-	Picture                //交易中扩展字段为图片
-	File                   //交易中扩展字段为文件
+	Word TxMinor = iota //交易中扩展字段为文字
+	Data
 )
 
 //股权类型的次要类型
@@ -87,12 +89,11 @@ const (
 )
 
 //新增合约类型
-type ContractType uint8
+type BaseContractType uint8
 
 const (
-	BinaryContract   ContractType = iota //普通合约类型
-	SystemContract                       //系统基础合约
-	PersonalContract                     //个人基础合约
+	System BaseContractType = iota //系统基础合约
+	User                           //个人基础合约
 )
 
 type StockState uint8
@@ -112,45 +113,50 @@ var (
 	TimeOfFirstBlock            = int64(0)                                   //创世区块的时间偏移量
 	ConfirmedBlockHead          = []byte("confirmed-block-head")
 
-	MaxWordSize    = int64(1 * 1024 * 1024)
-	MaxPictureSize = int64(1 * 1024 * 1024)
-	MaxExtraSize   = int64(5 * 1024 * 1024)
+	MaxWordSize  = int64(1 * 1024 * 1024)
+	MaxDataSize  = int(1 * 1024 * 1024)
+	MaxExtraSize = int64(5 * 1024 * 1024)
 
 	MaxNormalSize = common.StorageSize(32 * 1024)
 	MaxBlockSize  = int64(5 * 1024 * 1024)
 )
 
 var (
-	//用户触发的合约方法名（用户触发，但是不收取Gas费用）
+	//用户触发的合约方法名
 	RegisterCandidateMethod = "registerCandidate" //申请候选节点
 	VoteCandidateMethod     = "voteCandidate"     //投票候选节点
 	CancelVoteMethod        = "cancelAllVotes"    //取消所有投票
-	FireEventMethod         = "fireUserEvent"     //用户行为数据上报
+)
 
+var (
 	//基础链触发的基础合约
-	AssignTokenMethod   = "assignToken"   //分配通证
 	RotateVoteMethod    = "rotateVote"    //产生当前的出块节点(在每次周期产生的时候触发)
 	TickCandidateMethod = "tickVote"      //投票时钟
 	GetCandidateMethod  = "getCandidates" //获取候选人结果
 )
 
 var (
-	EpochPrefix     = []byte("epoch-")     //存放周期信息
-	ValidatorPrefix = []byte("validator-") //存放验证者投票信息
-	BlockCntPrefix  = []byte("blockCnt-")  //存放投票数量
-	ValidatorsKey   = []byte("validators") //存放所有的验证者列表
-	SinglePrefix    = []byte("single-")    //
-	Contracts       = []byte("contracts")  //
-	AbiPrefix       = []byte("abi-")       //
+	EpochPrefix          = []byte("epoch")      //存放周期信息
+	ValidatorPrefix      = []byte("validator")  //存放验证者投票信息
+	VotePrefix           = []byte("vote")       //存放投票数量
+	SingleContractPrefix = []byte("single")     //存放单个合约信息
+	ValidatorsPrefix     = []byte("validators") //存放所有的验证者列表
+	ContractsPrefix      = []byte("contracts")  //存放所有合约信息
+)
+
+//股权相关
+var (
+	SingleStockPrefix = []byte("stock")
+	StocksPrefix      = []byte("stocks")
+	OwnerPrefix       = []byte("owner")
+	GasPoolPrefix     = []byte("gas")
 )
 
 var (
 	ErrNilBlockHeader             = errors.New("nil block header returned")                       //区块头为空
 	ErrUnknownBlock               = errors.New("unknown block")                                   //未知区块
 	ErrInvalidProducer            = errors.New("invalid current producer")                        //出块节点出错
-	ErrInvalidTokenNoder          = errors.New("invalid current token noder")                     //当前分配通证节点出错
 	ErrInvalidProducerTime        = errors.New("invalid time to mint the block")                  //不正确的出块时间
-	ErrInvalidTokenTime           = errors.New("invalid time to assign token noder")              //错误的分币节点
 	ErrInvalidCoinbase            = errors.New("invalid current mining coinbase")                 //当前挖矿账号错误
 	ErrInvalidSystem              = errors.New("invalid current system")                          //当前系统的投票合约出错
 	ErrMismatchSignerAndValidator = errors.New("mismatch block signer and validator")             //签名者和区块头中的验证者不是同一个
@@ -191,9 +197,17 @@ type BokerConfig struct {
 }
 
 type BokerBackendProto struct {
-	SingleHash     common.Hash `json:"SingleRoot"        gencodec:"required"`
-	ContractsHash  common.Hash `json:"ContractsRoot"    gencodec:"required"`
-	ContracAbiHash common.Hash `json:"ContractABIRoot"    gencodec:"required"`
+	SingleHash    common.Hash `json:"SingleRoot"        gencodec:"required"`
+	ContractsHash common.Hash `json:"ContractsRoot"    gencodec:"required"`
+	StocksHash    common.Hash `json:"StocksRoot"    gencodec:"required"`
+	OwnerHash     common.Hash `json:"OwnerRoot"    gencodec:"required"`
+	GasPoolHash   common.Hash `json:"GasPoolRoot"    gencodec:"required"`
+}
+
+type StockAccount struct {
+	Account common.Address
+	Number  uint64
+	State   StockState
 }
 
 func (p *BokerBackendProto) Root() (h common.Hash) {
@@ -201,17 +215,25 @@ func (p *BokerBackendProto) Root() (h common.Hash) {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, p.SingleHash)
 	rlp.Encode(hw, p.ContractsHash)
-	rlp.Encode(hw, p.ContracAbiHash)
+	rlp.Encode(hw, p.StocksHash)
+	rlp.Encode(hw, p.OwnerHash)
+	rlp.Encode(hw, p.GasPoolHash)
 	hw.Sum(h[:0])
 	return h
 }
 
-func ToBokerProto(singleHash common.Hash, contractsHash common.Hash, contractAbi common.Hash) *BokerBackendProto {
+func ToBokerProto(singleHash common.Hash,
+	contractsHash common.Hash,
+	stocksHash common.Hash,
+	ownerHash common.Hash,
+	gasPoolHash common.Hash) *BokerBackendProto {
 
 	return &BokerBackendProto{
-		SingleHash:     singleHash,
-		ContractsHash:  contractsHash,
-		ContracAbiHash: contractAbi,
+		SingleHash:    singleHash,
+		ContractsHash: contractsHash,
+		StocksHash:    stocksHash,
+		OwnerHash:     ownerHash,
+		GasPoolHash:   gasPoolHash,
 	}
 }
 

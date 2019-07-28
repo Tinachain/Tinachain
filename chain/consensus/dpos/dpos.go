@@ -466,11 +466,14 @@ func (d *Dpos) Finalize(chain consensus.ChainReader, header *types.Header, state
 	//更新MintCnt的默克尔树，并返回一个新区块
 	updateMintCnt(parent.Time.Int64(), header.Time.Int64(), header.Validator, dposContext)
 	header.DposProto = dposContext.ToProto()
-	//log.Info("Get Bokerchain Dpos Trie", "DposProto", header.DposProto.Root().String())
 
-	singleTrie, contractsTrie, abiTrie := boker.GetContractTrie()
-	header.BokerProto = protocol.ToBokerProto(singleTrie.Hash(), contractsTrie.Hash(), abiTrie.Hash())
-	//log.Info("Get Bokerchain Trie", "BokerProto", header.BokerProto.Root().String(), 	"singleTrie", singleTrie.Hash().String(), "contractsTrie", contractsTrie.Hash().String(), "abiTrie", abiTrie.Hash().String())
+	singleTrie, contractsTrie := boker.GetContractTrie()
+	_, stocksTrie, ownerTrie, gasPoolTrie := boker.GetStockTrie()
+	header.BokerProto = protocol.ToBokerProto(singleTrie.Hash(),
+		contractsTrie.Hash(),
+		stocksTrie.Hash(),
+		ownerTrie.Hash(),
+		gasPoolTrie.Hash())
 
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }

@@ -2,6 +2,7 @@
 package boker
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/Tinachain/Tina/chain/boker/protocol"
@@ -16,9 +17,8 @@ import (
 
 //基本合约配置信息
 type ContractConfig struct {
-	ContractType    protocol.ContractType `json:"contractType"`    //基础合约类型
-	ContractAddress common.Address        `json:"contractAddress"` //合约地址
-	Abi             string                `json:"abi"`             //合约abi
+	ContractType    protocol.BaseContractType `json:"contractType"`    //基础合约类型
+	ContractAddress common.Address            `json:"contractAddress"` //合约地址
 }
 
 type ContractConfigs struct {
@@ -31,15 +31,13 @@ type ContractService struct {
 
 //Tina链的基础合约管理
 type BokerContracts struct {
-	singleTrie    *trie.Trie                               //基础合约Hash树，Key为基础合约的Address Value为合约的类型
-	contractsTrie *trie.Trie                               //所有基础合约整体保存树，这里保存所有的基础合约信息，但是不保存基础合约的类型信息
-	abiTrie       *trie.Trie                               //合约的abi树
-	ethereum      *eth.Ethereum                            //以太坊对象
-	accounts      *BokerAccount                            //Tina链账号对象
-	transactions  *BokerTransaction                        //Tina链交易对象
-	db            ethdb.Database                           //数据库
-	contracts     map[common.Address]protocol.ContractType //基础合约的Map
-	services      ContractService                          //合约服务类
+	singleTrie    *trie.Trie                                   //基础合约Hash树，Key为基础合约的Address Value为合约的类型
+	contractsTrie *trie.Trie                                   //所有基础合约整体保存树，这里保存所有的基础合约信息，但是不保存基础合约的类型信息
+	ethereum      *eth.Ethereum                                //以太坊对象
+	transactions  *BokerTransaction                            //Tina链交易对象
+	db            ethdb.Database                               //数据库
+	contracts     map[common.Address]protocol.BaseContractType //基础合约的Map
+	services      ContractService                              //合约服务类
 }
 
 func NewContract(db ethdb.Database, ethereum *eth.Ethereum, transactions *BokerTransaction, bokerProto *protocol.BokerBackendProto) (*BokerContracts, error) {
@@ -58,18 +56,11 @@ func NewContract(db ethdb.Database, ethereum *eth.Ethereum, transactions *BokerT
 		return nil, errTrie
 	}
 
-	log.Info("Create Bokerchain Contract ABI Trie", "Hash", bokerProto.ContracAbiHash.String())
-	abiTrie, errTrie := NewContractAbiTrie(bokerProto.ContracAbiHash, db)
-	if errTrie != nil {
-		return nil, errTrie
-	}
-
 	//创建对象
 	c := new(BokerContracts)
 	c.singleTrie = singleContractTrie
 	c.contractsTrie = contractsTrie
-	c.abiTrie = abiTrie
-	c.contracts = make(map[common.Address]protocol.ContractType)
+	c.contracts = make(map[common.Address]protocol.BaseContractType)
 	c.db = db
 	c.ethereum = ethereum
 	c.transactions = transactions
@@ -85,7 +76,7 @@ func NewContract(db ethdb.Database, ethereum *eth.Ethereum, transactions *BokerT
 	//创建投票合约服务
 	log.Info("Check Bokerchain System Contract Exists")
 	var address common.Address
-	address, err = c.getContractAddress(protocol.SystemContract)
+	address, err = c.getContractAddress(protocol.System)
 	if err != nil {
 
 		log.Debug("Bokerchain System Contract is`t Exists")
@@ -106,99 +97,128 @@ func NewContract(db ethdb.Database, ethereum *eth.Ethereum, transactions *BokerT
 
 //基础合约详细信息树
 func NewSingleContractTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	return trie.NewTrieWithPrefix(root, protocol.SinglePrefix, db)
+	return trie.NewTrieWithPrefix(root, protocol.SingleContractPrefix, db)
 }
 
 //创建基础合约列表树
 func NewContractsTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	return trie.NewTrieWithPrefix(root, protocol.Contracts, db)
-}
-
-//创建基础合约列表树
-func NewContractAbiTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
-	return trie.NewTrieWithPrefix(root, protocol.AbiPrefix, db)
+	return trie.NewTrieWithPrefix(root, protocol.ContractsPrefix, db)
 }
 
 //设置合约到Hash树中
-func (c *BokerContracts) SetContract(address common.Address, contractType protocol.ContractType, isCancel bool, abiJson string) error {
+func (c *BokerContracts) SetSystemContract(address common.Address, from common.Address) error {
 
 	//设置基础合约
-	log.Info("****SetContract****", "address", address.String(), "contractType", contractType)
+	log.Info("(c *BokerContracts) SetSystemBaseContract", "address", address.String(), "from", from.String())
 
 	exist, err := c.existContract(address)
 	if exist {
-		log.Error("SetContract existContract Contract Existed")
+		log.Error("SetSystemBaseContract existContract Contract Existed")
 		return protocol.ErrContractExist
 	}
 
-	/****处理树的操作****/
-
 	//设置单个树的信息
-	if err = c.singleTrie.TryUpdate(address.Bytes(), []byte(strconv.Itoa(int(contractType)))); err != nil {
-		log.Error("SetContract singleTrie.TryUpdate failed", "err", err)
+	if err = c.singleTrie.TryUpdate(address.Bytes(), []byte(strconv.Itoa(int(protocol.System)))); err != nil {
+		log.Error("SetSystemBaseContract singleTrie.TryUpdate failed", "err", err)
 		return err
 	}
-	//设置基础合约的abi信息树
-	if err = c.abiTrie.TryUpdate(address.Bytes(), []byte(abiJson)); err != nil {
-		log.Error("SetContract abiTrie.TryUpdate failed", "err", err)
-		return err
-	}
-	c.contracts[address] = contractType
+	c.contracts[address] = protocol.System
 
 	//更新基础合约列表保存树
 	if err = c.setContractsTrie(); err != nil {
-		log.Error("SetContract setContractsTrie failed", "err", err)
+		log.Error("SetSystemBaseContract setContractsTrie failed", "err", err)
 		return protocol.ErrSaveContractTrie
 	}
 
-	//判断是否需要启动合约
-	if contractType == protocol.SystemContract {
-
-		log.Info("SetContract SystemContract")
-		c.services.contract, err = boker_contract.NewBokerInterfaceService(c.ethereum, address)
-		if err != nil {
-			log.Error("SetContract Start NewAssignTokenService failed", "err", err)
-			return protocol.ErrNewContractService
-		}
-
-		log.Info("SetContract Start Contract")
-		c.services.contract.Start()
-	} else {
-
-		log.Info("SetContract PersonalContract")
+	c.services.contract, err = boker_contract.NewBokerInterfaceService(c.ethereum, address)
+	if err != nil {
+		log.Error("SetSystemBaseContract Start NewAssignTokenService failed", "err", err)
+		return protocol.ErrNewContractService
 	}
+
+	log.Info("SetContract Start Contract")
+	c.services.contract.Start()
+
 	return nil
 }
 
-//设置合约到Hash树中
-func (c *BokerContracts) CancelContract(address common.Address) error {
+func (c *BokerContracts) SetUserBaseContract(address common.Address, from common.Address) error {
 
-	//检测合约是否存在
-	log.Info("****CancelContract****")
-	_, err := c.GetContract(address)
-	if err != nil {
-		return err
+	//设置基础合约
+	log.Info("(c *BokerContracts) SetUserBaseContract", "address", address.String(), "from", from.String())
+
+	exist, err := c.existContract(address)
+	if exist {
+		log.Error("SetSystemBaseContract existContract Contract Existed")
+		return protocol.ErrContractExist
 	}
 
-	//从Hash树中删除
+	if err = c.singleTrie.TryUpdate(address.Bytes(), []byte(strconv.Itoa(int(protocol.User)))); err != nil {
+		log.Error("SetSystemBaseContract singleTrie.TryUpdate failed", "err", err)
+		return err
+	}
+	c.contracts[address] = protocol.User
+
+	if err = c.setContractsTrie(); err != nil {
+		log.Error("SetSystemBaseContract setContractsTrie failed", "err", err)
+		return protocol.ErrSaveContractTrie
+	}
+
+	return nil
+}
+
+func (c *BokerContracts) CancelUserBaseContract(address common.Address, from common.Address) error {
+
+	log.Info("(c *BokerContracts) CancelUserBaseContract")
+	ret := c.IsUserBaseContract(address)
+	if !ret {
+		return errors.New("Address is`t User Base Contract")
+	}
+
 	if err := c.singleTrie.TryDelete(address.Bytes()); err != nil {
 		return err
 	}
 	delete(c.contracts, address)
 
 	//更新基础合约列表保存树
-	if err = c.setContractsTrie(); err != nil {
+	if err := c.setContractsTrie(); err != nil {
 		return protocol.ErrSaveContractTrie
 	}
 
 	return nil
 }
 
+func (c *BokerContracts) IsUserBaseContract(address common.Address) bool {
+
+	user, err := c.readContractType(address)
+	if err != nil {
+		return false
+	}
+
+	if user == protocol.User {
+		return true
+	}
+	return false
+}
+
+func (c *BokerContracts) IsSystemBaseContract(address common.Address) bool {
+
+	system, err := c.readContractType(address)
+	if err != nil {
+		return false
+	}
+
+	if system == protocol.System {
+		return true
+	}
+	return false
+}
+
 //将所有的合约地址进行设置
 func (c *BokerContracts) setContractsTrie() error {
 
 	//转换成切片数组
-	log.Info("****setContractsTrie****")
+	log.Info("(c *BokerContracts) setContractsTrie")
 
 	var contracts []common.Address = make([]common.Address, 0)
 	for k, _ := range c.contracts {
@@ -210,14 +230,14 @@ func (c *BokerContracts) setContractsTrie() error {
 		log.Error("failed to encode contracts to rlp", "error", err)
 		return err
 	}
-	c.contractsTrie.Update(protocol.Contracts, contractsRLP)
+	c.contractsTrie.Update(protocol.ContractsPrefix, contractsRLP)
 	return nil
 }
 
 //得到所有的合约地址
 func (c *BokerContracts) getContractsTrie() ([]common.Address, error) {
 
-	log.Info("****getContractsTrie****")
+	log.Info("(c *BokerContracts) getContractsTrie")
 
 	var contracts []common.Address
 	if c.contractsTrie == nil {
@@ -225,7 +245,7 @@ func (c *BokerContracts) getContractsTrie() ([]common.Address, error) {
 		return []common.Address{}, protocol.ErrPointerIsNil
 	}
 
-	contractsRLP, err := c.contractsTrie.TryGet(protocol.Contracts)
+	contractsRLP, err := c.contractsTrie.TryGet(protocol.ContractsPrefix)
 	if err != nil {
 		return []common.Address{}, err
 	}
@@ -239,24 +259,24 @@ func (c *BokerContracts) getContractsTrie() ([]common.Address, error) {
 }
 
 //从Hash树中获取合约类型
-func (c *BokerContracts) readContractType(address common.Address) (protocol.ContractType, error) {
+func (c *BokerContracts) readContractType(address common.Address) (protocol.BaseContractType, error) {
 
-	log.Info("****readContractType****")
+	log.Info("(c *BokerContracts) readContractType")
 
 	//根据地址获取数据
 	key := address.Bytes()
 	v, err := c.singleTrie.TryGet(key)
 	if err != nil {
-		return protocol.BinaryContract, err
+		return protocol.System, err
 	}
 
 	//转换成交易类型
 	contractType, err := strconv.Atoi(string(v[:]))
-	return protocol.ContractType(contractType), nil
+	return protocol.BaseContractType(contractType), nil
 }
 
 //根据合约类型得到合约地址
-func (c *BokerContracts) getContractAddress(contractType protocol.ContractType) (common.Address, error) {
+func (c *BokerContracts) getContractAddress(contractType protocol.BaseContractType) (common.Address, error) {
 
 	if len(c.contracts) <= 0 {
 		return common.Address{}, protocol.ErrNotFoundContract
@@ -271,21 +291,10 @@ func (c *BokerContracts) getContractAddress(contractType protocol.ContractType) 
 	return common.Address{}, protocol.ErrNotFoundContract
 }
 
-//根据合约地址得到合约类型
-func (c *BokerContracts) getContractType(address common.Address) (protocol.ContractType, error) {
-
-	contractType, exist := c.contracts[address]
-	if exist {
-		return contractType, nil
-	} else {
-		return protocol.BinaryContract, nil
-	}
-}
-
 //加载基础合约信息
 func (c *BokerContracts) loadTrieContract() error {
 
-	log.Info("****loadTrieContract****")
+	log.Info("(c *BokerContracts) loadTrieContract")
 
 	//获取所有合约
 	contracts, err := c.getContractsTrie()
@@ -309,7 +318,7 @@ func (c *BokerContracts) loadTrieContract() error {
 }
 
 //查找合约账户
-func (c *BokerContracts) GetContract(address common.Address) (protocol.TxMajor, error) {
+/*func (c *BokerContracts) GetContract(address common.Address) (protocol.TxMajor, error) {
 
 	if len(c.contracts) > 0 {
 		_, exist := c.contracts[address]
@@ -318,7 +327,7 @@ func (c *BokerContracts) GetContract(address common.Address) (protocol.TxMajor, 
 		}
 	}
 	return protocol.Normal, nil
-}
+}*/
 
 //判断此合约是否已经存在
 func (c *BokerContracts) existContract(address common.Address) (bool, error) {
@@ -330,19 +339,16 @@ func (c *BokerContracts) existContract(address common.Address) (bool, error) {
 	return false, protocol.ErrNotFoundContract
 }
 
-func (c *BokerContracts) GetContractTrie() (*trie.Trie, *trie.Trie, *trie.Trie) {
+func (c *BokerContracts) GetContractTrie() (*trie.Trie, *trie.Trie) {
 
-	return c.singleTrie, c.contractsTrie, c.abiTrie
+	return c.singleTrie, c.contractsTrie
 }
 
-func (c *BokerContracts) GetContractAddr(contractType protocol.ContractType) (common.Address, error) {
+func (c *BokerContracts) GetVotes() error {
 
-	for k, v := range c.contracts {
+	if c.services.contract != nil {
 
-		if v == contractType {
-			return k, nil
-		}
+		c.services.contract.GetVotes()
 	}
-
-	return common.Address{}, protocol.ErrNotFoundContract
+	return nil
 }

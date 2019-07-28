@@ -1,3 +1,4 @@
 {
-    "editor.fontFamily": "'Fira Code', Consolas, 'Courier New', monospace"
+    "editor.fontFamily": "'Fira Code', Consolas, 'Courier New', monospace",
+    "git.ignoreLimitWarning": true
 }
