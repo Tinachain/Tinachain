@@ -516,6 +516,7 @@ func (ethash *Ethash) Finalize(chain consensus.ChainReader,
 	uncles []*types.Header,
 	receipts []*types.Receipt,
 	ctx *types.DposContext,
+	bokerContext *types.BokerContext,
 	boker bokerapi.Api) (*types.Block, error) {
 
 	//计算报酬

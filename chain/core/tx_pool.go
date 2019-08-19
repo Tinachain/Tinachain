@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Tinachain/Tina/chain/boker/api"
 	"github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/core/state"
@@ -28,27 +29,18 @@ const (
 )
 
 var (
-	ErrInvalidSender = errors.New("invalid sender")          //如果交易包含无效签名
-	ErrNonceTooLow   = errors.New("nonce too low")           //Nonce太低
-	ErrUnderpriced   = errors.New("transaction underpriced") //交易的Gas比交易池中配置的价格还低
-	// ErrReplaceUnderpriced is returned if a transaction is attempted to be replaced
-	// with a different one without the required price bump.
+	ErrInvalidSender      = errors.New("invalid sender")          //如果交易包含无效签名
+	ErrNonceTooLow        = errors.New("nonce too low")           //Nonce太低
+	ErrUnderpriced        = errors.New("transaction underpriced") //交易的Gas比交易池中配置的价格还低
 	ErrReplaceUnderpriced = errors.New("replacement transaction underpriced")
 	ErrInsufficientFunds  = errors.New("insufficient funds for gas * price + value") //执行交易的总成本高于用户帐户的余额
-	// ErrIntrinsicGas is returned if the transaction is specified to use less gas
-	// than required to start the invocation.
-	ErrIntrinsicGas = errors.New("intrinsic gas too low")
-	ErrGasLimit     = errors.New("exceeds block gas limit") //交易要求的Gas超过限额，则返回当前块要求的最大允许Gas
-	// ErrNegativeValue is a sanity error to ensure noone is able to specify a
-	// transaction with a negative value.
-	ErrNegativeValue = errors.New("negative value")
-	// ErrOversizedData is returned if the input data of a transaction is greater
-	// than some meaningful limit a user might use. This is not a consensus error
-	// making the transaction invalid, rather a DOS protection.
-	ErrOversizedData = errors.New("oversized data")           //超大数据
-	ErrOverExtraData = errors.New("over extra data")          //超大扩展数据
-	ErrInvalidType   = errors.New("unknown transaction type") //未知交易类型
-	ErrBlackSender   = errors.New("transaction sender is black address")
+	ErrIntrinsicGas       = errors.New("intrinsic gas too low")
+	ErrGasLimit           = errors.New("exceeds block gas limit") //交易要求的Gas超过限额，则返回当前块要求的最大允许Gas
+	ErrNegativeValue      = errors.New("negative value")
+	ErrOversizedData      = errors.New("oversized data")           //超大数据
+	ErrOverExtraData      = errors.New("over extra data")          //超大扩展数据
+	ErrInvalidType        = errors.New("unknown transaction type") //未知交易类型
+	ErrBlackSender        = errors.New("transaction sender is black address")
 )
 
 var (
@@ -91,6 +83,7 @@ type blockChain interface {
 	GetBlock(hash common.Hash, number uint64) *types.Block
 	StateAt(root common.Hash) (*state.StateDB, error)
 	SubscribeChainHeadEvent(ch chan<- ChainHeadEvent) event.Subscription
+	Boker() bokerapi.Api
 }
 
 //miner是从pending中拿交易组装block的
@@ -393,10 +386,10 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 
 	//这里需要进行判断，如果是基础合约的话，GasLimit会很大，这里要看是否进行处理
 	pool.currentMaxGas = newHead.GasLimit
-	log.Info("Set newHead.GasLimit", "newHead.GasLimit", newHead.GasLimit, "Number", newHead.Number)
+	//log.Info("Set newHead.GasLimit", "newHead.GasLimit", newHead.GasLimit, "Number", newHead.Number)
 
 	// Inject any transactions discarded due to reorgs
-	log.Debug("Reinjecting stale transactions", "count", len(reinject))
+	//log.Debug("Reinjecting stale transactions", "count", len(reinject))
 	pool.addTxsLocked(reinject, false)
 
 	//验证pending transaction池里面的交易， 会移除所有已经存在区块链里面的交易，或者是因为其他交易导致不可用的交易(比如有一个更高的gasPrice)
@@ -575,7 +568,22 @@ func (pool *TxPool) normalValidateTx(tx *types.Transaction, local bool) error {
 	return nil
 }
 
-//扩展交易检测
+func (pool *TxPool) stockValidateTx(tx *types.Transaction, local bool) error {
+
+	log.Info("(pool *TxPool) stockValidateTx", "tx Gas", tx.Gas(), "pool.currentMaxGas", pool.currentMaxGas, "tx Nonce", tx.Nonce())
+
+	//得到from
+	from, err := types.Sender(types.HomesteadSigner{}, tx)
+	if err != nil {
+		return ErrInvalidSender
+	}
+
+	if pool.currentState.GetNonce(from) > tx.Nonce() {
+		return ErrNonceTooLow
+	}
+	return nil
+}
+
 func (pool *TxPool) extraValidateTx(tx *types.Transaction, local bool) error {
 
 	log.Info("(pool *TxPool) extraValidateTx",
@@ -583,12 +591,10 @@ func (pool *TxPool) extraValidateTx(tx *types.Transaction, local bool) error {
 		"pool.currentMaxGas", pool.currentMaxGas,
 		"tx Nonce", tx.Nonce())
 
-	//如果当前的最大Gas数量小于交易所标记的Gas数量，则放回GasLimit错误(这里需要添加针对基础合约类型的判断，因为基础合约采用的Gas为最大值)
 	if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
 		return ErrGasLimit
 	}
 
-	//判断交易是否已经经过正确的签名
 	from, err := types.Sender(types.HomesteadSigner{}, tx)
 	if err != nil {
 		return ErrInvalidSender
@@ -603,32 +609,27 @@ func (pool *TxPool) extraValidateTx(tx *types.Transaction, local bool) error {
 		return ErrUnderpriced
 	}
 
-	//判断交易中的Nonce是否大于发出交易用户的当前Nonce值
 	if pool.currentState.GetNonce(from) > tx.Nonce() {
 		return ErrNonceTooLow
 	}
 	log.Info("(pool *TxPool) extraValidateTx", "from current Nonce", pool.currentState.GetNonce(from), "tx Nonce", tx.Nonce())
 
-	//判断当前from用户的钱是否大于本次交易所花成本的最大值，如果小于则返回 ErrInsufficientFunds
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		log.Error("extraValidateTx", "balance", pool.currentState.GetBalance(from), "cost", tx.Cost())
 		return ErrInsufficientFunds
 	}
 
-	//使用给定的数据，计算Gas。
 	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
 
-	//判断交易的Gas是否小于计算出来的Gas，如果小于则返回 ErrIntrinsicGas
 	if tx.Gas().Cmp(intrGas) < 0 {
 		return ErrIntrinsicGas
 	}
 	return nil
 }
 
-//基础交易检测
-func (pool *TxPool) baseValidateTx(tx *types.Transaction, local bool) error {
+func (pool *TxPool) systemBaseValidateTx(tx *types.Transaction, local bool) error {
 
-	log.Info("(pool *TxPool) baseValidateTx",
+	log.Info("(pool *TxPool) systemBaseValidateTx",
 		"tx Gas", tx.Gas(),
 		"pool.currentMaxGas", pool.currentMaxGas,
 		"tx Nonce", tx.Nonce())
@@ -646,7 +647,26 @@ func (pool *TxPool) baseValidateTx(tx *types.Transaction, local bool) error {
 	return nil
 }
 
-//对交易进行基本信息的验证
+func (pool *TxPool) userBaseValidateTx(tx *types.Transaction, local bool) error {
+
+	log.Info("(pool *TxPool) userBaseValidateTx",
+		"tx Gas", tx.Gas(),
+		"pool.currentMaxGas", pool.currentMaxGas,
+		"tx Nonce", tx.Nonce())
+
+	//判断交易是否已经经过正确的签名
+	from, err := types.Sender(types.HomesteadSigner{}, tx)
+	if err != nil {
+		return ErrInvalidSender
+	}
+
+	//判断交易中的Nonce是否大于发出交易用户的当前Nonce值
+	if pool.currentState.GetNonce(from) > tx.Nonce() {
+		return ErrNonceTooLow
+	}
+	return nil
+}
+
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 	log.Info("(pool *TxPool) validateTx",
@@ -656,13 +676,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 	if protocol.Normal == tx.Major() || protocol.SystemBase == tx.Major() {
 
-		//为了防止Dos攻击，因此对于普通交易和基础交易的交易大小设置最大不能超过32KB
 		if tx.Size() > protocol.MaxNormalSize {
 			return ErrOversizedData
 		}
 	} else if protocol.Extra == tx.Major() {
 
-		//对于扩展类型的交易，交易的扩展字段不能超过最大扩展字段大小
 		if len(tx.Extra()) > int(protocol.MaxExtraSize) {
 			return ErrOverExtraData
 		}
@@ -676,32 +694,39 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 
 	if protocol.Normal == tx.Major() {
 
-		//普通交易类型检测
 		return pool.normalValidateTx(tx, local)
 	} else if protocol.SystemBase == tx.Major() {
 
-		//基础交易类型检测
 		if (tx.Minor() >= protocol.MinMinor) && (tx.Minor() <= protocol.MaxMinor) {
 
-			return pool.baseValidateTx(tx, local)
+			return pool.systemBaseValidateTx(tx, local)
+		}
+	} else if protocol.UserBase == tx.Major() {
+
+		if (tx.Minor() >= protocol.SetUserContract) && (tx.Minor() <= protocol.CancelUserContract) {
+
+			return pool.userBaseValidateTx(tx, local)
 		}
 	} else if protocol.Extra == tx.Major() {
 
-		//扩展交易类型检测
 		if (tx.Minor() >= protocol.Word) && (tx.Minor() <= protocol.Data) {
 
 			return pool.extraValidateTx(tx, local)
+		}
+
+	} else if protocol.Stock == tx.Major() {
+
+		if (tx.Minor() >= protocol.StockManager) && (tx.Minor() <= protocol.StockUnFrozen) {
+
+			return pool.stockValidateTx(tx, local)
 		}
 
 	}
 	return ErrInvalidType
 }
 
-//验证交易并将其插入到future queue. 如果这个交易是替换了当前存在的某个交易,那么会返回之前的那个交易,这样外部就不用调用promote方法.
-//如果某个新增加的交易被标记为local, 那么它的发送账户会进入白名单,这个账户的关联的交易将不会因为价格的限制或者其他的一些限制被删除.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 
-	//检测此交易的Hash是否存在，如果存在，则表明是已经存在的交易，将其丢弃
 	hash := tx.Hash()
 	if pool.all[hash] != nil {
 		log.Error("TxPool add Discarding already known transaction", "hash", hash)
@@ -866,14 +891,14 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 //本地节点产生单条交易
 func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 
-	//log.Info("****AddLocal****", "Nonce", tx.Nonce())
+	log.Info("(pool *TxPool) AddLocal", "Nonce", tx.Nonce())
 	return pool.addTx(tx, !pool.config.NoLocals)
 }
 
 //网络中接收的单条交易
 func (pool *TxPool) AddRemote(tx *types.Transaction) error {
 
-	log.Info("****AddRemote****", "Nonce", tx.Nonce())
+	log.Info("(pool *TxPool) AddRemote", "Nonce", tx.Nonce())
 	return pool.addTx(tx, false)
 }
 

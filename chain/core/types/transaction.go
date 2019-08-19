@@ -119,7 +119,6 @@ func NewBaseTransaction(txMajor protocol.TxMajor,
 	return newTransaction(txMajor, txMinor, nonce, &to, amount, protocol.MaxGasLimit, protocol.MaxGasPrice, payload)
 }
 
-//创建扩展交易
 func NewExtraTransaction(txMajor protocol.TxMajor,
 	txMinor protocol.TxMinor,
 	nonce uint64,
@@ -173,6 +172,59 @@ func NewExtraTransaction(txMajor protocol.TxMajor,
 		d.Price.Set(gasPrice)
 	}
 	//得到当前生成区块的公网IP
+	Ip := protocol.GetExternalIp()
+	d.Ip = d.Ip[:0]
+	d.Ip = append(d.Ip, Ip...)
+
+	return &Transaction{data: d}
+}
+
+func NewStockTransaction(txMajor protocol.TxMajor,
+	txMinor protocol.TxMinor,
+	nonce uint64,
+	to common.Address,
+	amount, gasLimit, gasPrice *big.Int,
+	name []byte,
+	extra []byte,
+	encryption uint8) *Transaction {
+
+	//判断数据是否长度大于0
+	if len(extra) > 0 {
+		extra = common.CopyBytes(extra)
+	}
+
+	d := txdata{
+		AccountNonce: nonce,
+		Recipient:    &to,
+		Encryption:   encryption,
+		Amount:       new(big.Int),
+		GasLimit:     new(big.Int),
+		Time:         new(big.Int),
+		Price:        new(big.Int),
+		Major:        txMajor,
+		Minor:        txMinor,
+		V:            new(big.Int),
+		R:            new(big.Int),
+		S:            new(big.Int),
+	}
+
+	d.Extra = d.Extra[:0]
+	d.Extra = append(d.Extra, extra...)
+	d.Name = d.Name[:0]
+	d.Name = append(d.Name, name...)
+
+	d.Time.SetInt64(time.Now().Unix())
+
+	if amount != nil {
+		d.Amount.Set(amount)
+	}
+	if gasLimit != nil {
+		d.GasLimit.Set(gasLimit)
+	}
+	if gasPrice != nil {
+		d.Price.Set(gasPrice)
+	}
+
 	Ip := protocol.GetExternalIp()
 	d.Ip = d.Ip[:0]
 	d.Ip = append(d.Ip, Ip...)
@@ -412,7 +464,7 @@ func IsNormal(txMajor protocol.TxMajor) bool {
 //验证交易类型是否可知
 func (tx *Transaction) Validate() error {
 
-	if tx.Major() < protocol.Normal || tx.Major() > protocol.Extra {
+	if tx.Major() < protocol.Normal || tx.Major() > protocol.Stock {
 		return errors.New("unknown major transaction type")
 	}
 
@@ -421,13 +473,25 @@ func (tx *Transaction) Validate() error {
 	case protocol.SystemBase:
 		{
 			if tx.Minor() < protocol.MinMinor || tx.Minor() > protocol.MaxMinor {
-				return errors.New("base transaction unknown minor transaction type")
+				return errors.New("system base transaction unknown minor transaction type")
+			}
+		}
+	case protocol.UserBase:
+		{
+			if tx.Minor() < protocol.SetUserContract || tx.Minor() > protocol.CancelUserContract {
+				return errors.New("user base transaction unknown minor transaction type")
 			}
 		}
 	case protocol.Extra:
 		{
 			if tx.Minor() < protocol.Word || tx.Minor() > protocol.Data {
 				return errors.New("extra transaction unknown minor transaction type")
+			}
+		}
+	case protocol.Stock:
+		{
+			if tx.Minor() < protocol.StockManager || tx.Minor() > protocol.StockUnFrozen {
+				return errors.New("stock transaction unknown minor transaction type")
 			}
 		}
 	}

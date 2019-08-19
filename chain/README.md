@@ -1,6 +1,9 @@
 
 ### Tina链（Tinachain）
-Tina链是一个专门为服务于文字、图片、文章以及文件保存而开发的垂直型区块链平台，用户可以使用Tina链提供的接口将自己的相关信息永久保存到Tina链上。同时为了保证信息的安全和保密，Tina链对于信息的保存提供了可选加密功能。从而保证了用户信息的安全性。
+Tina链一款采用Dpos共识机制设计的区块链产品。
+Tina链为了避免沦为无实际应用的发币工具，因此Tina链中自带了股权机制。
+Tina链的设计初衷是为了方便用户在区块链上永久保存文字、图片、文章以及文件保存而开发的垂直型区块链平台，用户可以使用Tina链提供的接口将自己的相关信息永久保存到Tina链上。
+同时为了保证信息的安全和保密，Tina链对于信息的保存提供了可选加密功能。从而保证了用户信息的安全性。
 
 Tinachain is a vertical blockchain platform specifically designed for preservation of text, images, articles and files. With rpc interfaces provided by Tinachain, it is convenient for users to save personal information permanently. Meanwhile, Tinachain provides optional encryption function for users to ensure the security and privacy of their information.
 
@@ -10,7 +13,7 @@ Tinachain is a vertical blockchain platform specifically designed for preservati
     type txdata struct {
     
         Major        protocol.TxMajor `json:"major"   gencodec:"required"`          
-		Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          
+    	Minor        protocol.TxMinor `json:"minor"   gencodec:"required"`          
 		AccountNonce uint64           `json:"nonce"    gencodec:"required"`         
 		Price        *big.Int         `json:"gasPrice" gencodec:"required"`         
 		GasLimit     *big.Int         `json:"gas"      gencodec:"required"`         
@@ -74,9 +77,9 @@ Tinachain is a vertical blockchain platform specifically designed for preservati
 ### genesis.json
 ```json
 {
-	"config": {
+    "config": {
 		"chainId": 0,
-		"byzantiumBlock": 0,
+		"homesteadBlock": 0,
 		"eip155Block": 0,
 		"eip158Block": 0
 	},
@@ -86,31 +89,6 @@ Tinachain is a vertical blockchain platform specifically designed for preservati
 	"gasLimit": "0xffffffff"
 }
 
-```
-**注意：`"byzantiumBlock": 0` 这个配置，否则合约调用有可能出错。**
-
-### boker.json
-```json
-{
-    "dpos":{
-        "validators":[
-            "0xdd165ba267593d2acc837fc507c2e94e802817d9"
-        ]
-    },
-    "contracts":{
-        "bases":[
-            {
-                "contracttype":2,
-                "deployaddress":"0xdd165ba267593d2acc837fc507c2e94e802817d9",
-                "contractaddress":"0xd7fd311c8f97349670963d87f37a68794dfa80ff"
-            }
-        ]
-    },
-    "producer":{
-        "coinbase":"0x1aa228dde26f02e1cc5551cb4f1d74d0e998d24a",
-        "password":"123456"
-    }
-}
 ```
 
 ### Tina链启动方式
@@ -126,27 +104,26 @@ Tinachain is a vertical blockchain platform specifically designed for preservati
 
 第二步：初始化创世文件
 
-    geth --datadir "/projects/tina/node" init genesis.json
+    geth --datadir "/projects/tinachain/node" init genesis.json
 
 
 第三步：启动geth
 
-    nohup geth --nodiscover  \
+    nohup /projects/tinachain/geth --nodiscover  \
     --maxpeers 3 \
     --identity "tinachain" \
     --rpc \
     --rpcaddr 0.0.0.0 \
     --rpccorsdomain "*" \
-    --rpccorsdomain "http://localhost:8000" \
-    --datadir "/projects/tina/node" \
-    --port 30304 \
+    --datadir "/projects/tinachain/node" \
+    --port 30404 \
     --rpcapi "db,eth,net,web3" \
-    --networkid 96579 &
+    --networkid 98765 &
 
 
 第四步：进入geth控制台
 
-    geth attach ipc:/projects/tina/node/geth.ipc
+    geth attach ipc:/projects/tinachain/node/geth.ipc
 
 第五步：创建账号
 
@@ -169,46 +146,78 @@ Tinachain is a vertical blockchain platform specifically designed for preservati
 
     miner.start()
 	
-### Tina链子节点接入流程
+	
+### 新增 RPC 指令
 
-第一步:得到主节点节点信息
+1：得到最后一个出块超级节点
 
-	admin.nodeInfo
+    GetLastProducerAt
+    
+2：得到下一个出块超级节点
 
-	返回
-	{
-	  enode: "enode://97730b179a8c1af4c21613c78fcc9c607f2ce9614ec927ab2f788e0c1faab2c3a4f532fa326220a589b59af421ea30c0e7224c6c0837b66a2ff4e391314da679@[::]:30304?discport=0",
-	  id: "97730b179a8c1af4c21613c78fcc9c607f2ce9614ec927ab2f788e0c1faab2c3a4f532fa326220a589b59af421ea30c0e7224c6c0837b66a2ff4e391314da679",
-	  ip: "::",
-	  listenAddr: "[::]:30304",
-	  name: "Geth/bokerchain--rpc/v1.7.4-stable/linux-amd64/go1.9.2",
-	  ports: {
-		discovery: 0,
-		listener: 30304
-	  },
-	  protocols: {
-		eth: {
-		  difficulty: 28684,
-		  genesis: "0xb0a53b645ea52f7971d06ada36e004a9961105d4acb013f7e2d337a4ce90e280",
-		  head: "0x73d7519a2edc78be4b12c8137d92266f234631ebf976a08bb79d55614b0b0c20",
-		  network: 66666
-		}
-	  }
-	}
-	
-第二步:在子节点中加入主节点
+    GetNextProducerAt
+    
+3：设置系统基础合约（系统调用，免Gas）
 
-	admin.addPeer("enode://97730b179a8c1af4c21613c78fcc9c607f2ce9614ec927ab2f788e0c1faab2c3a4f532fa326220a589b59af421ea30c0e7224c6c0837b66a2ff4e391314da679@192.168.22.135:30303")
-	此处注意IP信息和端口均为主节点对外开放可以进行访问的信息
-	
-第三步:等待区块同步可以使用指令查询
-	eth.blockNumber
-	
-查询节点信息
-	admin.peers
-	
-	
-### RPC 指令
+    SetSystemBaseContracts
+    
+4：设置用户基础合约（免Gas）
+    
+    SetUserBaseContracts
+    
+5：取消用户基础合约（免Gas）
+
+    CancelUserBaseContracts
+    
+6：添加超级节点（创世超级节点使用）
+    
+    AddValidator
+    
+7：根据区块编号得到出口超级节点
+
+    GetBlockValidator
+    
+8：设置股权
+
+    StockSet
+    
+9：得到指定账号的股权数量
+
+    GetStock
+    
+10：股权交易
+
+    StockTransfer
+    
+11：股权清空
+    
+    StockClean
+    
+12：股权冻结
+
+    StockFrozen
+    
+13：股权解冻
+
+    StockUnFrozen
+    
+14：得到当前股权池中Gas总数量（用于分给股权用户的Gas数量）
+    
+    StockGasPool
+    
+15：设置股权管理账号
+
+    SetStockManager
+    
+16：设置文字（文字上链）
+
+    SetWord
+    
+17：设置数据（数据上链）
+    
+    SetData
+    
+
 
 #### 文字上链
 
@@ -220,3 +229,13 @@ Tinachain is a vertical blockchain platform specifically designed for preservati
 
     eth.getWord("0x8c52e28e4819d28f215563635e7a4971cddd5ad48d21424383c832ff03b12800")
 
+
+#### 图片上链
+
+1：将图片上链（其中：/projects/tina/1.jpg 是节点上地址）
+
+    eth.setPicture("/projects/tina/1.jpg")
+	
+2：从链上获取图片（其中：交易Hash、保存图片的节点目录，文件名使用链上的文件名，例如设置/projects/tina则保存的图片地址为：/projects/tina/1.jpg）
+
+    eth.getPicture("0x26635445ae6e1f20bc2a7ed5be45c3a0b7e847e1c79167c9b1564fe77ef72094", "/projects/tina")

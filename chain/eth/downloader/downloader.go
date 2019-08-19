@@ -28,7 +28,7 @@ import (
 	"time"
 
 	ethereum "github.com/Tinachain/Tina/chain"
-	"github.com/Tinachain/Tina/chain/boker/protocol"
+	_ "github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/core/types"
 	"github.com/Tinachain/Tina/chain/ethdb"
@@ -1482,7 +1482,7 @@ func (d *Downloader) syncDposContextState(context *types.DposContextProto) error
 	roots := []common.Hash{
 		context.ValidatorHash,
 		context.EpochHash,
-		context.BlockCntHash,
+		context.VoteHash,
 	}
 	for _, root := range roots {
 		if err := d.syncState(root).Wait(); err != nil {
@@ -1493,7 +1493,7 @@ func (d *Downloader) syncDposContextState(context *types.DposContextProto) error
 }
 
 // Todo: sync dpos context in concurrent
-func (d *Downloader) syncBokerContextState(context *protocol.BokerBackendProto) error {
+func (d *Downloader) syncBokerContextState(context *types.BokerBackendProto) error {
 	roots := []common.Hash{
 		context.SingleHash,
 		context.ContractsHash,

@@ -449,7 +449,7 @@ func (t *timeoutError) Error() string {
 // and returns them as a JSON object.
 func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.Hash, config *TraceArgs) (interface{}, error) {
 
-	log.Info("****TraceTransaction****")
+	log.Info("(api *PrivateDebugAPI) TraceTransaction")
 
 	var tracer vm.Tracer
 	if config != nil && config.Tracer != nil {
@@ -498,7 +498,13 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.
 	// Run the transaction with tracing enabled.
 	log.Info("****TraceTransaction****")
 	vmenv := vm.NewEVM(context, statedb, api.config, vm.Config{Debug: true, Tracer: tracer})
-	ret, gas, failed, err := core.NormalMessage(vmenv, msg, new(core.GasPool).AddGas(tx.Gas()), new(big.Int).SetInt64(protocol.MaxBlockSize), api.eth.Boker())
+	ret, gas, failed, err := core.NormalMessage(vmenv,
+		msg,
+		new(core.GasPool).AddGas(tx.Gas()),
+		new(big.Int).SetInt64(protocol.MaxBlockSize),
+		api.eth.BlockChain().CurrentBlock().DposCtx(),
+		api.eth.BlockChain().CurrentBlock().BokerCtx(),
+		api.eth.Boker())
 	if err != nil {
 		return nil, fmt.Errorf("tracing failed: %v", err)
 	}
@@ -550,7 +556,13 @@ func (api *PrivateDebugAPI) computeTxEnv(blockHash common.Hash, txIndex int) (co
 		vmenv := vm.NewEVM(context, statedb, api.config, vm.Config{})
 		gp := new(core.GasPool).AddGas(tx.Gas())
 		sp := new(big.Int).SetInt64(protocol.MaxBlockSize)
-		_, _, _, err := core.NormalMessage(vmenv, msg, gp, sp, api.eth.Boker())
+		_, _, _, err := core.NormalMessage(vmenv,
+			msg,
+			gp,
+			sp,
+			api.eth.BlockChain().CurrentBlock().DposCtx(),
+			api.eth.BlockChain().CurrentBlock().BokerCtx(),
+			api.eth.Boker())
 		if err != nil {
 			return nil, vm.Context{}, nil, fmt.Errorf("tx %x failed: %v", tx.Hash(), err)
 		}

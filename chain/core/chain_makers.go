@@ -14,6 +14,7 @@ import (
 	"github.com/Tinachain/Tina/chain/core/types"
 	"github.com/Tinachain/Tina/chain/core/vm"
 	"github.com/Tinachain/Tina/chain/ethdb"
+	"github.com/Tinachain/Tina/chain/log"
 	"github.com/Tinachain/Tina/chain/params"
 )
 
@@ -61,7 +62,11 @@ func (b *BlockGen) SetExtra(data []byte) {
 //添加一个交易到区块
 func (b *BlockGen) AddTx(tx *types.Transaction, boker bokerapi.Api) {
 
-	//判断gas池是否为nil
+	log.Info("(b *BlockGen) AddTx")
+
+	if boker != nil {
+		log.Info("(b *BlockGen) AddTx boker not is nil")
+	}
 	if b.gasPool == nil {
 		b.SetCoinbase(common.Address{})
 	}
@@ -70,7 +75,23 @@ func (b *BlockGen) AddTx(tx *types.Transaction, boker bokerapi.Api) {
 	b.statedb.Prepare(tx.Hash(), common.Hash{}, len(b.txs))
 
 	//应用交易，并返回回执
-	receipt, _, err := ApplyTransaction(b.config, nil, nil, &b.header.Coinbase, b.gasPool, b.sizePool, b.statedb, b.header, tx, b.header.GasUsed, vm.Config{}, boker)
+	if boker != nil {
+		log.Info("(b *BlockGen) AddTx boker notis nil")
+	}
+
+	receipt, _, err := ApplyTransaction(b.config,
+		nil,
+		nil,
+		nil,
+		&b.header.Coinbase,
+		b.gasPool,
+		b.sizePool,
+		b.statedb,
+		b.header,
+		tx,
+		b.header.GasUsed,
+		vm.Config{},
+		boker)
 
 	//如果返回失败，则退出此协程
 	if err != nil {
@@ -170,8 +191,13 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db ethdb.Dat
 			gen(i, b)
 		}
 
+		bokerContext, err := types.NewBokerContextFromProto(db, parent.Header().BokerProto)
+		if err != nil {
+			panic(fmt.Sprintf("state write error: %v", err))
+		}
+
 		//累计奖励
-		dpos.AccumulateRewards(config, statedb, h, b.uncles, b.txs, boker)
+		dpos.AccumulateRewards(config, statedb, h, b.uncles, b.txs, bokerContext, boker)
 
 		//提交数据
 		root, err := statedb.CommitTo(db, config.IsEIP158(h.Number))
@@ -217,7 +243,7 @@ func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.St
 		Coinbase:   parent.Coinbase(),
 		Difficulty: parent.Difficulty(),
 		DposProto:  &types.DposContextProto{},
-		BokerProto: &protocol.BokerBackendProto{},
+		BokerProto: &types.BokerBackendProto{},
 		GasLimit:   CalcGasLimit(parent),
 		GasUsed:    new(big.Int),
 		Number:     new(big.Int).Add(parent.Number(), common.Big1),

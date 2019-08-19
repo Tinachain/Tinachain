@@ -83,7 +83,7 @@ func NewBlockChain(chainDb ethdb.Database,
 	engine consensus.Engine,
 	vmConfig vm.Config) (*BlockChain, error) {
 
-	log.Info("****NewBlockChain****")
+	log.Info("blockchain.go NewBlockChain")
 
 	bodyCache, _ := lru.New(bodyCacheLimit)
 	bodyRLPCache, _ := lru.New(bodyCacheLimit)
@@ -817,6 +817,9 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	}
 
 	if _, err := block.DposContext.CommitTo(batch); err != nil {
+		return NonStatTy, err
+	}
+	if _, err := block.BokerContext.CommitTo(batch); err != nil {
 		return NonStatTy, err
 	}
 	if _, err := state.CommitTo(batch, bc.config.IsEIP158(block.Number())); err != nil {

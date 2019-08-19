@@ -273,7 +273,7 @@ func (b *SimulatedBackend) callContract(ctx context.Context, call ethereum.CallM
 	sizepool := new(big.Int).SetInt64(protocol.MaxBlockSize)
 
 	//创建这个交易的状态对象
-	ret, gasUsed, _, failed, err := core.NewStateTransition(vmenv, msg, gaspool, sizepool).NormalTransitionDb(b.blockchain.Boker())
+	ret, gasUsed, _, failed, err := core.NewStateTransition(vmenv, msg, gaspool, sizepool).NormalTransitionDb(b.blockchain.CurrentBlock().DposCtx(), b.blockchain.CurrentBlock().BokerCtx(), b.blockchain.Boker())
 	log.Info("callContract", "ret", ret, "gasUsed", gasUsed)
 
 	return ret, gasUsed, failed, err

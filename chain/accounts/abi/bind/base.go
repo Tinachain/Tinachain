@@ -221,11 +221,13 @@ func (c *BoundContract) Transact(opts *TransactOpts, method string, params ...in
 			return nil, err
 		}
 
-		//判断是否是系统合约
-		system := e.Boker().IsSystemBaseContract(c.address)
-		if system {
+		contractType, err := e.BlockChain().CurrentBlock().BokerCtx().GetSingleContractsType(c.address)
+		if err != nil {
+			return nil, err
+		}
 
-			//系统合约
+		if contractType == protocol.System {
+
 			if method == protocol.RegisterCandidateMethod {
 				return c.transact(opts, &c.address, input, []byte(""), protocol.SystemBase, protocol.RegisterCandidate)
 
@@ -247,13 +249,8 @@ func (c *BoundContract) Transact(opts *TransactOpts, method string, params ...in
 				return c.transact(opts, &c.address, input, []byte(""), protocol.SystemBase, protocol.VoteEpoch)
 			}
 			return nil, errors.New("unknown system contract method name")
-		} else {
-
-			//用户基础合约
-			user := e.Boker().IsUserBaseContract(c.address)
-			if user {
-				return c.transact(opts, &c.address, input, []byte(""), protocol.UserBase, 0)
-			}
+		} else if contractType == protocol.User {
+			return c.transact(opts, &c.address, input, []byte(""), protocol.UserBase, 0)
 		}
 	}
 	return c.transact(opts, &c.address, input, []byte(""), protocol.Normal, 0)
@@ -281,11 +278,13 @@ func (c *BoundContract) TryTransact(opts *TransactOpts, method string, now int64
 		return c.transact(opts, &c.address, input, []byte(""), protocol.Normal, 0)
 	}
 
-	//判断是否是系统合约
-	system := e.Boker().IsSystemBaseContract(c.address)
-	if system {
+	contractType, err := e.BlockChain().CurrentBlock().BokerCtx().GetSingleContractsType(c.address)
+	if err != nil {
+		return nil, err
+	}
 
-		//系统合约
+	if contractType == protocol.System {
+
 		if method == protocol.RotateVoteMethod {
 
 			producerNoder, err := c.getProducer(opts)
@@ -312,16 +311,16 @@ func (c *BoundContract) Transfer(opts *TransactOpts) (*types.Transaction, error)
 		return nil, err
 	}
 
-	system := e.Boker().IsSystemBaseContract(c.address)
-	if system {
-		return c.transact(opts, &c.address, nil, []byte(""), protocol.SystemBase, 0)
+	contractType, err := e.BlockChain().CurrentBlock().BokerCtx().GetSingleContractsType(c.address)
+	if err != nil {
+		return nil, err
 	}
 
-	user := e.Boker().IsUserBaseContract(c.address)
-	if user {
+	if contractType == protocol.System {
+		return c.transact(opts, &c.address, nil, []byte(""), protocol.SystemBase, 0)
+	} else if contractType == protocol.User {
 		return c.transact(opts, &c.address, nil, []byte(""), protocol.UserBase, 0)
 	}
-
 	return c.transact(opts, &c.address, nil, []byte(""), protocol.Normal, 0)
 }
 

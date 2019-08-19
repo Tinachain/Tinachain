@@ -5,14 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
+	"math/big"
 
 	"github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/core/types"
 	"github.com/Tinachain/Tina/chain/eth"
+	"github.com/Tinachain/Tina/chain/ethdb"
 	"github.com/Tinachain/Tina/chain/log"
 	"github.com/Tinachain/Tina/chain/params"
-	"github.com/Tinachain/Tina/chain/trie"
 )
 
 const JsonFileName = "boker.json" //Tina链配置
@@ -61,27 +62,27 @@ type BokerBackend struct {
 	ethereum     *eth.Ethereum
 	contracts    *BokerContracts
 	transactions *BokerTransaction
-	stocks       *TinaStock
 	blacks       map[common.Address]bool
+	db           ethdb.Database
 }
 
-func New() *BokerBackend {
+func New(db ethdb.Database) *BokerBackend {
 
-	log.Info("****New Boker****")
+	log.Info("boker.go New")
 	boker := new(BokerBackend)
 	boker.ethereum = nil
 	boker.contracts = nil
 	boker.transactions = nil
+	boker.db = db
 	boker.blacks = make(map[common.Address]bool)
 	boker.loadConfig()
 	return boker
 }
 
-func (boker *BokerBackend) Init(e *eth.Ethereum, bokerProto *protocol.BokerBackendProto) error {
+func (boker *BokerBackend) Init(e *eth.Ethereum, bokerProto *types.BokerBackendProto) error {
 
 	log.Info("(boker *BokerBackend) Init")
 
-	//创建类
 	boker.ethereum = e
 
 	log.Info("Create Bokerchain Transaction Object")
@@ -89,17 +90,14 @@ func (boker *BokerBackend) Init(e *eth.Ethereum, bokerProto *protocol.BokerBacke
 
 	var err error
 	log.Info("Create Bokerchain Contract Object")
-	boker.contracts, err = NewContract(e.ChainDb(), e, boker.transactions, bokerProto)
+	boker.contracts, err = NewContract(boker.db, e, bokerProto)
 	if err != nil {
 		return nil
 	}
 
-	boker.stocks = NewStock(e.ChainDb(), e, bokerProto)
-
 	return nil
 }
 
-//loadConfig 加载json格式的配置文件
 func (boker *BokerBackend) loadConfig() error {
 
 	log.Info("(boker *BokerBackend) loadConfig")
@@ -108,13 +106,10 @@ func (boker *BokerBackend) loadConfig() error {
 
 		boker.config.Dpos = new(params.DposConfig)
 		boker.config.Dpos.Validators = make([]common.Address, 0)
-
 		boker.config.Contracts = new(BaseContractConfig)
 		boker.config.Contracts.Bases = make([]BaseContract, 0)
-
 		boker.config.Producer = new(ProducerConfig)
 		boker.config.BlackList = new(BlackConfig)
-
 		boker.config.Stocks = new(StocksConfig)
 
 		//读取文件
@@ -159,24 +154,8 @@ func (boker *BokerBackend) loadConfig() error {
 	return protocol.ErrSystem
 }
 
-func (boker *BokerBackend) SetSystemContract(address common.Address, from common.Address) error {
-	return boker.contracts.SetSystemContract(address, from)
-}
-
-func (boker *BokerBackend) SetUserBaseContract(address common.Address, from common.Address) error {
-	return boker.contracts.SetUserBaseContract(address, from)
-}
-
-func (boker *BokerBackend) CancelUserBaseContract(address common.Address, from common.Address) error {
-	return boker.contracts.CancelUserBaseContract(address, from)
-}
-
-func (boker *BokerBackend) IsSystemBaseContract(address common.Address) bool {
-	return boker.contracts.IsSystemBaseContract(address)
-}
-
-func (boker *BokerBackend) IsUserBaseContract(address common.Address) bool {
-	return boker.contracts.IsUserBaseContract(address)
+func (boker *BokerBackend) SetSystemContract(address common.Address, from common.Address, bokerContext *types.BokerContext) error {
+	return boker.contracts.SetSystemContract(address, from, bokerContext)
 }
 
 func (boker *BokerBackend) IsLocalValidator(address common.Address) bool {
@@ -215,16 +194,15 @@ func (boker *BokerBackend) CheckBlackAddress(address common.Address) bool {
 	return false
 }
 
-//SubmitBokerTransaction
 func (boker *BokerBackend) SubmitBokerTransaction(ctx context.Context,
 	txMajor protocol.TxMajor,
 	txMinor protocol.TxMinor,
-	to common.Address,
-	name []byte,
-	extra []byte,
+	from, to common.Address,
+	name, extra []byte,
+	value *big.Int,
 	encryption uint8) (*types.Transaction, error) {
 
-	return boker.transactions.SubmitBokerTransaction(ctx, txMajor, txMinor, to, name, extra, encryption)
+	return boker.transactions.SubmitBokerTransaction(ctx, txMajor, txMinor, from, to, name, extra, value, encryption)
 }
 
 func (boker *BokerBackend) EncoderContext(context []byte, key []byte) (error, []byte) {
@@ -233,24 +211,6 @@ func (boker *BokerBackend) EncoderContext(context []byte, key []byte) (error, []
 
 func (boker *BokerBackend) DecoderContext(context []byte, key []byte) (error, []byte) {
 	return boker.transactions.DecoderContext(context, key)
-}
-
-func (boker *BokerBackend) CommitTrie() (*protocol.BokerBackendProto, error) {
-
-	//提交基础合约交易
-	contractsRoot, err := boker.contracts.contractsTrie.CommitTo(boker.ethereum.ChainDb())
-	if err != nil {
-		return nil, err
-	}
-
-	return &protocol.BokerBackendProto{
-		ContractsHash: contractsRoot,
-	}, nil
-}
-
-func (boker *BokerBackend) GetContractTrie() (*trie.Trie, *trie.Trie) {
-
-	return boker.contracts.GetContractTrie()
 }
 
 func (boker *BokerBackend) GetVotes() error {
@@ -281,70 +241,4 @@ func (boker *BokerBackend) GetMethodName(txMinor protocol.TxMinor) (string, stri
 	default:
 		return "", "", protocol.ErrTxType
 	}
-}
-
-//
-func (boker *BokerBackend) GetOwner() common.Address {
-
-	return boker.stocks.GetOwner()
-}
-
-func (boker *BokerBackend) SetOwner(operation common.Address, address common.Address) error {
-
-	return boker.stocks.SetOwner(operation, address)
-}
-
-func (boker *BokerBackend) GetGasPool() uint64 {
-
-	return boker.stocks.GetGasPool()
-}
-
-func (boker *BokerBackend) AddGasPool(gas uint64) uint64 {
-
-	return boker.stocks.AddGasPool(gas)
-}
-
-func (boker *BokerBackend) GetStock(address common.Address) *protocol.StockAccount {
-
-	return boker.stocks.GetStock(address)
-}
-
-func (boker *BokerBackend) GetStocks() ([]*protocol.StockAccount, error) {
-
-	return boker.stocks.GetStocks()
-}
-
-func (boker *BokerBackend) SetStock(operation common.Address, address common.Address, number uint64) error {
-
-	return boker.stocks.SetStock(operation, address, number)
-}
-
-func (boker *BokerBackend) TransferStock(operation common.Address, from common.Address, to common.Address, number uint64) error {
-
-	return boker.stocks.TransferStock(operation, from, to, number)
-}
-
-func (boker *BokerBackend) CleanStock(operation common.Address, from common.Address) error {
-
-	return boker.stocks.CleanStock(operation, from)
-}
-
-func (boker *BokerBackend) FrozenStock(operation common.Address, from common.Address) error {
-
-	return boker.stocks.FrozenStock(operation, from)
-}
-
-func (boker *BokerBackend) UnFrozenStock(operation common.Address, from common.Address) error {
-
-	return boker.stocks.UnFrozenStock(operation, from)
-}
-
-func (boker *BokerBackend) ClearStock(operation common.Address) error {
-
-	return boker.stocks.ClearStock(operation)
-}
-
-func (boker *BokerBackend) GetStockTrie() (*trie.Trie, *trie.Trie, *trie.Trie, *trie.Trie) {
-
-	return boker.stocks.GetStockTrie()
 }

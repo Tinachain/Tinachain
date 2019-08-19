@@ -43,19 +43,20 @@ const (
 // Work is the workers current environment and holds
 // all of the current state information
 type Work struct {
-	config      *params.ChainConfig
-	signer      types.Signer
-	state       *state.StateDB // apply state changes here
-	dposContext *types.DposContext
-	ancestors   *set.Set     // ancestor set (used for checking uncle parent validity)
-	family      *set.Set     // family set (used for checking uncle invalidity)
-	uncles      *set.Set     // uncle set
-	tcount      int          // tx count in cycle
-	Block       *types.Block // the new block
-	header      *types.Header
-	txs         []*types.Transaction
-	receipts    []*types.Receipt
-	createdAt   time.Time
+	config       *params.ChainConfig
+	signer       types.Signer
+	state        *state.StateDB // apply state changes here
+	dposContext  *types.DposContext
+	bokerContext *types.BokerContext
+	ancestors    *set.Set     // ancestor set (used for checking uncle parent validity)
+	family       *set.Set     // family set (used for checking uncle invalidity)
+	uncles       *set.Set     // uncle set
+	tcount       int          // tx count in cycle
+	Block        *types.Block // the new block
+	header       *types.Header
+	txs          []*types.Transaction
+	receipts     []*types.Receipt
+	createdAt    time.Time
 }
 
 type Result struct {
@@ -96,6 +97,8 @@ type worker struct {
 func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
 
 	//创建一个矿工
+	log.Info("worker.go newWorker", "coinbase", coinbase.String())
+
 	worker := &worker{
 		config:         config,
 		engine:         engine,
@@ -129,6 +132,9 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 }
 
 func (self *worker) CreateNewWork() {
+
+	log.Info("(self *worker) CreateNewWork", "isStart", self.isStart)
+
 	if !self.isStart {
 		self.isStart = true
 		self.createNewWork()
@@ -209,7 +215,7 @@ func (self *worker) mintBlock(now int64) {
 		log.Info("block Information", "number", block.Number(), "firstTimer", firstTimer, "now", now)
 		if err := engine.CheckDeadline(self.chain.CurrentBlock(), now, firstTimer); err != nil {
 
-			log.Error("CheckDeadline Failed", "now", now, "firstTimer", firstTimer, "err", err)
+			//log.Error("CheckDeadline Failed", "now", now, "firstTimer", firstTimer, "err", err)
 			return
 		}
 
@@ -400,7 +406,7 @@ func (self *worker) wait() {
 	}
 }
 
-func newBokerFromProto(db ethdb.Database, bokerProto *protocol.BokerBackendProto) (*trie.Trie, *trie.Trie, error) {
+func newBokerFromProto(db ethdb.Database, bokerProto *types.BokerBackendProto) (*trie.Trie, *trie.Trie, error) {
 
 	singleTrie, err := trie.NewTrieWithPrefix(bokerProto.SingleHash, protocol.SingleContractPrefix, db)
 	if err != nil {
@@ -424,36 +430,29 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		return err
 	}
 
-	//创建一个共识实例
 	dposContext, err := types.NewDposContextFromProto(self.chainDb, parent.Header().DposProto)
 	if err != nil {
 		return err
 	}
-
-	//加载Tina链信息
-	/*baseTrie, contractTrie, err := newBokerFromProto(self.chainDb, parent.Header().BokerProto)
+	bokerContext, err := types.NewBokerContextFromProto(self.chainDb, parent.Header().BokerProto)
 	if err != nil {
 		return err
-	}*/
-	/*log.Info("Read Boker",
-	"BokerProto", parent.Header().BokerProto.Root().String(),
-	"base", baseTrie.Hash().String(),
-	"contract", contractTrie.Hash().String())*/
+	}
 
 	//创建一个work实例
 	work := &Work{
-		config:      self.config,
-		signer:      types.HomesteadSigner{},
-		state:       state,
-		dposContext: dposContext,
-		ancestors:   set.New(),
-		family:      set.New(),
-		uncles:      set.New(),
-		header:      header,
-		createdAt:   time.Now(),
+		config:       self.config,
+		signer:       types.HomesteadSigner{},
+		state:        state,
+		dposContext:  dposContext,
+		bokerContext: bokerContext,
+		ancestors:    set.New(),
+		family:       set.New(),
+		uncles:       set.New(),
+		header:       header,
+		createdAt:    time.Now(),
 	}
 
-	// when 08 is processed ancestors contain 07 (quick block)
 	for _, ancestor := range self.chain.GetBlocksFromHash(parent.Hash(), 7) {
 		for _, uncle := range ancestor.Uncles() {
 			work.family.Add(uncle.Hash())
@@ -462,7 +461,6 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		work.ancestors.Add(ancestor.Hash())
 	}
 
-	// Keep track of transactions which return errors so they can be removed
 	work.tcount = 0
 	self.current = work
 	return nil
@@ -503,7 +501,6 @@ func (self *worker) createNewWork() (*Work, error) {
 		Extra:      self.extra,
 		Time:       big.NewInt(tstamp),
 	}
-	log.Info("createNewWork", "Time", header.Time.Uint64())
 
 	//如果我们正在挖掘，只设置coinbase（避免出现虚假区块奖励）
 	if atomic.LoadInt32(&self.mining) == 1 {
@@ -586,10 +583,11 @@ func (self *worker) createNewWork() (*Work, error) {
 	}
 
 	log.Info("createNewWork self.engine.Finalize")
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.dposContext, self.eth.Boker()); err != nil {
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.dposContext, work.bokerContext, self.eth.Boker()); err != nil {
 		return nil, fmt.Errorf("got error when finalize block for sealing, err: %s", err)
 	}
 	work.Block.DposContext = work.dposContext
+	work.Block.BokerContext = work.bokerContext
 
 	//更新新块的矿工数量,如果我们正在挖矿，那我们只打印日志
 	if atomic.LoadInt32(&self.mining) == 1 {
@@ -702,10 +700,12 @@ func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, c
 	//首先获取当前状态的快照
 	snap := env.state.Snapshot()
 	dposSnap := env.dposContext.Snapshot()
+	bokerSnap := env.bokerContext.Snapshot()
 
 	//执行交易
 	receipt, _, err := core.ApplyTransaction(env.config,
 		env.dposContext,
+		env.bokerContext,
 		bc,
 		&coinbase,
 		gp,
@@ -722,6 +722,7 @@ func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, c
 		//交易执行失败，则回滚到之前的快照状态并返回错误，该账户的所有后续交易都将被跳过
 		env.state.RevertToSnapshot(snap)
 		env.dposContext.RevertToSnapShot(dposSnap)
+		env.bokerContext.RevertToSnapShot(bokerSnap)
 		return err, nil
 	}
 

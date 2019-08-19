@@ -20,7 +20,7 @@ import (
 type DposContext struct {
 	epochTrie     *trie.Trie //记录每个周期的验证人Hash树
 	validatorTrie *trie.Trie //验证人以及对应投票人Hash树
-	blockCntTrie  *trie.Trie //记录验证人在周期内的出块数目Hash树
+	voteTrie      *trie.Trie
 	db            ethdb.Database
 }
 
@@ -34,14 +34,14 @@ func NewValidatorTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
 	return trie.NewTrieWithPrefix(root, protocol.ValidatorPrefix, db)
 }
 
-func NewBlockCntTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
+func NewVoteTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
 
 	return trie.NewTrieWithPrefix(root, protocol.VotePrefix, db)
 }
 
 func NewDposContext(db ethdb.Database) (*DposContext, error) {
 
-	log.Info("****NewDposContext****")
+	log.Info("dpos_context.go NewDposContext")
 
 	epochTrie, err := NewEpochTrie(common.Hash{}, db)
 	if err != nil {
@@ -55,16 +55,16 @@ func NewDposContext(db ethdb.Database) (*DposContext, error) {
 	}
 	log.Info("NewValidatorTrie")
 
-	blockCntTrie, err := NewBlockCntTrie(common.Hash{}, db)
+	voteTrie, err := NewVoteTrie(common.Hash{}, db)
 	if err != nil {
 		return nil, err
 	}
-	log.Info("NewBlockCntTrie")
+	log.Info("NewVoteTrie")
 
 	return &DposContext{
 		epochTrie:     epochTrie,
 		validatorTrie: validatorTrie,
-		blockCntTrie:  blockCntTrie,
+		voteTrie:      voteTrie,
 		db:            db,
 	}, nil
 }
@@ -83,7 +83,7 @@ func NewDposContextFromProto(db ethdb.Database, ctxProto *DposContextProto) (*Dp
 		return nil, err
 	}
 
-	blockCntTrie, err := NewBlockCntTrie(ctxProto.BlockCntHash, db)
+	voteTrie, err := NewVoteTrie(ctxProto.VoteHash, db)
 	if err != nil {
 		log.Error("NewBlockCntTrie", "Error", err)
 		return nil, err
@@ -92,7 +92,7 @@ func NewDposContextFromProto(db ethdb.Database, ctxProto *DposContextProto) (*Dp
 	dposContext := new(DposContext)
 	dposContext.epochTrie = epochTrie
 	dposContext.validatorTrie = validatorTrie
-	dposContext.blockCntTrie = blockCntTrie
+	dposContext.voteTrie = voteTrie
 	dposContext.db = db
 
 	return dposContext, nil
@@ -102,11 +102,12 @@ func (d *DposContext) Copy() *DposContext {
 
 	epochTrie := *d.epochTrie
 	validatorTrie := *d.validatorTrie
-	blockCntTrie := *d.blockCntTrie
+	voteTrie := *d.voteTrie
+
 	return &DposContext{
 		epochTrie:     &epochTrie,
 		validatorTrie: &validatorTrie,
-		blockCntTrie:  &blockCntTrie,
+		voteTrie:      &voteTrie,
 	}
 }
 
@@ -115,7 +116,7 @@ func (d *DposContext) Root() (h common.Hash) {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, d.epochTrie.Hash())
 	rlp.Encode(hw, d.validatorTrie.Hash())
-	rlp.Encode(hw, d.blockCntTrie.Hash())
+	rlp.Encode(hw, d.voteTrie.Hash())
 	hw.Sum(h[:0])
 	return h
 }
@@ -128,7 +129,7 @@ func (d *DposContext) RevertToSnapShot(snapshot *DposContext) {
 
 	d.epochTrie = snapshot.epochTrie
 	d.validatorTrie = snapshot.validatorTrie
-	d.blockCntTrie = snapshot.blockCntTrie
+	d.voteTrie = snapshot.voteTrie
 }
 
 func (d *DposContext) FromProto(dcp *DposContextProto) error {
@@ -144,21 +145,21 @@ func (d *DposContext) FromProto(dcp *DposContextProto) error {
 		return err
 	}
 
-	d.blockCntTrie, err = NewBlockCntTrie(dcp.BlockCntHash, d.db)
+	d.voteTrie, err = NewVoteTrie(dcp.VoteHash, d.db)
 	return err
 }
 
 type DposContextProto struct {
 	EpochHash     common.Hash `json:"epochRoot"        gencodec:"required"`
 	ValidatorHash common.Hash `json:"validatorRoot"     gencodec:"required"`
-	BlockCntHash  common.Hash `json:"blockCntRoot"      gencodec:"required"`
+	VoteHash      common.Hash `json:"voteRoot"      gencodec:"required"`
 }
 
 func (d *DposContext) ToProto() *DposContextProto {
 	return &DposContextProto{
 		EpochHash:     d.epochTrie.Hash(),
 		ValidatorHash: d.validatorTrie.Hash(),
-		BlockCntHash:  d.blockCntTrie.Hash(),
+		VoteHash:      d.voteTrie.Hash(),
 	}
 }
 
@@ -167,7 +168,7 @@ func (p *DposContextProto) Root() (h common.Hash) {
 	hw := sha3.NewKeccak256()
 	rlp.Encode(hw, p.EpochHash)
 	rlp.Encode(hw, p.ValidatorHash)
-	rlp.Encode(hw, p.BlockCntHash)
+	rlp.Encode(hw, p.VoteHash)
 	hw.Sum(h[:0])
 	return h
 }
@@ -184,28 +185,29 @@ func (d *DposContext) CommitTo(dbw trie.DatabaseWriter) (*DposContextProto, erro
 		return nil, err
 	}
 
-	blockCntRoot, err := d.blockCntTrie.CommitTo(dbw)
+	voteRoot, err := d.voteTrie.CommitTo(dbw)
 	if err != nil {
 		return nil, err
 	}
+
 	return &DposContextProto{
 		EpochHash:     epochRoot,
 		ValidatorHash: validatorRoot,
-		BlockCntHash:  blockCntRoot,
+		VoteHash:      voteRoot,
 	}, nil
 }
 
 func (d *DposContext) EpochTrie() *trie.Trie             { return d.epochTrie }
 func (d *DposContext) ValidatorTrie() *trie.Trie         { return d.validatorTrie }
-func (d *DposContext) BlockCntTrie() *trie.Trie          { return d.blockCntTrie }
-func (d *DposContext) DB() ethdb.Database                { return d.db }
+func (d *DposContext) VoteTrie() *trie.Trie              { return d.voteTrie }
 func (d *DposContext) SetEpoch(epoch *trie.Trie)         { d.epochTrie = epoch }
 func (d *DposContext) SetValidator(validator *trie.Trie) { d.validatorTrie = validator }
-func (d *DposContext) SetMintCnt(blockCnt *trie.Trie)    { d.blockCntTrie = blockCnt }
+func (d *DposContext) SetVote(voteTrie *trie.Trie)       { d.voteTrie = voteTrie }
+func (d *DposContext) DB() ethdb.Database                { return d.db }
 
 func (dc *DposContext) GetEpochTrie() ([]common.Address, error) {
 
-	log.Info("(dc *DposContext) GetEpochTrie", "epochTrie", dc.epochTrie.Hash().String())
+	//log.Info("(dc *DposContext) GetEpochTrie", "epochTrie", dc.epochTrie.Hash().String())
 
 	var validators []common.Address
 	validatorsRLP := dc.epochTrie.Get(protocol.ValidatorsPrefix)

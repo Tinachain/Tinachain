@@ -444,14 +444,19 @@ web3._extend({
 			params: 0,
 		}),
 		new web3._extend.Method({
-			name: 'setBaseContracts',
-			call: 'eth_setBaseContracts',
-			params: 3,		
+			name: 'setSystemBaseContracts',
+			call: 'eth_setSystemBaseContracts',
+			params: 1,		
 		}),
 		new web3._extend.Method({
-			name: 'cancelBaseContracts',
-			call: 'eth_cancelBaseContracts',
-			params: 2,
+			name: 'setUserBaseContracts',
+			call: 'eth_setUserBaseContracts',
+			params: 1,		
+		}),
+		new web3._extend.Method({
+			name: 'cancelUserBaseContracts',
+			call: 'eth_cancelUserBaseContracts',
+			params: 1,
 		}),
 		new web3._extend.Method({
 			name: 'addValidator',
@@ -459,9 +464,39 @@ web3._extend({
 			params: 2,
 		}),	
 		new web3._extend.Method({
-			name: 'decodeAbi',
-			call: 'eth_decodeAbi',
+			name: 'getBlockValidator',
+			call: 'eth_getBlockValidator',
+			params: 1,
+		}),		
+		new web3._extend.Method({
+			name: 'stockSet',
+			call: 'eth_stockSet',
+			params: 2,
+		}),
+		new web3._extend.Method({
+			name: 'stockGet',
+			call: 'eth_stockGet',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'stockTransfer',
+			call: 'eth_stockTransfer',
 			params: 3,
+		}),
+		new web3._extend.Method({
+			name: 'stockClean',
+			call: 'eth_stockClean',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'stockFrozen',
+			call: 'eth_stockFrozen',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'stockUnFrozen',
+			call: 'eth_stockUnFrozen',
+			params: 1,
 		}),
 		
 		new web3._extend.Method({
@@ -482,11 +517,16 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'getData',
 			call: 'eth_getData',
-			params: 2,
+			params: 1,
 		}),
 		new web3._extend.Method({
-			name: 'checkTxSign',
-			call: 'eth_checkTxSign',
+			name: 'setStockManager',
+			call: 'eth_setStockManager',
+			params: 1,
+		}),
+		new web3._extend.Method({
+			name: 'getStockManager',
+			call: 'eth_getStockManager',
 			params: 0,
 		}),
 	],

@@ -52,6 +52,7 @@ type Engine interface {
 		uncles []*types.Header,
 		receipts []*types.Receipt,
 		dposContext *types.DposContext,
+		bokerContext *types.BokerContext,
 		boker bokerapi.Api) (*types.Block, error)
 
 	Seal(chain ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error)

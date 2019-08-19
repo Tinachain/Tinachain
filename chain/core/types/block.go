@@ -30,7 +30,6 @@ import (
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/common/hexutil"
 	"github.com/Tinachain/Tina/chain/crypto/sha3"
-	"github.com/Tinachain/Tina/chain/log"
 	"github.com/Tinachain/Tina/chain/rlp"
 )
 
@@ -70,25 +69,25 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 
 // Header represents a block header in the Ethereum blockchain.
 type Header struct {
-	ParentHash  common.Hash                 `json:"parentHash"       gencodec:"required"`  //该区块的父区块的Hash值
-	UncleHash   common.Hash                 `json:"sha3Uncles"       gencodec:"required"`  //该区块的叔区块的Hash值
-	Validator   common.Address              `json:"validator"        gencodec:"required"`  //该区块的验证者
-	Coinbase    common.Address              `json:"coinbase"         gencodec:"required"`  //打包该区块矿工的地址，矿工费和发现区块的奖励会被发送到该地址
-	Root        common.Hash                 `json:"stateRoot"        gencodec:"required"`  //Merkle树根节点的Hash，以太坊中的交易状态信息是以Merkle状态树的形式进行存储的，Root是该状态树的根节点的Hash值
-	TxHash      common.Hash                 `json:"transactionsRoot" gencodec:"required"`  //保存该区块中交易Merkle树的根节点的Hash值
-	ReceiptHash common.Hash                 `json:"receiptsRoot"     gencodec:"required"`  //一个区块中所包含的交易中的接收者也是以Merkle树的形式进行存储的，该值是该Merkle树根节点的Hash值
-	DposProto   *DposContextProto           `json:"dposContext"      gencodec:"required"`  //采用的Dpos上下文
-	BokerProto  *protocol.BokerBackendProto `json:"bokerBackend"      gencodec:"required"` //Tina链上下文
-	Bloom       Bloom                       `json:"logsBloom"        gencodec:"required"`  //用于索引与搜索的结构（详见Tips）
-	Difficulty  *big.Int                    `json:"difficulty"       gencodec:"required"`  //该区块的难度
-	Number      *big.Int                    `json:"number"           gencodec:"required"`  //所有祖先区块的数量（也就是区块高度）
-	GasLimit    *big.Int                    `json:"gasLimit"         gencodec:"required"`  //该区块的gas上限
-	GasUsed     *big.Int                    `json:"gasUsed"          gencodec:"required"`  //该区块使用的gas
-	Time        *big.Int                    `json:"timestamp"        gencodec:"required"`  //区块开始打包的时间
-	Extra       []byte                      `json:"extraData"        gencodec:"required"`  //区块相关的附加信息
-	MixDigest   common.Hash                 `json:"mixHash"          gencodec:"required"`  //该哈希值与Nonce值一起能够证明在该区块上已经进行了足够的计算（用于验证该区块挖矿成功与否的Hash值）
-	Nonce       BlockNonce                  `json:"nonce"            gencodec:"required"`  //该哈希值与MixDigest值一起能够证明在该区块上已经进行了足够的计算（用于验证该区块挖矿成功与否的Hash值）
-	Ip          []byte                      `json:"blockIp"        gencodec:"required"`    //区块的打包IP(为了让交易和打包信息更加透明，因此添加了区块打包IP和交易提交IP两个信息)
+	ParentHash  common.Hash        `json:"parentHash"       gencodec:"required"`  //该区块的父区块的Hash值
+	UncleHash   common.Hash        `json:"sha3Uncles"       gencodec:"required"`  //该区块的叔区块的Hash值
+	Validator   common.Address     `json:"validator"        gencodec:"required"`  //该区块的验证者
+	Coinbase    common.Address     `json:"coinbase"         gencodec:"required"`  //打包该区块矿工的地址，矿工费和发现区块的奖励会被发送到该地址
+	Root        common.Hash        `json:"stateRoot"        gencodec:"required"`  //Merkle树根节点的Hash，以太坊中的交易状态信息是以Merkle状态树的形式进行存储的，Root是该状态树的根节点的Hash值
+	TxHash      common.Hash        `json:"transactionsRoot" gencodec:"required"`  //保存该区块中交易Merkle树的根节点的Hash值
+	ReceiptHash common.Hash        `json:"receiptsRoot"     gencodec:"required"`  //一个区块中所包含的交易中的接收者也是以Merkle树的形式进行存储的，该值是该Merkle树根节点的Hash值
+	DposProto   *DposContextProto  `json:"dposContext"      gencodec:"required"`  //采用的Dpos上下文
+	BokerProto  *BokerBackendProto `json:"bokerBackend"      gencodec:"required"` //Tina链上下文
+	Bloom       Bloom              `json:"logsBloom"        gencodec:"required"`  //用于索引与搜索的结构（详见Tips）
+	Difficulty  *big.Int           `json:"difficulty"       gencodec:"required"`  //该区块的难度
+	Number      *big.Int           `json:"number"           gencodec:"required"`  //所有祖先区块的数量（也就是区块高度）
+	GasLimit    *big.Int           `json:"gasLimit"         gencodec:"required"`  //该区块的gas上限
+	GasUsed     *big.Int           `json:"gasUsed"          gencodec:"required"`  //该区块使用的gas
+	Time        *big.Int           `json:"timestamp"        gencodec:"required"`  //区块开始打包的时间
+	Extra       []byte             `json:"extraData"        gencodec:"required"`  //区块相关的附加信息
+	MixDigest   common.Hash        `json:"mixHash"          gencodec:"required"`  //该哈希值与Nonce值一起能够证明在该区块上已经进行了足够的计算（用于验证该区块挖矿成功与否的Hash值）
+	Nonce       BlockNonce         `json:"nonce"            gencodec:"required"`  //该哈希值与MixDigest值一起能够证明在该区块上已经进行了足够的计算（用于验证该区块挖矿成功与否的Hash值）
+	Ip          []byte             `json:"blockIp"        gencodec:"required"`    //区块的打包IP(为了让交易和打包信息更加透明，因此添加了区块打包IP和交易提交IP两个信息)
 }
 
 // field type overrides for gencodec
@@ -161,7 +160,8 @@ type Block struct {
 	ReceivedAt   time.Time
 	ReceivedFrom interface{}
 
-	DposContext *DposContext
+	DposContext  *DposContext
+	BokerContext *BokerContext
 }
 
 // DeprecatedTd is an old relic for extracting the TD of a block. It is in the
@@ -233,10 +233,12 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 	}
 
 	//得到当前生成区块的公网IP
-	Ip := protocol.GetExternalIp()
+	var Ip string = ""
+	if b.header.Number.Uint64() != 0 {
+		Ip = protocol.GetExternalIp()
+	}
 	b.header.Ip = b.header.Ip[:0]
 	b.header.Ip = append(b.header.Ip, Ip...)
-	log.Info("NewBlock", "Ip", string(b.header.Ip[:]))
 
 	return b
 }
@@ -283,7 +285,7 @@ func CopyHeader(h *Header) *Header {
 	}
 
 	//
-	cpy.BokerProto = &protocol.BokerBackendProto{}
+	cpy.BokerProto = &BokerBackendProto{}
 	if h.BokerProto != nil {
 		cpy.BokerProto = h.BokerProto
 	}
@@ -359,7 +361,8 @@ func (b *Block) IP() []byte                { return common.CopyBytes(b.header.Ip
 // Body returns the non-header content of the block.
 func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
 
-func (b *Block) DposCtx() *DposContext { return b.DposContext }
+func (b *Block) DposCtx() *DposContext   { return b.DposContext }
+func (b *Block) BokerCtx() *BokerContext { return b.BokerContext }
 
 func (b *Block) HashNoNonce() common.Hash {
 	return b.header.HashNoNonce()
@@ -397,7 +400,8 @@ func (b *Block) WithSeal(header *Header) *Block {
 		uncles:       b.uncles,
 
 		// add dposcontext
-		DposContext: b.DposContext,
+		DposContext:  b.DposContext,
+		BokerContext: b.BokerContext,
 	}
 }
 
@@ -450,6 +454,7 @@ func (h *Header) String() string {
 	TxSha		    %x
 	ReceiptSha:	    %x
     DposContext:    %x
+	BokerContext: %x
 	Bloom:		    %x
 	Difficulty:	    %v
 	Number:		    %v
@@ -469,6 +474,7 @@ func (h *Header) String() string {
 		h.TxHash,
 		h.ReceiptHash,
 		h.DposProto,
+		h.BokerProto,
 		h.Bloom,
 		h.Difficulty,
 		h.Number,

@@ -179,8 +179,8 @@ func (client *Client) AtInterfaceBase() (err error) {
 	return nil
 }
 
-func (client *Client) SetBaseContracts(address ethcommon.Address, abiJson string) (err error) {
-	hash, err := client.EthClient.SetBaseContracts(context.Background(), address, 1, abiJson)
+func (client *Client) SetSystemBaseContracts(address ethcommon.Address) (err error) {
+	hash, err := client.EthClient.SetSystemBaseContracts(context.Background(), address)
 	if err != nil {
 		return err
 	}
@@ -237,8 +237,8 @@ func (client *Client) AtManager(address string) (err error) {
 	return nil
 }
 
-func (client *Client) SetPicture(picture string) (err error) {
-	hash, err := client.EthClient.SetPicture(context.Background(), picture)
+func (client *Client) SetUserBaseContracts(address ethcommon.Address) (err error) {
+	hash, err := client.EthClient.SetUserBaseContracts(context.Background(), address)
 	if err != nil {
 		return err
 	}
@@ -250,16 +250,8 @@ func (client *Client) SetPicture(picture string) (err error) {
 	return nil
 }
 
-func (client *Client) GetPicture(hash ethcommon.Hash, savePath string) (err error) {
-	err = client.EthClient.GetPicture(context.Background(), hash, savePath)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (client *Client) CancelBaseContracts(address ethcommon.Address) (err error) {
-	hash, err := client.EthClient.CancelBaseContracts(context.Background(), address, 1)
+func (client *Client) CancelUserBaseContracts(address ethcommon.Address) (err error) {
+	hash, err := client.EthClient.CancelUserBaseContracts(context.Background(), address)
 	if err != nil {
 		return err
 	}

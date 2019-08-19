@@ -20,11 +20,7 @@ import (
 	"github.com/Tinachain/Tina/chain/log"
 	"github.com/Tinachain/Tina/chain/params"
 	"github.com/Tinachain/Tina/chain/rlp"
-	"github.com/Tinachain/Tina/chain/trie"
 )
-
-//go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
-//go:generate gencodec -type GenesisAccount -field-override genesisAccountMarshaling -out gen_genesis_account.go
 
 var errGenesisNoConfig = errors.New("genesis has no chain configuration")
 
@@ -39,11 +35,9 @@ type Genesis struct {
 	Mixhash    common.Hash         `json:"mixHash"`
 	Coinbase   common.Address      `json:"coinbase"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
-
-	//这些字段用于一致性测试，请不要使用它们在实际的创世块中.
-	Number     uint64      `json:"number"`
-	GasUsed    uint64      `json:"gasUsed"`
-	ParentHash common.Hash `json:"parentHash"`
+	Number     uint64              `json:"number"`
+	GasUsed    uint64              `json:"gasUsed"`
+	ParentHash common.Hash         `json:"parentHash"`
 }
 
 //Json格式反序列化
@@ -138,7 +132,7 @@ func (e *GenesisMismatchError) Error() string {
 // The returned chain configuration is never nil.
 func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig, common.Hash, error) {
 
-	log.Info("****SetupGenesisBlock****")
+	log.Info("genesis.go SetupGenesisBlock")
 
 	if genesis != nil && genesis.Config == nil {
 		return params.DposChainConfig, common.Hash{}, errGenesisNoConfig
@@ -166,7 +160,7 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 
 	// Check whether the genesis block is already written.
 	if genesis != nil {
-		block, _, _, _ := genesis.ToBlock()
+		block, _ := genesis.ToBlock()
 		hash := block.Hash()
 		if hash != stored {
 
@@ -174,7 +168,6 @@ func SetupGenesisBlock(db ethdb.Database, genesis *Genesis) (*params.ChainConfig
 			return genesis.Config, block.Hash(), &GenesisMismatchError{stored, hash}
 		}
 	}
-	log.Info("ToBlock")
 
 	// Get the existing chain configuration.
 	newcfg := genesis.configOrDefault(stored)
@@ -223,12 +216,11 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 }
 
 //创建一个特定的创世区块状态
-func (g *Genesis) ToBlock() (*types.Block, *state.StateDB, *trie.Trie, *trie.Trie) {
+func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 
 	db, _ := ethdb.NewMemDatabase()
 	statedb, _ := state.New(common.Hash{}, state.NewDatabase(db))
 
-	//创建导入的账号信息
 	for addr, account := range g.Alloc {
 		statedb.AddBalance(addr, account.Balance)
 		statedb.SetCode(addr, account.Code)
@@ -239,25 +231,13 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB, *trie.Trie, *trie.Tri
 	}
 	root := statedb.IntermediateRoot(false)
 
-	//添加Dpos配置
 	dposContext := initGenesisDposContext(g, db)
 	dposContextProto := dposContext.ToProto()
-	log.Info("ToProto", "root", dposContextProto.Root().String())
+	log.Info("(g *Genesis) ToBlock", "dposContextProto", dposContextProto.Root().String())
 
-	//添加Tina链的设置
-	singleContractTrie, contractsTrie, _, stocksTrie, ownerTrie, gasPoolTrie, err := initBoker(db)
-	if err != nil {
-		fmt.Errorf("initGenesisBoker error")
-		return nil, statedb, nil, nil
-	}
-
-	bokerProto := protocol.ToBokerProto(singleContractTrie.Hash(),
-		contractsTrie.Hash(),
-		stocksTrie.Hash(),
-		ownerTrie.Hash(),
-		gasPoolTrie.Hash())
-
-	log.Info("ToBokerProto", "root", bokerProto.Root().String())
+	bokerContext := initGenesisBokerContext(g, db)
+	bokerContextProto := bokerContext.ToProto()
+	log.Info("(g *Genesis) ToBlock", "bokerContextProto", bokerContextProto.Root().String())
 
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
@@ -272,7 +252,7 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB, *trie.Trie, *trie.Tri
 		Coinbase:   g.Coinbase,
 		Root:       root,
 		DposProto:  dposContextProto,
-		BokerProto: bokerProto,
+		BokerProto: bokerContextProto,
 	}
 	if g.GasLimit == 0 {
 		head.GasLimit = params.GenesisGasLimit
@@ -280,28 +260,25 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB, *trie.Trie, *trie.Tri
 	if g.Difficulty == nil {
 		head.Difficulty = params.GenesisDifficulty
 	}
-
 	block := types.NewBlock(head, nil, nil, nil)
 	block.DposContext = dposContext
+	block.BokerContext = bokerContext
 
-	return block, statedb, singleContractTrie, contractsTrie
+	return block, statedb
 }
 
-// Commit writes the block and state of a genesis specification to the database.
-// The block is committed as the canonical head block.
 func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 
-	block, statedb, singleTrie, contractsTrie := g.ToBlock()
+	log.Info("(g *Genesis) Commit")
+	block, statedb := g.ToBlock()
 
-	// add dposcontext
 	if _, err := block.DposContext.CommitTo(db); err != nil {
 		return nil, err
 	}
-	//新增Tina链数据保存
-	if err := commitBoker(singleTrie, contractsTrie, db); err != nil {
+
+	if _, err := block.BokerContext.CommitTo(db); err != nil {
 		return nil, err
 	}
-	log.Info("Write Boker ", "singleTrieHash", singleTrie.Hash().String(), "ContractsHash", contractsTrie.Hash().String())
 
 	if block.Number().Sign() != 0 {
 		return nil, fmt.Errorf("can't commit genesis block with number > 0")
@@ -334,14 +311,11 @@ func (g *Genesis) Commit(db ethdb.Database) (*types.Block, error) {
 	return block, WriteChainConfig(db, block.Hash(), config)
 }
 
-// GenesisBlockForTesting creates and writes a block in which addr has the given wei balance.
 func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big.Int) *types.Block {
 	g := Genesis{Alloc: GenesisAlloc{addr: {Balance: balance}}}
 	return g.MustCommit(db)
 }
 
-// MustCommit writes the genesis block and state to db, panicking on error.
-// The block is committed as the canonical head block.
 func (g *Genesis) MustCommit(db ethdb.Database) *types.Block {
 	block, err := g.Commit(db)
 	if err != nil {
@@ -374,9 +348,9 @@ func decodePrealloc(data string) GenesisAlloc {
 	return ga
 }
 
-//DPOS的初始化设置
 func initGenesisDposContext(g *Genesis, db ethdb.Database) *types.DposContext {
 
+	log.Info("genesis.go initGenesisDposContext")
 	dc, err := types.NewDposContextFromProto(db, &types.DposContextProto{})
 	if err != nil {
 		return nil
@@ -393,98 +367,15 @@ func initGenesisDposContext(g *Genesis, db ethdb.Database) *types.DposContext {
 		log.Info("failed to decode validators", "error", err)
 		return nil
 	}
-
 	return dc
 }
 
-func initBoker(db ethdb.Database) (*trie.Trie, *trie.Trie, *trie.Trie, *trie.Trie, *trie.Trie, *trie.Trie, error) {
+func initGenesisBokerContext(g *Genesis, db ethdb.Database) *types.BokerContext {
 
-	log.Info("genesis.go initBoker")
-
-	var singleContractTrie, contractsTrie *trie.Trie
-	var singleStockTrie, stocksTrie, ownerTrie, gasPoolTrie *trie.Trie
-	var err error
-	var root common.Hash
-
-	//单独合约树
-	if singleContractTrie, err = trie.NewTrieWithPrefix(root, protocol.SingleContractPrefix, db); err != nil {
-		return nil, nil, nil, nil, nil, nil, err
-	}
-	var bases []common.Address = make([]common.Address, 0)
-	basesRLP, err := rlp.EncodeToBytes(bases)
+	log.Info("genesis.go initGenesisBokerContext")
+	bc, err := types.NewBokerContextFromProto(db, &types.BokerBackendProto{})
 	if err != nil {
-		log.Error("failed to encode contract to rlp", "error", err)
-		return nil, nil, nil, nil, nil, nil, err
+		return nil
 	}
-	singleContractTrie.Update(protocol.SingleContractPrefix, basesRLP)
-
-	//所有合约树
-	if contractsTrie, err = trie.NewTrieWithPrefix(root, protocol.ContractsPrefix, db); err != nil {
-		return nil, nil, nil, nil, nil, nil, err
-	}
-	var contracts []common.Address = make([]common.Address, 0)
-	contractsRLP, err := rlp.EncodeToBytes(contracts)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
-	}
-	contractsTrie.Update(protocol.ContractsPrefix, contractsRLP)
-
-	//单个股权树
-	if singleStockTrie, err = trie.NewTrieWithPrefix(root, protocol.SingleStockPrefix, db); err != nil {
-		return nil, nil, nil, nil, nil, nil, err
-	}
-	var stock protocol.StockAccount
-	stockRLP, err := rlp.EncodeToBytes(stock)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
-	}
-	singleStockTrie.Update(protocol.SingleStockPrefix, stockRLP)
-
-	//所有股权树
-	if stocksTrie, err = trie.NewTrieWithPrefix(root, protocol.StocksPrefix, db); err != nil {
-		return nil, nil, nil, nil, nil, nil, err
-	}
-	var stocks []common.Address = make([]common.Address, 0)
-	stocksRLP, err := rlp.EncodeToBytes(stocks)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
-	}
-	stocksTrie.Update(protocol.StocksPrefix, stocksRLP)
-
-	//所有者账户树
-	if ownerTrie, err = trie.NewTrieWithPrefix(root, protocol.OwnerPrefix, db); err != nil {
-		return nil, nil, nil, nil, nil, nil, err
-	}
-	var ownerAccount common.Address
-	ownerRLP, err := rlp.EncodeToBytes(ownerAccount)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
-	}
-	ownerTrie.Update(protocol.OwnerPrefix, ownerRLP)
-
-	//Gas池树
-	if gasPoolTrie, err = trie.NewTrieWithPrefix(root, protocol.GasPoolPrefix, db); err != nil {
-		return nil, nil, nil, nil, nil, nil, err
-	}
-	gasPool := 0
-	gasPoolRLP, err := rlp.EncodeToBytes(gasPool)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
-	}
-	gasPoolTrie.Update(protocol.GasPoolPrefix, gasPoolRLP)
-
-	return singleContractTrie, contractsTrie, singleStockTrie, stocksTrie, ownerTrie, gasPoolTrie, nil
-}
-
-func commitBoker(singleTrie *trie.Trie, contractsTrie *trie.Trie, db ethdb.Database) error {
-
-	log.Info("genesis.go commitBoker")
-
-	if _, err := singleTrie.CommitTo(db); err != nil {
-		return err
-	}
-	if _, err := contractsTrie.CommitTo(db); err != nil {
-		return err
-	}
-	return nil
+	return bc
 }

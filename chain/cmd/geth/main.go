@@ -208,7 +208,7 @@ func main() {
 func geth(ctx *cli.Context) error {
 
 	//生成一个*node.Node对象stack
-	log.Info("****geth****")
+	log.Info("main.go geth")
 
 	//这里的gethNode是一个全局变量
 	bind.GethNode = makeFullNode(ctx)
@@ -226,11 +226,10 @@ func geth(ctx *cli.Context) error {
 //启动系统节点和所有已注册的协议，之后它解锁任何请求的帐户，并启动RPC / IPC接口和矿工
 func startNode(ctx *cli.Context, stack *node.Node) {
 
-	log.Info("****startNode****")
-
+	log.Info("main.go startNode")
 	protocol.DecodeAbi("", "", "")
 
-	//启动节点
+	log.Info("main.go startNode utils.StartNode")
 	utils.StartNode(stack)
 	log.Info("Start Node")
 
@@ -303,11 +302,13 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		utils.Fatalf("ethereum service is nil")
 	}
 
-	block := ethereum.BlockChain().GetBlockByNumber(0)
-	bokerChain := boker.New()
+	//由于设置的默克尔树会发生变化，因此这里不能使用第一个区块的信息 fxh7622
+	block := ethereum.BlockChain().CurrentBlock()
+	bokerChain := boker.New(ethereum.ChainDb())
 	bokerChain.Init(ethereum, block.Header().BokerProto)
 	ethereum.SetBoker(bokerChain)
-	log.Info("Set BokerChain Pointer")
+	//log.Info("Set BokerChain Pointer", "Number", block.Number(), "GetGasPool", block.BokerCtx().GetGasPool())
+	log.Info("Set BokerChain Pointer", "Number", block.Number())
 
 	//在这里启动worker的createNewWork，由于之前启动有可能ETH还没有启动完成
 	log.Info("Get Worker and CreateNewWork")

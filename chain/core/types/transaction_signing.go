@@ -60,7 +60,7 @@ func SignTx(tx *Transaction, s Signer, prv *ecdsa.PrivateKey) (*Transaction, err
 	//获取该交易的RLP编码哈希值
 	h := s.Hash(tx)
 
-	log.Info("transaction_signing.go SignTx", "h", h.Str())
+	//log.Info("transaction_signing.go SignTx", "h", h.Str())
 
 	//使用私钥对该值进行ECDSA签名处理
 	sig, err := crypto.Sign(h[:], prv)

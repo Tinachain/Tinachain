@@ -2,14 +2,10 @@ package ethapi
 
 import (
 	"context"
-	_ "crypto/ecdsa"
 	"encoding/json"
 	"errors"
 	"fmt"
-	_ "io/ioutil"
 	"math/big"
-	_ "os"
-	_ "path/filepath"
 	"strings"
 	"time"
 
@@ -328,7 +324,7 @@ func (s *PrivateAccountAPI) LockAccount(addr common.Address) bool {
 //将根据给定的参数创建一个交易，尝试使用与args.To关联的键对其进行签名。 如果给定的passwd不是能够解密失败的密钥。
 func (s *PrivateAccountAPI) SendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
 
-	log.Info("****PrivateAccountAPI SendTransaction****", "passwd", passwd)
+	log.Info("(s *PrivateAccountAPI) SendTransaction", "passwd", passwd)
 
 	//查找包含所请求签名者的钱包
 	account := accounts.Account{Address: args.From}
@@ -441,7 +437,7 @@ func (s *PrivateAccountAPI) EcRecover(ctx context.Context, data, sig hexutil.Byt
 // and will be removed in the future. It primary goal is to give clients time to update.
 func (s *PrivateAccountAPI) SignAndSendTransaction(ctx context.Context, args SendTxArgs, passwd string) (common.Hash, error) {
 
-	log.Info("****PrivateAccountAPI SignAndSendTransaction****", "passwd", passwd)
+	log.Info("(s *PrivateAccountAPI) SignAndSendTransaction", "passwd", passwd)
 	return s.SendTransaction(ctx, args, passwd)
 }
 
@@ -565,7 +561,6 @@ func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.A
 	return res[:], state.Error()
 }
 
-//得到最后一次的出块节点
 func (s *PublicBlockChainAPI) GetLastProducer(ctx context.Context) (common.Address, error) {
 
 	block := s.b.CurrentBlock()
@@ -580,7 +575,6 @@ func (s *PublicBlockChainAPI) GetLastProducer(ctx context.Context) (common.Addre
 	return common.Address{}, errors.New("failed get last producer")
 }
 
-//得到下一次的出块节点
 func (s *PublicBlockChainAPI) GetNextProducer(ctx context.Context) (common.Address, error) {
 
 	block := s.b.CurrentBlock()
@@ -590,146 +584,359 @@ func (s *PublicBlockChainAPI) GetNextProducer(ctx context.Context) (common.Addre
 		if err != nil {
 
 			return block.DposContext.GetCurrentProducer(firstBlock.Time().Int64())
-
 		}
-
 	}
 	return common.Address{}, errors.New("failed get next producer")
 }
 
-//Tina链新增函数处理，设置当前基础合约
-func (s *PublicBlockChainAPI) SetSystemContract(ctx context.Context, address common.Address) (common.Hash, error) {
+func (s *PublicBlockChainAPI) SetSystemBaseContracts(ctx context.Context, address common.Address) (common.Hash, error) {
 
-	log.Info("(s *PublicBlockChainAPI) SetSystemContract")
+	log.Info("(s *PublicBlockChainAPI) SetSystemBaseContracts", "address", address.String())
 
-	//检测节点信息
-	if err := s.checkContract(); err != nil {
-		log.Error("SetBaseContracts checkContract", "err", err)
+	if err := s.checkOwner(); err != nil {
+		log.Error("SetSystemBaseContracts checkOwner", "err", err)
 		return common.Hash{}, err
 	}
 
-	//检测交易类型
-	/*if err := s.isExitsTxType(contractType, protocol.SystemContract, protocol.PersonalContract); err != nil {
-		log.Error("SetBaseContracts isExitsTxType", "err", err)
+	from, err := s.b.Coinbase()
+	if err != nil {
+		log.Error("SetSystemBaseContracts CoinBase", "error", err)
 		return common.Hash{}, err
-	}*/
+	}
 
 	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
 		protocol.SystemBase,
 		protocol.SetSystemContract,
+		from,
 		address,
 		[]byte(""),
 		[]byte(""),
+		new(big.Int).SetUint64(0),
 		0)
 
-	log.Info("(s *PublicBlockChainAPI) SetBaseContracts",
+	log.Info("(s *PublicBlockChainAPI) SetSystemBaseContracts",
 		"Nonce", tx.Nonce(),
 		"To", tx.To(),
 		"tx.Hash", tx.Hash().String())
 
 	if resultErr != nil {
 		return common.Hash{}, resultErr
-	} else {
-		return tx.Hash(), nil
 	}
+	return tx.Hash(), nil
 }
 
-func (s *PublicBlockChainAPI) SetUserContract(ctx context.Context, address common.Address) (common.Hash, error) {
+func (s *PublicBlockChainAPI) SetUserBaseContracts(ctx context.Context, address common.Address) (common.Hash, error) {
 
-	log.Info("(s *PublicBlockChainAPI) SetUserContract")
+	log.Info("(s *PublicBlockChainAPI) SetUserBaseContracts", "address", address.String())
 
-	//检测节点信息
-	if err := s.checkContract(); err != nil {
-		log.Error("SetBaseContracts checkContract", "err", err)
+	if err := s.checkOwner(); err != nil {
+		log.Error("SetUserBaseContracts checkOwner", "err", err)
+		return common.Hash{}, err
+	}
+
+	from, err := s.b.Coinbase()
+	if err != nil {
+		log.Error("SetUserBaseContracts CoinBase", "error", err)
 		return common.Hash{}, err
 	}
 
 	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-		protocol.SystemBase,
+		protocol.UserBase,
 		protocol.SetUserContract,
+		from,
 		address,
 		[]byte(""),
 		[]byte(""),
+		new(big.Int).SetUint64(0),
 		0)
 
-	log.Info("(s *PublicBlockChainAPI) SetBaseContracts",
+	log.Info("(s *PublicBlockChainAPI) SetUserBaseContracts",
 		"Nonce", tx.Nonce(),
 		"To", tx.To(),
 		"tx.Hash", tx.Hash().String())
 
 	if resultErr != nil {
 		return common.Hash{}, resultErr
-	} else {
-		return tx.Hash(), nil
 	}
+	return tx.Hash(), nil
 }
 
-//Tina链新增函数处理，取消一个基础合约
-func (s *PublicBlockChainAPI) CancelUserContract(ctx context.Context, address common.Address) (common.Hash, error) {
+func (s *PublicBlockChainAPI) CancelUserBaseContracts(ctx context.Context, address common.Address) (common.Hash, error) {
 
-	log.Info("(s *PublicBlockChainAPI) CancelBaseContracts", "address", address.String())
+	log.Info("(s *PublicBlockChainAPI) CancelUserBaseContracts", "address", address.String())
 
-	//检测节点信息
-	if err := s.checkContract(); err != nil {
-		log.Error("CancelBaseContracts checkContract", "err", err)
+	if err := s.checkOwner(); err != nil {
+		log.Error("CancelUserBaseContracts checkOwner", "err", err)
+		return common.Hash{}, err
+	}
+
+	from, err := s.b.Coinbase()
+	if err != nil {
+		log.Error("CancelUserBaseContracts CoinBase", "error", err)
 		return common.Hash{}, err
 	}
 
 	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-		protocol.SystemBase,
+		protocol.UserBase,
 		protocol.CancelUserContract,
+		from,
 		address,
 		[]byte(""),
 		[]byte(""),
+		new(big.Int).SetUint64(0),
 		0)
 	if resultErr != nil {
 		return common.Hash{}, resultErr
-	} else {
-		return tx.Hash(), nil
 	}
+	return tx.Hash(), nil
 }
 
+//股权
+func (s *PublicBlockChainAPI) StockSet(ctx context.Context, address common.Address, number uint64) (common.Hash, error) {
+
+	log.Info("(s *PublicBlockChainAPI) StockSet", "address", address.String(), "number", number)
+
+	owner := s.b.CurrentBlock().BokerCtx().GetStockManager()
+	coinbase, _ := s.b.Coinbase()
+	if (owner == common.StringToAddress("")) || (owner != coinbase) {
+
+		return common.Hash{}, protocol.ErrIsnOwner
+	}
+
+	from, err := s.b.Coinbase()
+	if err != nil {
+		log.Error("StockSet CoinBase", "error", err)
+		return common.Hash{}, err
+	}
+
+	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
+		protocol.Stock,
+		protocol.StockSet,
+		from,
+		address,
+		[]byte(""),
+		[]byte(""),
+		new(big.Int).SetUint64(number),
+		0)
+	if resultErr != nil {
+		return common.Hash{}, resultErr
+	}
+	return tx.Hash(), nil
+}
+
+func (s *PublicBlockChainAPI) StockGet(ctx context.Context, address common.Address) (uint64, error) {
+
+	log.Info("(s *PublicBlockChainAPI) StockGet", "address", address.String())
+
+	stockAccount := s.b.CurrentBlock().BokerCtx().GetStock(address)
+	if stockAccount == nil {
+		return 0, nil
+	}
+
+	return stockAccount.Number, nil
+}
+
+func (s *PublicBlockChainAPI) StockTransfer(ctx context.Context, from common.Address, to common.Address, number uint64) (common.Hash, error) {
+
+	log.Info("(s *PublicBlockChainAPI) StockTransfer", "from", from.String(), "to", to.String(), "number", number)
+
+	stockAccount := s.b.CurrentBlock().BokerCtx().GetStock(from)
+	if stockAccount == nil {
+		return common.Hash{}, protocol.ErrIsnStock
+	}
+
+	from, err := s.b.Coinbase()
+	if err != nil {
+		log.Error("StockTransfer CoinBase", "error", err)
+		return common.Hash{}, err
+	}
+
+	if stockAccount.Number < number {
+		return common.Hash{}, protocol.ErrStockLow
+	}
+
+	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
+		protocol.Stock,
+		protocol.StockTransfer,
+		from,
+		to,
+		[]byte(""),
+		[]byte(""),
+		new(big.Int).SetUint64(number),
+		0)
+	if resultErr != nil {
+		return common.Hash{}, resultErr
+	}
+	return tx.Hash(), nil
+}
+
+func (s *PublicBlockChainAPI) StockClean(ctx context.Context, address common.Address) (common.Hash, error) {
+
+	log.Info("(s *PublicBlockChainAPI) StockClean", "address", address.String())
+
+	owner := s.b.CurrentBlock().BokerCtx().GetStockManager()
+	coinbase, _ := s.b.Coinbase()
+	if (owner == common.Address{}) || (owner != coinbase) {
+		return common.Hash{}, protocol.ErrIsnOwner
+	}
+
+	stockAccount := s.b.CurrentBlock().BokerCtx().GetStock(address)
+	if stockAccount == nil {
+		return common.Hash{}, protocol.ErrIsnStock
+	}
+
+	from, err := s.b.Coinbase()
+	if err != nil {
+		log.Error("StockClean CoinBase", "error", err)
+		return common.Hash{}, err
+	}
+
+	if stockAccount.State != protocol.Frozen {
+		return common.Hash{}, protocol.ErrStockLow
+	}
+
+	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
+		protocol.Stock,
+		protocol.StockClean,
+		from,
+		address,
+		[]byte(""),
+		[]byte(""),
+		new(big.Int).SetUint64(0),
+		0)
+	if resultErr != nil {
+		return common.Hash{}, resultErr
+	}
+	return tx.Hash(), nil
+}
+
+func (s *PublicBlockChainAPI) StockFrozen(ctx context.Context, address common.Address) (common.Hash, error) {
+
+	log.Info("(s *PublicBlockChainAPI) StockFrozen", "address", address.String())
+
+	owner := s.b.CurrentBlock().BokerCtx().GetStockManager()
+	coinbase, _ := s.b.Coinbase()
+	if (owner == common.Address{}) || (owner != coinbase) {
+		return common.Hash{}, protocol.ErrIsnOwner
+	}
+
+	stockAccount := s.b.CurrentBlock().BokerCtx().GetStock(address)
+	if stockAccount == nil {
+		return common.Hash{}, protocol.ErrIsnStock
+	}
+
+	if stockAccount.State != protocol.Run {
+		return common.Hash{}, protocol.ErrStockLow
+	}
+
+	from, err := s.b.Coinbase()
+	if err != nil {
+		log.Error("StockFrozen CoinBase", "error", err)
+		return common.Hash{}, err
+	}
+
+	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
+		protocol.Stock,
+		protocol.StockFrozen,
+		from,
+		address,
+		[]byte(""),
+		[]byte(""),
+		new(big.Int).SetUint64(0),
+		0)
+	if resultErr != nil {
+		return common.Hash{}, resultErr
+	}
+	return tx.Hash(), nil
+}
+
+func (s *PublicBlockChainAPI) StockUnFrozen(ctx context.Context, address common.Address) (common.Hash, error) {
+
+	log.Info("(s *PublicBlockChainAPI) StockUnFrozen", "address", address.String())
+
+	owner := s.b.CurrentBlock().BokerCtx().GetStockManager()
+	coinbase, _ := s.b.Coinbase()
+	if (owner == common.Address{}) || (owner != coinbase) {
+		return common.Hash{}, protocol.ErrIsnOwner
+	}
+
+	stockAccount := s.b.CurrentBlock().BokerCtx().GetStock(address)
+	if stockAccount == nil {
+		return common.Hash{}, protocol.ErrIsnStock
+	}
+
+	if stockAccount.State != protocol.Frozen {
+		return common.Hash{}, protocol.ErrStockLow
+	}
+
+	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
+		protocol.Stock,
+		protocol.StockUnFrozen,
+		coinbase,
+		address,
+		[]byte(""),
+		[]byte(""),
+		new(big.Int).SetUint64(0),
+		0)
+	if resultErr != nil {
+		return common.Hash{}, resultErr
+	}
+	return tx.Hash(), nil
+}
+
+//扩展
 func (s *PublicBlockChainAPI) SetWord(ctx context.Context, word string) (common.Hash, error) {
 
 	log.Info("(s *PublicBlockChainAPI) SetWord", "word", word)
-	//var key string = ""
-	//检测保存文字的大小是否越界
 	if len(word) > int(protocol.MaxWordSize) {
+		log.Error("(s *PublicBlockChainAPI) SetWord failed length too more than MaxWordSize(1MB)")
+		return common.Hash{}, errors.New("Setword length too more than MaxWordSize(1MB)")
+	}
 
-		return common.Hash{}, errors.New("Setword More Than MaxWordSize(1MB)")
+	from, err := s.b.Coinbase()
+	if err != nil {
+		log.Error("SetWord CoinBase", "error", err)
+		return common.Hash{}, err
 	}
 
 	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
 		protocol.Extra,
 		protocol.Word,
+		from,
 		common.Address{},
 		[]byte(""),
 		[]byte(word),
+		new(big.Int).SetUint64(0),
 		0)
 
 	if resultErr != nil {
 		return common.Hash{}, resultErr
-	} else {
-		return tx.Hash(), nil
 	}
+	return tx.Hash(), nil
 }
 
 func (s *PublicBlockChainAPI) SetData(ctx context.Context, data []byte) (common.Hash, error) {
 
 	log.Info("(s *PublicBlockChainAPI) SetData", "len", len(data))
-	//var key string = ""
-
 	if len(data) > protocol.MaxDataSize {
+		log.Error("(s *PublicBlockChainAPI) SetData failed length too more than MaxDataSize(1MB)")
+		return common.Hash{}, errors.New("SetData length too more than MaxDataSize(1MB)")
+	}
 
-		return common.Hash{}, errors.New("SetData Length More Than MaxDataSize(1MB)")
+	from, err := s.b.Coinbase()
+	if err != nil {
+		log.Error("SetData CoinBase", "error", err)
+		return common.Hash{}, err
 	}
 
 	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
 		protocol.Extra,
 		protocol.Data,
+		from,
 		common.Address{},
 		[]byte(""),
 		data,
+		new(big.Int).SetUint64(0),
 		0)
 
 	if resultErr != nil {
@@ -739,16 +946,24 @@ func (s *PublicBlockChainAPI) SetData(ctx context.Context, data []byte) (common.
 	}
 }
 
-func (s *PublicBlockChainAPI) CheckTxSign(ctx context.Context) (common.Hash, error) {
+func (s *PublicBlockChainAPI) SetStockManager(ctx context.Context, address common.Address) (common.Hash, error) {
 
-	log.Info("(s *PublicBlockChainAPI) CheckTxSign")
+	log.Info("(s *PublicBlockChainAPI) SetStockManager", "address", address.String())
+
+	from, err := s.b.Coinbase()
+	if err != nil {
+		log.Error("SetStockManager CoinBase", "error", err)
+		return common.Hash{}, err
+	}
 
 	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-		protocol.Normal,
-		protocol.Word,
-		common.Address{},
+		protocol.Stock,
+		protocol.StockManager,
+		from,
+		address,
 		[]byte(""),
 		[]byte(""),
+		new(big.Int).SetUint64(0),
 		0)
 
 	if resultErr != nil {
@@ -761,73 +976,51 @@ func (s *PublicBlockChainAPI) CheckTxSign(ctx context.Context) (common.Hash, err
 func (s *PublicBlockChainAPI) GetWord(ctx context.Context, hash common.Hash) (string, error) {
 
 	log.Info("(s *PublicBlockChainAPI) GetWord", "hash", hash)
-	//var key string = ""
-
 	if tx, _, _, _ := core.GetTransaction(s.b.ChainDb(), hash); tx != nil {
 
 		if tx.Major() != protocol.Extra {
-			return "", fmt.Errorf("RPC GetPicture Transaction from hash Major not is Extra type")
+			log.Error("(s *PublicBlockChainAPI) GetWord failed Major not is Extra type")
+			return "", errors.New("RPC GetWord failed Major not is Extra type")
 		}
 
 		if tx.Minor() != protocol.Word {
-			return "", fmt.Errorf("RPC GetPicture Transaction from hash Minor not is Word type")
+			log.Error("(s *PublicBlockChainAPI) GetWord failed Minor not is Word type")
+			return "", errors.New("RPC GetData failed Minor not is Word type")
 		}
 
-		// 解密
-		if 0 == tx.Encryption() {
-
-			return string(tx.Extra()[:]), nil
-		} /* else {
-
-			err, buffer := s.b.Boker().DecoderContext(tx.Extra(), []byte(key))
-			if err != nil {
-
-				return "", fmt.Errorf("RPC GetPicture Transaction from hash Decoder Failed")
-			}
-
-			return string(buffer[:]), nil
-		}*/
+		return string(tx.Extra()[:]), nil
 	}
 
-	return "", fmt.Errorf("RPC GetWord Not Found Transaction From Hash")
+	return "", errors.New("RPC GetWord Not Found Transaction From Hash")
 }
 
 func (s *PublicBlockChainAPI) GetData(ctx context.Context, hash common.Hash) ([]byte, error) {
 
 	log.Info("(s *PublicBlockChainAPI) GetData", "hash", hash)
-
-	//var key string = ""
-
 	if tx, _, _, _ := core.GetTransaction(s.b.ChainDb(), hash); tx != nil {
 
 		if tx.Major() != protocol.Extra {
-			return []byte(""), fmt.Errorf("(s *PublicBlockChainAPI) GetData Transaction from hash Major not is Extra type")
+			log.Error("(s *PublicBlockChainAPI) GetData failed Major not is Extra type")
+			return []byte(""), errors.New("RPC GetData failed Major not is Extra type")
 		}
 
 		if tx.Minor() != protocol.Data {
-			return []byte(""), fmt.Errorf("(s *PublicBlockChainAPI) GetData Transaction from hash Minor not is Data type")
+			log.Error("(s *PublicBlockChainAPI) GetData failed Minor not is Data type")
+			return []byte(""), errors.New("RPC GetData failed Minor not is Data type")
 		}
-
-		// 解密, 文件的写入
-		if 0 == tx.Encryption() {
-
-			return tx.Extra(), nil
-		} /*else {
-
-			err, buffer := s.b.Boker().DecoderContext(tx.Extra(), []byte(key))
-			if err != nil {
-
-				return []byte(""), fmt.Errorf("RPC GetPicture Transaction from hash Decoder Failed")
-			}
-
-			return buffer, nil
-		}*/
+		return tx.Extra(), nil
 	}
 
-	return []byte(""), fmt.Errorf("(s *PublicBlockChainAPI) GetData Not Found Transaction From Hash")
+	return []byte(""), errors.New("(s *PublicBlockChainAPI) GetData Not Found Transaction From Hash")
 }
 
-func (s *PublicBlockChainAPI) checkContract() error {
+func (s *PublicBlockChainAPI) GetStockManager(ctx context.Context) (common.Address, error) {
+
+	log.Info("(s *PublicBlockChainAPI) GetStockManager")
+	return s.b.CurrentBlock().BokerCtx().GetStockManager(), nil
+}
+
+func (s *PublicBlockChainAPI) checkValidator() error {
 
 	block := s.b.CurrentBlock()
 	if block == nil {
@@ -835,129 +1028,117 @@ func (s *PublicBlockChainAPI) checkContract() error {
 		errors.New("failed baseContractsDeal")
 	}
 
-	//获取当前Coinbase
 	coinbase, err := s.b.Coinbase()
 	if err != nil {
 		return err
 	}
 
-	//判断账号是否是验证人账号
 	if !block.DposContext.IsValidator(coinbase) {
 		return errors.New("Current coinbase Not`s Validator")
 	}
 
-	//判断账号是否是指定账号
-	/*txLevel, err := s.b.Boker().GetAccount(coinbase)
+	return nil
+}
+
+func (s *PublicBlockChainAPI) checkOwner() error {
+
+	block := s.b.CurrentBlock()
+	if block == nil {
+
+		errors.New("failed baseContractsDeal")
+	}
+
+	coinbase, err := s.b.Coinbase()
 	if err != nil {
 		return err
 	}
 
-	if !bokerapi.ExistsTxType(protocol.SetVote, txLevel) &&
-		!bokerapi.ExistsTxType(protocol.CancelVote, txLevel) &&
-		!bokerapi.ExistsTxType(protocol.SetAssignToken, txLevel) &&
-		!bokerapi.ExistsTxType(protocol.CanclAssignToken, txLevel) {
-
-		return errors.New("CoinBase Not`s Set Base Contracts Account")
-	}*/
+	if coinbase != s.b.CurrentBlock().BokerCtx().GetStockManager() {
+		return errors.New("Current coinbase Not`s Owner")
+	}
 
 	return nil
 }
 
-//Tina链新增函数处理，添加一个验证者信息
 func (s *PublicBlockChainAPI) AddValidator(ctx context.Context, address common.Address, votes *big.Int) (common.Hash, error) {
 
+	log.Info("(s *PublicBlockChainAPI) AddValidator", "address", address.String(), "votes", votes.Uint64())
 	block, err := s.b.BlockByNumber(ctx, 0)
 	if err != nil {
 		return common.Hash{}, err
 	}
-
-	if block != nil {
-
-		//获取当前Coinbase
-		coinbase, err := s.b.Coinbase()
-		if err != nil {
-			return common.Hash{}, err
-		}
-
-		if s.b.Boker() == nil {
-			log.Error("AddValidator error boker is nil")
-			return common.Hash{}, errors.New("AddValidator error boker is nil")
-		}
-
-		const (
-			genesisNumber uint64 = 0 //创世区块
-			firstNumber   uint64 = 1 //首区块
-		)
-
-		//判断当前区块数量是否为0，并且判断coinbase账号是否为已经设置的本地验证者
-		number := s.BlockNumber()
-		if number.Uint64() != genesisNumber {
-
-			return common.Hash{}, errors.New("AddValidator Failed Current Number not is Zero")
-		}
-
-		localCoinbase := s.b.GetLocalValidator()
-		if localCoinbase == coinbase {
-
-			tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-				protocol.SystemBase,
-				protocol.SetValidator,
-				address,
-				[]byte(""),
-				[]byte(""),
-				0)
-			if resultErr != nil {
-				return common.Hash{}, resultErr
-			} else {
-				return tx.Hash(), nil
-			}
-
-		} else {
-
-			//txMajor, err := s.b.Boker().GetAccount(coinbase)
-			owner := s.b.Boker().GetOwner()
-			if coinbase != owner {
-				return common.Hash{}, errors.New("CoinBase Not`s Owner And Can`t Add Validator")
-			}
-
-			//判断此账号是否已经是验证者
-			if block.DposContext.IsValidator(address) {
-				return common.Hash{}, errors.New("Account has Validator")
-			}
-
-			//判断当前是否验证者已满
-			if block.DposContext.IsValidatorFull() {
-				return common.Hash{}, errors.New("Validator has Full")
-			}
-
-			tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
-				protocol.SystemBase,
-				protocol.SetValidator,
-				address,
-				[]byte(""),
-				[]byte(""),
-				0)
-			if resultErr != nil {
-				return common.Hash{}, resultErr
-			} else {
-				return tx.Hash(), nil
-			}
-		}
+	if block == nil {
+		log.Error("(s *PublicBlockChainAPI) AddValidator failed 0 block is nil")
+		return common.Hash{}, errors.New("RPC AddValidator failed 0 block is nil")
 	}
-	return common.Hash{}, errors.New("failed AddValidator")
+
+	coinbase, err := s.b.Coinbase()
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	if s.b.Boker() == nil {
+		log.Error("(s *PublicBlockChainAPI) AddValidator failed boker object is nil")
+		return common.Hash{}, errors.New("RPC AddValidator failed boker object is nil")
+	}
+
+	const (
+		genesisNumber uint64 = 0 //创世区块
+		firstNumber   uint64 = 1 //首区块
+	)
+
+	number := s.BlockNumber()
+	if number.Uint64() != genesisNumber {
+		log.Error("(s *PublicBlockChainAPI) AddValidator failed current block number not is 0")
+		return common.Hash{}, errors.New("RPC AddValidator failed current block number not is 0")
+	}
+
+	localCoinbase := s.b.GetLocalValidator()
+	if localCoinbase != coinbase {
+		log.Error("(s *PublicBlockChainAPI) AddValidator use only youself")
+		return common.Hash{}, errors.New("RPC AddValidator use only youself")
+	}
+
+	tx, resultErr := s.b.Boker().SubmitBokerTransaction(ctx,
+		protocol.SystemBase,
+		protocol.SetValidator,
+		coinbase,
+		address,
+		[]byte(""),
+		[]byte(""),
+		new(big.Int).SetUint64(0),
+		0)
+	if resultErr != nil {
+		return common.Hash{}, resultErr
+	}
+	return tx.Hash(), nil
 }
 
-//Tina链新增函数处理，添加一个验证者信息
-func (s *PublicBlockChainAPI) DecodeAbi(ctx context.Context, abiJson string, method string, payload string) error {
+type ValidatorList struct {
+	Address []common.Address `json:"address"`
+}
 
-	log.Info("(s *PublicBlockChainAPI) DecodeAbi", "abiJson", abiJson, "method", method, "payload", payload)
+func (s *PublicBlockChainAPI) GetBlockValidator(ctx context.Context, blockNr rpc.BlockNumber) ([]byte, error) {
 
-	_, err := protocol.DecodeAbi(abiJson, method, payload)
-	if err != nil {
-		return err
+	block, blockErr := s.b.BlockByNumber(ctx, blockNr)
+	if block != nil {
+
+		validatorlist := ValidatorList{}
+		validators, dposErr := block.DposContext.GetEpochTrie()
+		if dposErr != nil {
+			return nil, dposErr
+		}
+
+		for index, _ := range validators {
+			validatorlist.Address = append(validatorlist.Address, validators[index])
+		}
+		jsonBytes, jsonErr := json.Marshal(validatorlist)
+		if jsonErr != nil {
+			return nil, jsonErr
+		}
+		return jsonBytes, nil
 	}
-	return nil
-
+	return nil, blockErr
 }
 
 // CallArgs represents the arguments for a call.
@@ -1035,7 +1216,7 @@ func (s *PublicBlockChainAPI) doCall(ctx context.Context, args CallArgs, blockNr
 	gp := new(core.GasPool).AddGas(math.MaxBig256)
 	sp := new(big.Int).SetInt64(protocol.MaxBlockSize)
 
-	res, gas, failed, err := core.NormalMessage(evm, msg, gp, sp, s.b.Boker())
+	res, gas, failed, err := core.NormalMessage(evm, msg, gp, sp, s.b.CurrentBlock().DposCtx(), s.b.CurrentBlock().BokerCtx(), s.b.Boker())
 	if err := vmError(); err != nil {
 
 		log.Error("doCall", "err", err)
@@ -1228,37 +1409,6 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 	return fields, nil
 }
 
-//Tina链中添加获取当前候选人相关信息
-type ValidatorList struct {
-	Address []common.Address `json:"address"`
-}
-
-func (s *PublicBlockChainAPI) GetCurrentValidator(ctx context.Context, blockNr rpc.BlockNumber) ([]byte, error) {
-
-	//根据块号得到相关的块信息
-	block, blockErr := s.b.BlockByNumber(ctx, blockNr)
-	if block != nil {
-
-		//根据块信息得到候选人列表信息
-		validatorlist := ValidatorList{}
-		validators, dposErr := block.DposContext.GetEpochTrie()
-		if dposErr != nil {
-			return nil, dposErr
-		}
-
-		//将候选人信息放入到json中，并进行打包
-		for index, _ := range validators {
-			validatorlist.Address = append(validatorlist.Address, validators[index])
-		}
-		jsonBytes, jsonErr := json.Marshal(validatorlist)
-		if jsonErr != nil {
-			return nil, jsonErr
-		}
-		return jsonBytes, nil
-	}
-	return nil, blockErr
-}
-
 type RPCTransaction struct {
 	Major            protocol.TxMajor `json:"major"`
 	MajorNotes       string           `json:"majorNotes"`
@@ -1325,10 +1475,6 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 			result.MinorNotes = "SetValidator"
 		case protocol.SetSystemContract:
 			result.MinorNotes = "SetSystemContract"
-		case protocol.SetUserContract:
-			result.MinorNotes = "SetUserContract"
-		case protocol.CancelUserContract:
-			result.MinorNotes = "CancelUserContract"
 		case protocol.RegisterCandidate:
 			result.MinorNotes = "RegisterCandidate"
 		case protocol.VoteUser:
@@ -1342,7 +1488,15 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 		}
 	case protocol.UserBase:
 		result.MajorNotes = "UserBase"
-		result.MinorNotes = ""
+
+		switch result.Minor {
+		case protocol.SetUserContract:
+			result.MinorNotes = "SetUserContract"
+		case protocol.CancelUserContract:
+			result.MinorNotes = "CancelUserContract"
+		default:
+			result.MinorNotes = ""
+		}
 	case protocol.Extra:
 		result.MajorNotes = "Extra"
 		switch result.Minor {
@@ -1634,7 +1788,6 @@ func (args *SendTxArgs) ToTransaction() (*types.Transaction, error) {
 	return types.NewTransaction(args.Major, args.Minor, uint64(*args.Nonce), to, (*big.Int)(args.Value), (*big.Int)(args.Gas), (*big.Int)(args.GasPrice), args.Data), nil
 }
 
-//submitTransaction是一个辅助函数，它将tx提交给txPool并记录消息。
 func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (common.Hash, error) {
 
 	//判断交易类型是否是限定的类型

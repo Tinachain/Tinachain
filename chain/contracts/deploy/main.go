@@ -235,17 +235,17 @@ Ware.%s = web3.eth.contract(%s).at('%s', function(error, contract){
 				contractOld := GetInterfaceBaseContract()
 				if "" != contractOld {
 
-					Log("CancelBaseContracts Old Contract %s", contractOld)
+					/*Log("CancelBaseContracts Old Contract %s", contractOld)
 					err = client.CancelBaseContracts(tinachain.HexToAddress(contractOld))
 					if err != nil {
 
 						Log("CancelBaseContracts Err %s Address %s", err.Error(), contractOld)
 						return
-					}
+					}*/
 				}
 
 				Log("SetBaseContracts Address %s", contract.Address.String())
-				err = client.SetBaseContracts(contract.Address, contract.Abi)
+				err = client.SetSystemBaseContracts(contract.Address)
 				if err != nil {
 
 					Log("SetBaseContracts Address %s Err %s", contract.Address.String(), err.Error())

@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	_ "fmt"
-	_ "math"
 	"math/big"
 	"sync"
 	"time"
@@ -29,6 +27,11 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 )
 
+const (
+	genesisNumber uint64 = 0 //创世区块
+	firstNumber   uint64 = 1 //首区块
+)
+
 var (
 	errMissingVanity     = errors.New("extra-data 32 byte vanity prefix missing")    //如果一个块的额外数据段小于存储签名者所必需的32字节，则返回errMissingVanity
 	errMissingSignature  = errors.New("extra-data 65 byte suffix signature missing") //如果块的额外数据部分没有包含一个65字节的secp256k1签名，则返回errMissingSignature
@@ -41,6 +44,27 @@ var (
 )
 var (
 	uncleHash = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
+)
+
+//矿工奖励和股权奖励
+var (
+	MinerRewards [6]*big.Int = [6]*big.Int{new(big.Int).SetUint64(22549179),
+		new(big.Int).SetUint64(11274590),
+		new(big.Int).SetUint64(5637295),
+		new(big.Int).SetUint64(2818647),
+		new(big.Int).SetUint64(1409324),
+		new(big.Int).SetUint64(704662)}
+
+	StockRewards [6]*big.Int = [6]*big.Int{new(big.Int).SetUint64(5637295),
+		new(big.Int).SetUint64(2818647),
+		new(big.Int).SetUint64(1409324),
+		new(big.Int).SetUint64(704662),
+		new(big.Int).SetUint64(352331),
+		new(big.Int).SetUint64(176165)}
+)
+
+var (
+	genesisYear = int(2019)
 )
 
 type Dpos struct {
@@ -372,87 +396,62 @@ func (d *Dpos) Prepare(chain consensus.ChainReader, header *types.Header) error 
 	return nil
 }
 
-func getYear(header *types.Header) (*big.Int, *big.Int, *big.Int) {
+func getRewards(header *types.Header) (minerParam, stockParam *big.Int) {
 
 	if 0 == header.Time.Int64() {
-
-		return new(big.Int).SetUint64(6341958), new(big.Int).SetUint64(25367833), new(big.Int).SetUint64(25367833)
+		return new(big.Int).SetUint64(0), new(big.Int).SetUint64(0)
 	} else {
 
-		//得到年份
-		//year := time.Unix(header.Time.Int64()/1000, 0).Year()
 		year := time.Unix(header.Time.Int64(), 0).Year()
+		//postion := int(math.Floor((year - genesisYear) / 4))
+		postion := (year - genesisYear) / 4
 
-		log.Info("****getYear****", "year", year)
-
-		//根据年份判断分币情况
-		if year <= 2022 {
-			return new(big.Int).SetUint64(6341958), new(big.Int).SetUint64(25367833), new(big.Int).SetUint64(25367833)
-		} else if year > 2022 && year <= 2026 {
-			return new(big.Int).SetUint64(3170979), new(big.Int).SetUint64(12683916), new(big.Int).SetUint64(25367833)
-		} else if year > 2026 && year <= 2030 {
-			return new(big.Int).SetUint64(1585489), new(big.Int).SetUint64(6341958), new(big.Int).SetUint64(25367833)
-		} else {
-			return new(big.Int).SetUint64(1585489), new(big.Int).SetUint64(6341958), new(big.Int).SetUint64(25367833)
-		}
+		minerParam = MinerRewards[postion]
+		stockParam = StockRewards[postion]
+		return minerParam, stockParam
 	}
 }
 
-//Tina链从2019年开始，每4年奖励减半，知道2031年结束,共产生7亿个Tina币
 func AccumulateRewards(config *params.ChainConfig,
 	state *state.StateDB,
 	header *types.Header,
 	uncles []*types.Header,
 	txs []*types.Transaction,
+	bokerContext *types.BokerContext,
 	boker bokerapi.Api) {
 
 	log.Info("dpos.go AccumulateRewards", "Number", header.Number.String(), "Time", header.Time)
-
-	//根据块时间判断当前属于哪一个分币档次
-	tinaMultiple, userMultiple, maxSingle := getYear(header)
+	minerParam, stockParam := getRewards(header)
 
 	//给出块节点的报酬
-	blockReward := big.NewInt(1)
-	blockReward.Mul(protocol.TinaUnit, tinaMultiple)
-	reward := new(big.Int).Set(blockReward)
-	state.AddBalance(header.Coinbase, reward)
-	log.Info("Block Award", "Coinbase", header.Coinbase, "reward", reward)
+	minerReward := big.NewInt(1)
+	minerReward.Mul(protocol.TinaUnit, minerParam)
+	state.AddBalance(header.Coinbase, new(big.Int).Set(minerReward))
+	log.Info("dpos.go AccumulateRewards Miner Award", "Coinbase", header.Coinbase, "reward", new(big.Int).Set(minerReward))
 
-	//计算给每个交易产生用户应该分配币的数量
-	var singleReward *big.Int = big.NewInt(0)
-	if len(txs) > 0 {
-		singleReward.Div(userMultiple, big.NewInt(int64(len(txs))))
-
-		//得到每个交易的最大值
-		if 1 == singleReward.Cmp(maxSingle) {
-			singleReward = maxSingle
-		}
-
-		//对于交易发起用户进行分币
-		for _, tx := range txs {
-
-			//得到msg中的From信息
-			msg, err := tx.AsMessage(types.MakeSigner(config, header.Number))
-			if err != nil {
-				state.AddBalance(msg.From(), singleReward)
-				log.Info("Transaction Award", "Addr", msg.From(), "reward", singleReward)
-			} else {
-				log.Error("Transaction Award Failed", "Addr", msg.From(), "reward", singleReward)
-			}
-		}
-		return
-	}
-	log.Info("Transaction Award Failed Transaction Count is Zero")
-
+	//将其它部分放入到股权gas池中,等待分配
+	stockReward := big.NewInt(1)
+	stockReward.Mul(protocol.TinaUnit, stockParam)
+	bokerContext.AddGasPool(new(big.Int).Set(stockReward).Uint64())
+	log.Info("dpos.go AccumulateRewards Stock Award", "reward", new(big.Int).Set(stockReward))
 }
 
 //将交易放入到区块中
-func (d *Dpos) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt, dposContext *types.DposContext, boker bokerapi.Api) (*types.Block, error) {
+func (d *Dpos) Finalize(chain consensus.ChainReader,
+	header *types.Header,
+	state *state.StateDB,
+	txs []*types.Transaction,
+	uncles []*types.Header,
+	receipts []*types.Receipt,
+	dposContext *types.DposContext,
+	bokerContext *types.BokerContext,
+	boker bokerapi.Api) (*types.Block, error) {
 
 	log.Info("(d *Dpos) Finalize", "Number", header.Number.String())
 
-	//计算报酬
-	AccumulateRewards(chain.Config(), state, header, uncles, txs, boker)
+	if header.Number.Uint64() != firstNumber {
+		AccumulateRewards(chain.Config(), state, header, uncles, txs, bokerContext, boker)
+	}
 
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 
@@ -466,14 +465,7 @@ func (d *Dpos) Finalize(chain consensus.ChainReader, header *types.Header, state
 	//更新MintCnt的默克尔树，并返回一个新区块
 	updateMintCnt(parent.Time.Int64(), header.Time.Int64(), header.Validator, dposContext)
 	header.DposProto = dposContext.ToProto()
-
-	singleTrie, contractsTrie := boker.GetContractTrie()
-	_, stocksTrie, ownerTrie, gasPoolTrie := boker.GetStockTrie()
-	header.BokerProto = protocol.ToBokerProto(singleTrie.Hash(),
-		contractsTrie.Hash(),
-		stocksTrie.Hash(),
-		ownerTrie.Hash(),
-		gasPoolTrie.Hash())
+	header.BokerProto = bokerContext.ToProto()
 
 	return types.NewBlock(header, txs, uncles, receipts), nil
 }
@@ -659,7 +651,7 @@ func NextSlot(now int64) int64 {
 func updateMintCnt(parentBlockTime, currentBlockTime int64, validator common.Address, dposContext *types.DposContext) {
 
 	//得到上一个区块的周期数量
-	blockCntTrie := dposContext.BlockCntTrie()
+	blockCntTrie := dposContext.VoteTrie()
 	currentEpoch := parentBlockTime / protocol.EpochInterval
 	currentEpochBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(currentEpochBytes, uint64(currentEpoch))
@@ -684,5 +676,5 @@ func updateMintCnt(parentBlockTime, currentBlockTime int64, validator common.Add
 	newEpochBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(newEpochBytes, uint64(newEpoch))
 	binary.BigEndian.PutUint64(newCntBytes, uint64(cnt))
-	dposContext.BlockCntTrie().TryUpdate(append(newEpochBytes, validator.Bytes()...), newCntBytes)
+	dposContext.VoteTrie().TryUpdate(append(newEpochBytes, validator.Bytes()...), newCntBytes)
 }

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/common/hexutil"
 )
@@ -17,25 +16,25 @@ var _ = (*headerMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (h Header) MarshalJSON() ([]byte, error) {
 	type Header struct {
-		ParentHash  common.Hash                 `json:"parentHash"       gencodec:"required"`
-		UncleHash   common.Hash                 `json:"sha3Uncles"       gencodec:"required"`
-		Validator   common.Address              `json:"validator"        gencodec:"required"`
-		Coinbase    common.Address              `json:"coinbase"         gencodec:"required"`
-		Root        common.Hash                 `json:"stateRoot"        gencodec:"required"`
-		TxHash      common.Hash                 `json:"transactionsRoot" gencodec:"required"`
-		ReceiptHash common.Hash                 `json:"receiptsRoot"     gencodec:"required"`
-		DposProto   *DposContextProto           `json:"dposContext"      gencodec:"required"`
-		BokerProto  *protocol.BokerBackendProto `json:"bokerBackend"      gencodec:"required"`
-		Bloom       Bloom                       `json:"logsBloom"        gencodec:"required"`
-		Difficulty  *hexutil.Big                `json:"difficulty"       gencodec:"required"`
-		Number      *hexutil.Big                `json:"number"           gencodec:"required"`
-		GasLimit    *hexutil.Big                `json:"gasLimit"         gencodec:"required"`
-		GasUsed     *hexutil.Big                `json:"gasUsed"          gencodec:"required"`
-		Time        *hexutil.Big                `json:"timestamp"        gencodec:"required"`
-		Extra       hexutil.Bytes               `json:"extraData"        gencodec:"required"`
-		MixDigest   common.Hash                 `json:"mixHash"          gencodec:"required"`
-		Nonce       BlockNonce                  `json:"nonce"            gencodec:"required"`
-		Hash        common.Hash                 `json:"hash"`
+		ParentHash  common.Hash        `json:"parentHash"       gencodec:"required"`
+		UncleHash   common.Hash        `json:"sha3Uncles"       gencodec:"required"`
+		Validator   common.Address     `json:"validator"        gencodec:"required"`
+		Coinbase    common.Address     `json:"coinbase"         gencodec:"required"`
+		Root        common.Hash        `json:"stateRoot"        gencodec:"required"`
+		TxHash      common.Hash        `json:"transactionsRoot" gencodec:"required"`
+		ReceiptHash common.Hash        `json:"receiptsRoot"     gencodec:"required"`
+		DposProto   *DposContextProto  `json:"dposContext"      gencodec:"required"`
+		BokerProto  *BokerBackendProto `json:"bokerBackend"      gencodec:"required"`
+		Bloom       Bloom              `json:"logsBloom"        gencodec:"required"`
+		Difficulty  *hexutil.Big       `json:"difficulty"       gencodec:"required"`
+		Number      *hexutil.Big       `json:"number"           gencodec:"required"`
+		GasLimit    *hexutil.Big       `json:"gasLimit"         gencodec:"required"`
+		GasUsed     *hexutil.Big       `json:"gasUsed"          gencodec:"required"`
+		Time        *hexutil.Big       `json:"timestamp"        gencodec:"required"`
+		Extra       hexutil.Bytes      `json:"extraData"        gencodec:"required"`
+		MixDigest   common.Hash        `json:"mixHash"          gencodec:"required"`
+		Nonce       BlockNonce         `json:"nonce"            gencodec:"required"`
+		Hash        common.Hash        `json:"hash"`
 	}
 	var enc Header
 	enc.ParentHash = h.ParentHash
@@ -63,24 +62,24 @@ func (h Header) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (h *Header) UnmarshalJSON(input []byte) error {
 	type Header struct {
-		ParentHash  *common.Hash                `json:"parentHash"       gencodec:"required"`
-		UncleHash   *common.Hash                `json:"sha3Uncles"       gencodec:"required"`
-		Validator   *common.Address             `json:"validator"        gencodec:"required"`
-		Coinbase    *common.Address             `json:"coinbase"         gencodec:"required"`
-		Root        *common.Hash                `json:"stateRoot"        gencodec:"required"`
-		TxHash      *common.Hash                `json:"transactionsRoot" gencodec:"required"`
-		ReceiptHash *common.Hash                `json:"receiptsRoot"     gencodec:"required"`
-		DposProto   *DposContextProto           `json:"dposContext"      gencodec:"required"`
-		BokerProto  *protocol.BokerBackendProto `json:"bokerBackend"      gencodec:"required"`
-		Bloom       *Bloom                      `json:"logsBloom"        gencodec:"required"`
-		Difficulty  *hexutil.Big                `json:"difficulty"       gencodec:"required"`
-		Number      *hexutil.Big                `json:"number"           gencodec:"required"`
-		GasLimit    *hexutil.Big                `json:"gasLimit"         gencodec:"required"`
-		GasUsed     *hexutil.Big                `json:"gasUsed"          gencodec:"required"`
-		Time        *hexutil.Big                `json:"timestamp"        gencodec:"required"`
-		Extra       *hexutil.Bytes              `json:"extraData"        gencodec:"required"`
-		MixDigest   *common.Hash                `json:"mixHash"          gencodec:"required"`
-		Nonce       *BlockNonce                 `json:"nonce"            gencodec:"required"`
+		ParentHash  *common.Hash       `json:"parentHash"       gencodec:"required"`
+		UncleHash   *common.Hash       `json:"sha3Uncles"       gencodec:"required"`
+		Validator   *common.Address    `json:"validator"        gencodec:"required"`
+		Coinbase    *common.Address    `json:"coinbase"         gencodec:"required"`
+		Root        *common.Hash       `json:"stateRoot"        gencodec:"required"`
+		TxHash      *common.Hash       `json:"transactionsRoot" gencodec:"required"`
+		ReceiptHash *common.Hash       `json:"receiptsRoot"     gencodec:"required"`
+		DposProto   *DposContextProto  `json:"dposContext"      gencodec:"required"`
+		BokerProto  *BokerBackendProto `json:"bokerBackend"      gencodec:"required"`
+		Bloom       *Bloom             `json:"logsBloom"        gencodec:"required"`
+		Difficulty  *hexutil.Big       `json:"difficulty"       gencodec:"required"`
+		Number      *hexutil.Big       `json:"number"           gencodec:"required"`
+		GasLimit    *hexutil.Big       `json:"gasLimit"         gencodec:"required"`
+		GasUsed     *hexutil.Big       `json:"gasUsed"          gencodec:"required"`
+		Time        *hexutil.Big       `json:"timestamp"        gencodec:"required"`
+		Extra       *hexutil.Bytes     `json:"extraData"        gencodec:"required"`
+		MixDigest   *common.Hash       `json:"mixHash"          gencodec:"required"`
+		Nonce       *BlockNonce        `json:"nonce"            gencodec:"required"`
 	}
 	var dec Header
 	if err := json.Unmarshal(input, &dec); err != nil {

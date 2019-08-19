@@ -33,6 +33,7 @@ import (
 	"github.com/Tinachain/Tina/chain/eth/gasprice"
 	"github.com/Tinachain/Tina/chain/ethdb"
 	"github.com/Tinachain/Tina/chain/event"
+	"github.com/Tinachain/Tina/chain/log"
 	"github.com/Tinachain/Tina/chain/params"
 	"github.com/Tinachain/Tina/chain/rpc"
 )
@@ -133,10 +134,9 @@ func (b *EthApiBackend) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscri
 	return b.eth.BlockChain().SubscribeLogsEvent(ch)
 }
 
-//将交易放入放入到本地交易池中（本地发生的交易放在本地交易池中）
 func (b *EthApiBackend) SendTx(ctx context.Context, signedTx *types.Transaction) error {
 
-	//log.Info("****SendTx****", "Nonce", signedTx.Nonce())
+	log.Info("(b *EthApiBackend) SendTx", "Nonce", signedTx.Nonce())
 	return b.eth.txPool.AddLocal(signedTx)
 }
 

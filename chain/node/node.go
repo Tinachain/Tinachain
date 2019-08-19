@@ -156,7 +156,24 @@ func (n *Node) Start() error {
 		n.serverConfig.NodeDatabase = n.config.NodeDB()
 	}
 	running := &p2p.Server{Config: n.serverConfig}
-	//log.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)
+	log.Info("(n *Node) Starting peer-to-peer node", "instance", n.serverConfig.Name)
+
+	//挖矿只有在运行完整的以太坊节点时才是有意义的
+	/*var ethereum *eth.Ethereum
+	if err := stack.Service(&ethereum); err != nil {
+		utils.Fatalf("ethereum service not running: %v", err)
+	}
+	if ethereum == nil {
+		utils.Fatalf("ethereum service is nil")
+	}
+
+	//由于设置的默克尔树会发生变化，因此这里不能使用第一个区块的信息 fxh7622
+	block := ethereum.BlockChain().CurrentBlock()
+	bokerChain := boker.New()
+	bokerChain.Init(ethereum, block.Header().BokerProto)
+	ethereum.SetBoker(bokerChain)
+	log.Info("Set BokerChain Pointer", "Number", block.Number(), "GetGasPool", ethereum.Boker().GetGasPool())
+	*/
 
 	//通过node的serviceFuncs所包含的构造函数，生成了一系列的Service
 	services := make(map[reflect.Type]Service)
@@ -188,13 +205,12 @@ func (n *Node) Start() error {
 		}
 		services[kind] = service
 	}
-	//log.Info("create Service Context and Constrctor")
+	log.Info("(n *Node) Start create Service Context and Constrctor")
 
 	//将这些Service所使用的协议，加入到了P2P服务对象running的协议变量Protocols中维护了起来
 	for _, service := range services {
 		running.Protocols = append(running.Protocols, service.Protocols()...)
 	}
-	//log.Info("append Protocols")
 
 	//启动P2P服务running
 	if err := running.Start(); err != nil {
@@ -218,7 +234,7 @@ func (n *Node) Start() error {
 		// Mark the service started for potential cleanup
 		started = append(started, kind)
 	}
-	//log.Info("Start reflect Service")
+	log.Info("(n *Node) Start reflect Service")
 
 	//启动注册的RPC接口服务
 	if err := n.startRPC(services); err != nil {
@@ -228,7 +244,7 @@ func (n *Node) Start() error {
 		running.Stop()
 		return err
 	}
-	//log.Info("Start RPC")
+	log.Info("(n *Node) Start RPC")
 
 	//完成启动的初始化工作
 	n.services = services

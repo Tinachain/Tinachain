@@ -5,12 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	_ "io/ioutil"
 	"math/big"
-	"os"
 
 	"github.com/Tinachain/Tina/chain"
-	_ "github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/common/hexutil"
 	"github.com/Tinachain/Tina/chain/core/types"
@@ -385,7 +382,7 @@ func (ec *Client) PendingNonceAt(ctx context.Context, account common.Address) (u
 	return uint64(result), err
 }
 
-// PendingTransactionCount returns the total number of transactions in the pending state.
+//当前全链pinding交易数量
 func (ec *Client) PendingTransactionCount(ctx context.Context) (uint, error) {
 	var num hexutil.Uint
 	err := ec.c.CallContext(ctx, &num, "eth_getBlockTransactionCountByNumber", "pending")
@@ -416,7 +413,6 @@ func (ec *Client) PendingCallContract(ctx context.Context, msg ethereum.CallMsg)
 	return hex, nil
 }
 
-//返回当前执行交易建议的Gas价格
 func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 	var hex hexutil.Big
 	if err := ec.c.CallContext(ctx, &hex, "eth_gasPrice"); err != nil {
@@ -425,7 +421,6 @@ func (ec *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 	return (*big.Int)(&hex), nil
 }
 
-//返回当前基于执行指定交易所需要的Gas，由于矿工可以自己添加或者删除其它的交易，因此这个Gas不保证是真正的Gas限制，但是他可以作为合理的Gas设置基础
 func (ec *Client) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (*big.Int, error) {
 	var hex hexutil.Big
 	err := ec.c.CallContext(ctx, &hex, "eth_estimateGas", toCallArg(msg))
@@ -435,7 +430,6 @@ func (ec *Client) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (*big.I
 	return (*big.Int)(&hex), nil
 }
 
-//Tina链禁止 RPC 指令
 func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 
 	data, err := rlp.EncodeToBytes(tx)
@@ -452,192 +446,6 @@ func (ec *Client) SendTransaction(ctx context.Context, tx *types.Transaction) er
 	}
 
 	return ec.c.CallContext(ctx, nil, "eth_sendRawTransaction", common.ToHex(data))
-}
-
-/****Tina链新增的RPC调用****/
-
-//得到最后一次的出块节点
-func (ec *Client) GetLastProducerAt(ctx context.Context) ([]byte, error) {
-
-	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_getLastProducer")
-	return result, err
-}
-
-//得到最后一次的分币节点
-func (ec *Client) GetLastTokenNoderAt(ctx context.Context) ([]byte, error) {
-
-	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_getLastTokenNoder")
-	return result, err
-}
-
-//得到下一次的出块节点
-func (ec *Client) GetNextProducerAt(ctx context.Context) ([]byte, error) {
-
-	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_getNextProducer")
-	return result, err
-}
-
-//得到下一次的分币节点
-func (ec *Client) GetNextTokenNoderAt(ctx context.Context) ([]byte, error) {
-
-	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_getNextTokenNoder")
-	return result, err
-}
-
-func (ec *Client) SetBaseContracts(ctx context.Context, address common.Address, contractType uint64, abiJson string) (common.Hash, error) {
-
-	log.Info("(ec *Client) SetBaseContracts", "address", address.String())
-
-	var txHash common.Hash
-	err := ec.c.CallContext(ctx, &txHash, "eth_setBaseContracts", address, contractType, abiJson)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	return txHash, nil
-}
-
-func (ec *Client) CancelBaseContracts(ctx context.Context, address common.Address, contractType uint64) (common.Hash, error) {
-
-	log.Info("(ec *Client) CancelBaseContracts", "address", address.String())
-
-	var txHash common.Hash
-	err := ec.c.CallContext(ctx, &txHash, "eth_cancelBaseContracts", address, contractType)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return txHash, nil
-}
-
-func (ec *Client) AddValidator(ctx context.Context, address common.Address, votes uint64) (common.Hash, error) {
-
-	log.Info("(ec *Client) AddValidator", "address", address.String(), "votes", votes)
-
-	var txHash common.Hash
-	err := ec.c.CallContext(ctx, &txHash, "eth_addValidator", address, votes)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return txHash, nil
-}
-
-//解析abi数据
-func (ec *Client) DecodeAbi(ctx context.Context, abiJson string, method string, payload string) error {
-
-	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_decodeAbi", abiJson, method, payload)
-	return err
-}
-
-func (ec *Client) SetWord(ctx context.Context, word string) (common.Hash, error) {
-
-	log.Info("(ec *Client) SetWord", "len", len(word), "word", word)
-
-	var txHash common.Hash
-	err := ec.c.CallContext(ctx, &txHash, "eth_setWord", word)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return txHash, nil
-}
-
-func (ec *Client) SetPicture(ctx context.Context, picture string) (common.Hash, error) {
-
-	log.Info("(ec *Client) SetPicture", "picture", picture)
-
-	var txHash common.Hash
-	err := ec.c.CallContext(ctx, &txHash, "eth_setPicture", picture)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return txHash, nil
-}
-
-func (ec *Client) SetFile(ctx context.Context, file string) (common.Hash, error) {
-
-	log.Info("(ec *Client) SetFile", "file", file)
-
-	var txHash common.Hash
-	err := ec.c.CallContext(ctx, &txHash, "eth_setFile", file)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return txHash, nil
-}
-
-func (ec *Client) SetOwner(ctx context.Context, address common.Address) (common.Hash, error) {
-
-	log.Info("(ec *Client) SetOwner", "address", address.String())
-
-	var txHash common.Hash
-	err := ec.c.CallContext(ctx, &txHash, "eth_setOwner", address)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return txHash, nil
-}
-
-func (ec *Client) CheckTxSign(ctx context.Context) (common.Hash, error) {
-
-	log.Info("(ec *Client) CheckTxSign")
-
-	var txHash common.Hash
-	err := ec.c.CallContext(ctx, &txHash, "eth_checkTxSign")
-	if err != nil {
-		return common.Hash{}, err
-	}
-	return txHash, nil
-}
-
-func pathExists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
-}
-
-func fileExist(filename string) bool {
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		return false
-	}
-	return true
-}
-
-//图片保存
-func (ec *Client) GetWord(ctx context.Context, hash common.Hash) (string, error) {
-
-	log.Info("(ec *Client) GetWord", "hash", hash)
-
-	var result string
-	err := ec.c.CallContext(ctx, &result, "eth_getWord", hash)
-	return result, err
-}
-
-//图片保存
-func (ec *Client) GetPicture(ctx context.Context, hash common.Hash, savePath string) error {
-
-	log.Info("(ec *Client) GetPicture", "hash", hash, "savePath", savePath)
-
-	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_getPicture", hash, savePath)
-	return err
-}
-
-func (ec *Client) GetFile(ctx context.Context, hash common.Hash, saveFile string) error {
-
-	log.Info("(ec *Client) GetFile", "hash", hash, "saveFile", saveFile)
-
-	var result hexutil.Bytes
-	err := ec.c.CallContext(ctx, &result, "eth_GetFile", hash, saveFile)
-	return err
 }
 
 func toCallArg(msg ethereum.CallMsg) interface{} {
@@ -662,4 +470,218 @@ func toCallArg(msg ethereum.CallMsg) interface{} {
 		arg["extra"] = hexutil.Bytes(msg.Extra)
 	}
 	return arg
+}
+
+func (ec *Client) GetLastProducerAt(ctx context.Context) ([]byte, error) {
+
+	var result hexutil.Bytes
+	err := ec.c.CallContext(ctx, &result, "eth_getLastProducer")
+	return result, err
+}
+
+func (ec *Client) GetNextProducerAt(ctx context.Context) ([]byte, error) {
+
+	var result hexutil.Bytes
+	err := ec.c.CallContext(ctx, &result, "eth_getNextProducer")
+	return result, err
+}
+
+func (ec *Client) SetSystemBaseContracts(ctx context.Context, address common.Address) (common.Hash, error) {
+
+	log.Info("(ec *Client) SetSystemBaseContracts", "address", address.String())
+
+	var txHash common.Hash
+	err := ec.c.CallContext(ctx, &txHash, "eth_setSystemBaseContracts", address)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
+
+func (ec *Client) SetUserBaseContracts(ctx context.Context, address common.Address) (common.Hash, error) {
+
+	log.Info("(ec *Client) SetUserBaseContracts", "address", address.String())
+
+	var txHash common.Hash
+	err := ec.c.CallContext(ctx, &txHash, "eth_setUserBaseContracts", address)
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	return txHash, nil
+}
+
+func (ec *Client) CancelUserBaseContracts(ctx context.Context, address common.Address) (common.Hash, error) {
+
+	log.Info("(ec *Client) CancelUserBaseContracts", "address", address.String())
+
+	var txHash common.Hash
+	err := ec.c.CallContext(ctx, &txHash, "eth_cancelUserBaseContracts", address)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return txHash, nil
+}
+
+func (ec *Client) AddValidator(ctx context.Context, address common.Address, votes uint64) (common.Hash, error) {
+
+	log.Info("(ec *Client) AddValidator", "address", address.String(), "votes", votes)
+
+	var txHash common.Hash
+	err := ec.c.CallContext(ctx, &txHash, "eth_addValidator", address, votes)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return txHash, nil
+}
+
+func (ec *Client) GetBlockValidator(ctx context.Context, blockNumber *big.Int) ([]byte, error) {
+
+	log.Info("(ec *Client) GetBlockValidator", "blockNumber", blockNumber.Int64())
+
+	var result []byte
+	err := ec.c.CallContext(ctx, &result, "eth_getBlockValidator", toBlockNumArg(blockNumber))
+	return result, err
+}
+
+//股权
+func (ec *Client) StockSet(ctx context.Context, address common.Address, number uint64) (common.Hash, error) {
+
+	log.Info("(ec *Client) StockSet", "address", address.String(), "number", number)
+
+	var txHash common.Hash
+	err := ec.c.CallContext(ctx, &txHash, "eth_stockSet", address, number)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return txHash, nil
+}
+
+func (ec *Client) GetStock(ctx context.Context, address common.Address) (uint64, error) {
+
+	log.Info("(ec *Client) GetStock", "address", address.String())
+
+	var number uint64
+	err := ec.c.CallContext(ctx, &number, "eth_stockGet", address)
+	if err != nil {
+		return 0, err
+	}
+	return number, nil
+}
+
+func (ec *Client) StockTransfer(ctx context.Context, from common.Address, to common.Address, number uint64) (common.Hash, error) {
+
+	log.Info("(ec *Client) StockTransfer", "from", from.String(), "to", to.String(), "number", number)
+
+	var txHash common.Hash
+	err := ec.c.CallContext(ctx, &txHash, "eth_stockTransfer", from, to, number)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return txHash, nil
+}
+
+func (ec *Client) StockClean(ctx context.Context, address common.Address) (common.Hash, error) {
+
+	log.Info("(ec *Client) StockClean", "address", address.String())
+
+	var txHash common.Hash
+	err := ec.c.CallContext(ctx, &txHash, "eth_stockClean", address)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return txHash, nil
+}
+
+func (ec *Client) StockFrozen(ctx context.Context, address common.Address) (common.Hash, error) {
+
+	log.Info("(ec *Client) StockFrozen", "address", address.String())
+
+	var txHash common.Hash
+	err := ec.c.CallContext(ctx, &txHash, "eth_stockFrozen", address)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return txHash, nil
+}
+
+func (ec *Client) StockUnFrozen(ctx context.Context, address common.Address) (common.Hash, error) {
+
+	log.Info("(ec *Client) StockUnFrozen", "address", address.String())
+
+	var txHash common.Hash
+	err := ec.c.CallContext(ctx, &txHash, "eth_stockUnFrozen", address)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return txHash, nil
+}
+
+//扩展
+func (ec *Client) SetWord(ctx context.Context, word string) (common.Hash, error) {
+
+	log.Info("(ec *Client) SetWord", "len", len(word), "word", word)
+
+	var txHash common.Hash
+	err := ec.c.CallContext(ctx, &txHash, "eth_setWord", word)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return txHash, nil
+}
+
+func (ec *Client) SetData(ctx context.Context, data []byte) (common.Hash, error) {
+
+	log.Info("(ec *Client) SetData", "len", len(data))
+
+	var txHash common.Hash
+	err := ec.c.CallContext(ctx, &txHash, "eth_setData", data)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return txHash, nil
+}
+
+func (ec *Client) GetWord(ctx context.Context, hash common.Hash) (string, error) {
+
+	log.Info("(ec *Client) GetWord", "hash", hash)
+
+	var result string
+	err := ec.c.CallContext(ctx, &result, "eth_getWord", hash)
+	return result, err
+}
+
+func (ec *Client) GetData(ctx context.Context, hash common.Hash) ([]byte, error) {
+
+	log.Info("(ec *Client) GetData", "hash", hash)
+
+	var result []byte
+	err := ec.c.CallContext(ctx, &result, "eth_getData", hash)
+	return result, err
+}
+
+//所属
+func (ec *Client) SetStockManager(ctx context.Context, address common.Address) (common.Hash, error) {
+
+	log.Info("(ec *Client) SetOwner", "address", address.String())
+
+	var txHash common.Hash
+	err := ec.c.CallContext(ctx, &txHash, "eth_setStockManager", address)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return txHash, nil
+}
+
+func (ec *Client) GetStockManager(ctx context.Context) (common.Address, error) {
+
+	log.Info("(ec *Client) GetOwner")
+
+	var address common.Address
+	err := ec.c.CallContext(ctx, &address, "eth_getStockManager")
+	if err != nil {
+		return common.Address{}, err
+	}
+	return address, nil
 }

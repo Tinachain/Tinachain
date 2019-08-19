@@ -13,26 +13,23 @@ import (
 
 	"github.com/Tinachain/Tina/chain/accounts/abi"
 	"github.com/Tinachain/Tina/chain/common"
-	"github.com/Tinachain/Tina/chain/crypto/sha3"
 	"github.com/Tinachain/Tina/chain/log"
-	"github.com/Tinachain/Tina/chain/rlp"
 )
 
 const (
-	ExtraVanity         = 32         //扩展字段的前缀字节数量
-	ExtraSeal           = 65         //扩展字段的后缀字节数量
-	InmemorySignatures  = 4096       //保留在内存中的最近块签名的数量
-	ProducerInterval    = int64(10)  //打包时间间隔（秒）
-	TimeoutInterval     = int64(300) //超时周期
-	BlacksInterval      = int64(300)
-	EpochInterval       = int64(86400) //一个周期的时间（86400秒 = 1天）
-	MaxValidatorSize    = 1            //DPOS的验证者数量
-	SafeSize            = 1            //安全的验证者数量
-	ConsensusSize       = 1            //共识确认验证者数量
-	BokerInterval       = time.Second  //分配通证时间间隔(秒)
-	AssignInterval      = time.Minute  //分配通证时间间隔单位
-	BlackInterval       = time.Minute  //黑名单间隔时间
-	MillisecondInterval = time.Millisecond
+	ExtraVanity         = 32               //扩展字段的前缀字节数量
+	ExtraSeal           = 65               //扩展字段的后缀字节数量
+	InmemorySignatures  = 4096             //保留在内存中的最近块签名的数量
+	ProducerInterval    = int64(10)        //打包时间间隔（秒）
+	TimeoutInterval     = int64(300)       //超时周期
+	BlacksInterval      = int64(300)       //获取黑名单周期
+	EpochInterval       = int64(86400)     //一个周期的时间（86400秒 = 1天）
+	MaxValidatorSize    = 1                //DPOS的验证者数量
+	ConsensusSize       = 1                //共识确认验证者数量
+	BokerInterval       = time.Second      //分配通证时间间隔(秒)
+	AssignInterval      = time.Minute      //分配通证时间间隔单位
+	BlackInterval       = time.Minute      //黑名单间隔时间
+	MillisecondInterval = time.Millisecond //毫秒
 )
 
 //主要交易类型
@@ -53,27 +50,31 @@ type TxMinor uint8
 const (
 	MinMinor          TxMinor = iota
 	SetValidator              //设置验证者
-	SetSystemContract         //设置基础合约
-	SetUserContract
-	CancelUserContract //取消设置基础合约
-	RegisterCandidate  //注册成为候选人(用户注册为候选人)
-	VoteUser           //用户投票
-	VoteCancel         //用户取消投票
-	VoteEpoch          //产生当前的出块节点(在每次周期产生的时候触发)
-	Timeout
-	MaxMinor
+	SetSystemContract         //设置系统基础合约
+	RegisterCandidate         //注册成为候选人(用户注册为候选人)
+	VoteUser                  //用户投票
+	VoteCancel                //用户取消投票
+	VoteEpoch                 //产生当前的出块节点(在每次周期产生的时候触发)
+	Timeout                   //超时处理
+	MaxMinor                  //最大值
+)
+
+//用户基础交易的次要类型
+const (
+	SetUserContract TxMinor = iota
+	CancelUserContract
 )
 
 //扩展交易的次要类型
 const (
-	//文件类型;
-	Word TxMinor = iota //交易中扩展字段为文字
+	Word TxMinor = iota
 	Data
 )
 
 //股权类型的次要类型
 const (
-	StockSet      TxMinor = iota //设置股权
+	StockManager  TxMinor = iota //股权管理者
+	StockSet                     //设置股权
 	StockTransfer                //转移部分股权
 	StockClean                   //销毁股权(将股权从某个账号中强行销毁)
 	StockFrozen                  //冻结股权(股权冻结，则此股权将无法获得Gas收益)
@@ -112,13 +113,11 @@ var (
 	MaxGasLimit        *big.Int = new(big.Int).SetUint64(0)                  //最大的GasLimit
 	TimeOfFirstBlock            = int64(0)                                   //创世区块的时间偏移量
 	ConfirmedBlockHead          = []byte("confirmed-block-head")
-
-	MaxWordSize  = int64(1 * 1024 * 1024)
-	MaxDataSize  = int(1 * 1024 * 1024)
-	MaxExtraSize = int64(5 * 1024 * 1024)
-
-	MaxNormalSize = common.StorageSize(32 * 1024)
-	MaxBlockSize  = int64(5 * 1024 * 1024)
+	MaxWordSize                 = int64(1 * 1024 * 1024)
+	MaxDataSize                 = int(1 * 1024 * 1024)
+	MaxExtraSize                = int64(5 * 1024 * 1024)
+	MaxNormalSize               = common.StorageSize(32 * 1024)
+	MaxBlockSize                = int64(5 * 1024 * 1024)
 )
 
 var (
@@ -135,13 +134,19 @@ var (
 	GetCandidateMethod  = "getCandidates" //获取候选人结果
 )
 
+//周期验证者相关
 var (
-	EpochPrefix          = []byte("epoch")      //存放周期信息
-	ValidatorPrefix      = []byte("validator")  //存放验证者投票信息
-	VotePrefix           = []byte("vote")       //存放投票数量
-	SingleContractPrefix = []byte("single")     //存放单个合约信息
-	ValidatorsPrefix     = []byte("validators") //存放所有的验证者列表
-	ContractsPrefix      = []byte("contracts")  //存放所有合约信息
+	EpochPrefix      = []byte("epoch")      //存放周期信息
+	ValidatorPrefix  = []byte("validator")  //存放验证者投票信息
+	VotePrefix       = []byte("vote")       //存放投票数量
+	ValidatorsPrefix = []byte("validators") //存放所有的验证者列表
+
+)
+
+//合约相关
+var (
+	SingleContractPrefix = []byte("single")    //存放单个合约信息
+	ContractsPrefix      = []byte("contracts") //存放所有合约信息
 )
 
 //股权相关
@@ -149,7 +154,7 @@ var (
 	SingleStockPrefix = []byte("stock")
 	StocksPrefix      = []byte("stocks")
 	OwnerPrefix       = []byte("owner")
-	GasPoolPrefix     = []byte("gas")
+	GasPoolPrefix     = []byte("gasPool")
 )
 
 var (
@@ -189,20 +194,10 @@ var (
 	ErrEpochTrieNil               = errors.New("failed to producers length is zero")              //出块节点长度为0
 	ErrToIsNil                    = errors.New("setValidator block header to is nil")             //设置验证者区块头为nil
 	ErrTxType                     = errors.New("failed to tx type")                               //交易类型失败
+	ErrIsnStock                   = errors.New("not is stock account")                            //不是股权账号
+	ErrIsnOwner                   = errors.New("coinbase not is owner of chain")
+	ErrStockLow                   = errors.New("account stock too low")
 )
-
-//设置Tina链配置
-type BokerConfig struct {
-	Address common.Address
-}
-
-type BokerBackendProto struct {
-	SingleHash    common.Hash `json:"SingleRoot"        gencodec:"required"`
-	ContractsHash common.Hash `json:"ContractsRoot"    gencodec:"required"`
-	StocksHash    common.Hash `json:"StocksRoot"    gencodec:"required"`
-	OwnerHash     common.Hash `json:"OwnerRoot"    gencodec:"required"`
-	GasPoolHash   common.Hash `json:"GasPoolRoot"    gencodec:"required"`
-}
 
 type StockAccount struct {
 	Account common.Address
@@ -210,31 +205,9 @@ type StockAccount struct {
 	State   StockState
 }
 
-func (p *BokerBackendProto) Root() (h common.Hash) {
-
-	hw := sha3.NewKeccak256()
-	rlp.Encode(hw, p.SingleHash)
-	rlp.Encode(hw, p.ContractsHash)
-	rlp.Encode(hw, p.StocksHash)
-	rlp.Encode(hw, p.OwnerHash)
-	rlp.Encode(hw, p.GasPoolHash)
-	hw.Sum(h[:0])
-	return h
-}
-
-func ToBokerProto(singleHash common.Hash,
-	contractsHash common.Hash,
-	stocksHash common.Hash,
-	ownerHash common.Hash,
-	gasPoolHash common.Hash) *BokerBackendProto {
-
-	return &BokerBackendProto{
-		SingleHash:    singleHash,
-		ContractsHash: contractsHash,
-		StocksHash:    stocksHash,
-		OwnerHash:     ownerHash,
-		GasPoolHash:   gasPoolHash,
-	}
+//设置Tina链配置
+type BokerConfig struct {
+	Address common.Address
 }
 
 //Abi函数参数信息
