@@ -17,9 +17,7 @@ contract BokerDefine {
     string constant ContractNodeData    = "BokerNodeData";
     string constant ContractInterface   = "BokerInterface";
     string constant ContractInterfaceBase = "BokerInterfaceBase";
-    string constant ContractChainware   = "Chainware";
-    string constant ContractCWAREToken  = "CWAREToken";
-
+    
     enum Error {
         Ok,
         AddressIsContract,

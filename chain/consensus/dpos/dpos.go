@@ -179,7 +179,7 @@ func (d *Dpos) verifyHeader(chain consensus.ChainReader, header *types.Header, p
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if parent.Time.Uint64()+uint64(protocol.ProducerInterval) > header.Time.Uint64() {
+	if parent.Time.Uint64()+uint64(protocol.BlockInterval) > header.Time.Uint64() {
 		return ErrInvalidTimestamp
 	}
 	return nil
@@ -483,7 +483,7 @@ func (d *Dpos) CheckDeadline(lastBlock *types.Block, now int64, firstTimer int64
 	}
 
 	offset := (now - firstTimer) % protocol.EpochInterval
-	if offset%protocol.ProducerInterval != 0 {
+	if offset%protocol.BlockInterval != 0 {
 		return protocol.ErrInvalidProducerTime
 	}
 
@@ -640,11 +640,11 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 
 //得到区块的上一次生成时间和下一次生成时间
 func PrevSlot(now int64) int64 {
-	return int64((now-1)/protocol.ProducerInterval) * protocol.ProducerInterval
+	return int64((now-1)/protocol.BlockInterval) * protocol.BlockInterval
 }
 
 func NextSlot(now int64) int64 {
-	return int64((now+protocol.ProducerInterval-1)/protocol.ProducerInterval) * protocol.ProducerInterval
+	return int64((now+protocol.BlockInterval-1)/protocol.BlockInterval) * protocol.BlockInterval
 }
 
 //修改出块节点出块的数量

@@ -83,6 +83,7 @@ func (s *BokerInterfaceService) Start() {
 
 	go s.pollVote()
 	go s.pollBlacks()
+	go s.pollGas()
 }
 
 func (s *BokerInterfaceService) Stop() {
@@ -96,37 +97,40 @@ func (s *BokerInterfaceService) pollVote() {
 	var lastTxTime int64 = 0
 	for {
 
-		time.Sleep(time.Duration(500) * protocol.MillisecondInterval)
+		time.Sleep(time.Duration(500) * protocol.MillisecondTimer)
 
 		if lastTxTime != 0 && lastTxTime == time.Now().Unix() {
 			continue
 		}
 
-		blocks := s.ethereum.BlockChain().GetBlockByNumber(0)
-		if blocks == nil {
-			continue
-		}
+		if s.ethereum != nil {
 
-		now := time.Now().Unix()
-		firstTimer := blocks.Time().Int64()
-		offset := now - firstTimer
-
-		if offset%protocol.EpochInterval == 0 {
-
-			lastTxTime = now
-
-			opts := s.createTransactOpts()
-			tx, err := s.bokerInterface.BokerInterfaceBaseTransactor.RotateVote(opts, new(big.Int).SetInt64(now))
-			if err != nil {
-
-				if err == bind.ErrNoCode {
-					log.Error("(s *BokerInterfaceService) pollVote RotateVote method not found", "Contract", s.addr)
-				} else {
-					log.Error("(s *BokerInterfaceService) pollVote Failed to RotateVote", "err", err)
-				}
+			blocks := s.ethereum.BlockChain().GetBlockByNumber(0)
+			if blocks == nil {
 				continue
 			}
-			log.Info("(s *BokerInterfaceService) pollVote", "tx", tx.Hash(), "tx Timer", tx.Time())
+
+			now := time.Now().Unix()
+			firstTimer := blocks.Time().Int64()
+			offset := now - firstTimer
+
+			if offset%protocol.EpochInterval == 0 {
+
+				lastTxTime = now
+
+				opts := s.createTransactOpts()
+				tx, err := s.bokerInterface.BokerInterfaceBaseTransactor.RotateVote(opts, new(big.Int).SetInt64(now))
+				if err != nil {
+
+					if err == bind.ErrNoCode {
+						log.Error("(s *BokerInterfaceService) pollVote RotateVote method not found", "Contract", s.addr)
+					} else {
+						log.Error("(s *BokerInterfaceService) pollVote Failed to RotateVote", "err", err)
+					}
+					continue
+				}
+				log.Info("(s *BokerInterfaceService) pollVote", "tx", tx.Hash(), "tx Timer", tx.Time())
+			}
 		}
 	}
 }
@@ -172,25 +176,28 @@ func (s *BokerInterfaceService) pollBlacks() {
 	var lastTxTime int64 = 0
 	for {
 
-		time.Sleep(time.Duration(500) * protocol.MillisecondInterval)
+		time.Sleep(time.Duration(500) * protocol.MillisecondTimer)
 
 		if lastTxTime != 0 && lastTxTime == time.Now().Unix() {
 			continue
 		}
 
-		blocks := s.ethereum.BlockChain().GetBlockByNumber(0)
-		if blocks == nil {
-			continue
-		}
+		if s.ethereum != nil {
 
-		now := time.Now().Unix()
-		firstTimer := blocks.Time().Int64()
-		offset := now - firstTimer
+			blocks := s.ethereum.BlockChain().GetBlockByNumber(0)
+			if blocks == nil {
+				continue
+			}
 
-		if offset%protocol.BlacksInterval == 0 {
+			now := time.Now().Unix()
+			firstTimer := blocks.Time().Int64()
+			offset := now - firstTimer
 
-			lastTxTime = now
-			s.getBlacks()
+			if offset%protocol.BlacksInterval == 0 {
+
+				lastTxTime = now
+				s.getBlacks()
+			}
 		}
 	}
 }
@@ -214,6 +221,59 @@ func (s *BokerInterfaceService) getBlacks() {
 	} else {
 
 		s.ethereum.Boker().SetBlacks(blacks)
+	}
+}
+
+func (s *BokerInterfaceService) pollGas() {
+
+	var lastTxTime int64 = 0
+	for {
+
+		time.Sleep(time.Duration(500) * protocol.MillisecondTimer)
+
+		if lastTxTime != 0 && lastTxTime == time.Now().Unix() {
+			continue
+		}
+
+		if s.ethereum != nil {
+
+			blocks := s.ethereum.BlockChain().GetBlockByNumber(0)
+			if blocks == nil {
+				continue
+			}
+
+			now := time.Now().Unix()
+			firstTimer := blocks.Time().Int64()
+			offset := now - firstTimer
+
+			if offset%protocol.GasInterval == 0 {
+
+				lastTxTime = now
+
+				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(1)*protocol.MillisecondTimer)
+				defer cancel()
+
+				var coinbase, producer common.Address
+				var err error
+
+				coinbase, err = s.ethereum.Coinbase()
+				if err != nil {
+					continue
+				}
+
+				producer, err = s.ethereum.BlockChain().CurrentBlock().DposCtx().GetCurrentProducer(firstTimer)
+				if err != nil {
+					continue
+				}
+
+				if coinbase != producer {
+					continue
+				}
+
+				tx, _ := s.ethereum.Boker().SubmitBokerTransaction(ctx, protocol.Stock, protocol.StockAssignGas, coinbase, common.Address{}, []byte(""), []byte(""), new(big.Int).SetUint64(0), 0)
+				log.Info("(s *BokerInterfaceService) pollGas", "tx", tx.Hash(), "tx Timer", tx.Time())
+			}
+		}
 	}
 }
 

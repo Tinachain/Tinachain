@@ -231,9 +231,9 @@ func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.St
 	//计算时间（这里注意以太坊允许有10秒中的时间差）
 	var time *big.Int
 	if parent.Time() == nil {
-		time = big.NewInt(protocol.ProducerInterval)
+		time = big.NewInt(protocol.BlockInterval)
 	} else {
-		time = new(big.Int).Add(parent.Time(), big.NewInt(protocol.ProducerInterval)) // block time is fixed at 10 seconds
+		time = new(big.Int).Add(parent.Time(), big.NewInt(protocol.BlockInterval)) // block time is fixed at 10 seconds
 	}
 
 	//创建区块头

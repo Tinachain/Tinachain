@@ -662,6 +662,9 @@ func (s *BokerContext) AddGasPool(gas uint64) uint64 {
 
 	gasPool := s.GetGasPool() + gas
 	s.setGasPoolTrie(gasPool)
+
+	log.Info("(s *BokerContext) AddGasPool", "gas", gas, "gasPool", gasPool)
+
 	return gasPool
 }
 
@@ -682,8 +685,6 @@ func (s *BokerContext) SetStockManager(operation common.Address,
 	log.Info("(s *BokerContext) SetStockManager", "operation", operation.String(), "address", address.String())
 
 	owner := s.GetStockManager()
-	log.Info("(s *BokerContext) SetStockManager GetStockManager", "owner", owner.String())
-
 	if owner == common.StringToAddress("") {
 
 		producer, err := dposContext.GetCurrentNowProducer(0, now)
@@ -699,10 +700,9 @@ func (s *BokerContext) SetStockManager(operation common.Address,
 
 		s.setOwnerTrie(address)
 	}
-	log.Info("(s *BokerContext) SetStockManager SetOwnerTrie", "address", address.String())
 
 	owner = s.GetStockManager()
-	log.Info("(s *BokerContext) SetStockManager Get Current Stock Manager", "owner", owner.String())
+	log.Info("(s *BokerContext) SetStockManager get Current Stock Manager", "owner", owner.String())
 
 	return nil
 }
@@ -749,14 +749,12 @@ func (s *BokerContext) SetStock(operation, address common.Address, number uint64
 	if owner != operation {
 		return errors.New("Operation Account Is not Owner")
 	}
-	log.Info("(s *BokerContext) SetStock GetStockManager", "owner", owner.String())
 
 	exists := s.stockExists(address)
 	if exists {
 		log.Error("(s *BokerContext) SetStock CheckSingleStockTrie Exists")
 		return errors.New("Stock Account is not Nil")
 	}
-	log.Info("(s *BokerContext) SetStock Check Stock", "exists", exists)
 
 	//得到已有股权
 	stockAccounts := s.getStocksTrie()
@@ -765,32 +763,28 @@ func (s *BokerContext) SetStock(operation, address common.Address, number uint64
 	stock.Number = number
 	stock.State = protocol.Run
 	stockAccounts = append(stockAccounts, address)
-	log.Info("(s *BokerContext) SetStock Get Stocks", "len", len(stockAccounts))
 
 	//写入股权数组
 	if err := s.setStocksTrie(stockAccounts); err != nil {
 		return errors.New("Stock Account is not Nil")
 	}
 	stocks := s.getStocksTrie()
-	log.Info("(c *BokerContracts) SetStock GetStocks", "len", len(stocks))
 	for i, v := range stocks {
 		log.Info("(c *BokerContracts) SetStock GetStocks", "i", i, "v", v)
 	}
-	log.Info("(c *BokerContracts) SetStock SetStocksTrie", "len", len(stockAccounts))
+	log.Info("(c *BokerContracts) SetStock", "stocks", len(stocks))
 
 	//写入单个股权
 	if err := s.setSingleStockTrie(stock); err != nil {
 		return errors.New("Stock Account is not Nil")
 	}
-	log.Info("(c *BokerContracts) SetStock SetSingleStockTrie")
-
 	stockAddress, getNumber, _, getErr := s.getSingleStockTrie(address)
 	if getErr != nil {
 
 		log.Error("(c *BokerContracts) SetStock GetSingleStockTrie Failed")
 		return errors.New("Stock Account is not Nil")
 	}
-	log.Info("(c *BokerContracts) SetStock GetSingleStockTrie", "address", stockAddress, "number", getNumber)
+	log.Info("(c *BokerContracts) SetStock", "address", stockAddress, "number", getNumber)
 
 	return nil
 }
@@ -864,7 +858,7 @@ func (s *BokerContext) FrozenStock(operation common.Address, from common.Address
 	return nil
 }
 
-func (s *BokerContext) UnFrozenStock(operation common.Address, from common.Address) error {
+func (s *BokerContext) UnFrozenStock(operation, from common.Address) error {
 
 	owner := s.GetStockManager()
 	if owner != operation {

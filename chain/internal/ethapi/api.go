@@ -884,6 +884,13 @@ func (s *PublicBlockChainAPI) StockUnFrozen(ctx context.Context, address common.
 	return tx.Hash(), nil
 }
 
+func (s *PublicBlockChainAPI) StockGasPool(ctx context.Context) (uint64, error) {
+
+	log.Info("(s *PublicBlockChainAPI) StockGasPool")
+	gasPool := s.b.CurrentBlock().BokerCtx().GetGasPool()
+	return gasPool, nil
+}
+
 //扩展
 func (s *PublicBlockChainAPI) SetWord(ctx context.Context, word string) (common.Hash, error) {
 

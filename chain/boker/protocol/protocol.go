@@ -17,19 +17,25 @@ import (
 )
 
 const (
-	ExtraVanity         = 32               //扩展字段的前缀字节数量
-	ExtraSeal           = 65               //扩展字段的后缀字节数量
-	InmemorySignatures  = 4096             //保留在内存中的最近块签名的数量
-	ProducerInterval    = int64(10)        //打包时间间隔（秒）
-	TimeoutInterval     = int64(300)       //超时周期
-	BlacksInterval      = int64(300)       //获取黑名单周期
-	EpochInterval       = int64(86400)     //一个周期的时间（86400秒 = 1天）
-	MaxValidatorSize    = 1                //DPOS的验证者数量
-	ConsensusSize       = 1                //共识确认验证者数量
-	BokerInterval       = time.Second      //分配通证时间间隔(秒)
-	AssignInterval      = time.Minute      //分配通证时间间隔单位
-	BlackInterval       = time.Minute      //黑名单间隔时间
-	MillisecondInterval = time.Millisecond //毫秒
+	ExtraVanity        = 32   //扩展字段的前缀字节数量
+	ExtraSeal          = 65   //扩展字段的后缀字节数量
+	InmemorySignatures = 4096 //保留在内存中的最近块签名的数量
+)
+
+const (
+	MaxValidatorSize = 1 //DPOS的验证者数量
+	ConsensusSize    = 1 //共识确认验证者数量
+)
+
+const (
+	BlacksInterval   = int64(300)       //黑名单周期
+	EpochInterval    = int64(86400)     //验证者周期
+	GasInterval      = int64(300)       //股权周期
+	BlockInterval    = int64(5)         //打包周期
+	MinuteTimer      = time.Minute      //分
+	SecondTimer      = time.Second      //秒
+	MillisecondTimer = time.Millisecond //毫秒
+
 )
 
 //主要交易类型
@@ -73,12 +79,13 @@ const (
 
 //股权类型的次要类型
 const (
-	StockManager  TxMinor = iota //股权管理者
-	StockSet                     //设置股权
-	StockTransfer                //转移部分股权
-	StockClean                   //销毁股权(将股权从某个账号中强行销毁)
-	StockFrozen                  //冻结股权(股权冻结，则此股权将无法获得Gas收益)
-	StockUnFrozen                //解冻股权
+	StockManager   TxMinor = iota //股权管理者
+	StockSet                      //设置股权
+	StockTransfer                 //转移部分股权
+	StockClean                    //销毁股权(将股权从某个账号中强行销毁)
+	StockFrozen                   //冻结股权(股权冻结，则此股权将无法获得Gas收益)
+	StockUnFrozen                 //解冻股权
+	StockAssignGas                //股权分币
 )
 
 //股权产生方式
@@ -199,10 +206,15 @@ var (
 	ErrStockLow                   = errors.New("account stock too low")
 )
 
+type StockRewards struct {
+	Timer  int64
+	Number uint64
+}
 type StockAccount struct {
 	Account common.Address
 	Number  uint64
 	State   StockState
+	//Rewards []StockRewards
 }
 
 //设置Tina链配置

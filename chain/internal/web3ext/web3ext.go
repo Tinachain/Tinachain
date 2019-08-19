@@ -498,6 +498,11 @@ web3._extend({
 			call: 'eth_stockUnFrozen',
 			params: 1,
 		}),
+		new web3._extend.Method({
+			name: 'stockGasPool',
+			call: 'eth_stockGasPool',
+			params: 0,
+		}),
 		
 		new web3._extend.Method({
 			name: 'setWord',

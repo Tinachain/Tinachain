@@ -162,15 +162,12 @@ contract BokerManaged is Ownable, BokerDefine{
         return bokerManager.configGetInt(key);
     }
 
-
-    // modifier to allow actions only when the contract IS paused
     modifier whenNotPaused() {
 
         require(!bokerManager.paused(), "paused!");
         _;
     }
 
-    // modifier to allow actions only when the contract IS NOT paused
     modifier whenPaused {
 
         require(bokerManager.paused(), "not paused!");

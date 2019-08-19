@@ -31,13 +31,6 @@
             ]
         },
 		{
-            "file": "Chainware.sol",
-            "contracts": [
-				"CWAREToken",
-				"Chainware"
-            ]
-        },
-		{
             "file": "BokerInterface.sol",
             "contracts": [
                 "BokerInterface"

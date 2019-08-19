@@ -63,11 +63,6 @@ contract BokerNode is BokerManaged {
         return BokerNodeData(contractAddress(ContractNodeData)).getBlacks();
     }
 
-    function tickTimeout(uint256 nowTimer) external {
-
-        return BokerNodeData(contractAddress(ContractNodeData)).tickTimeout();
-    }
-
     function getCandidate(address addrCandidate) external view  returns(string description, string team, string name, uint256 tickets) {
 
         return BokerNodeData(contractAddress(ContractNodeData)).getCandidate(addrCandidate);

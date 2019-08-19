@@ -364,7 +364,7 @@ func (dc *DposContext) GetCurrentProducer(firstTimer int64) (common.Address, err
 	}
 
 	offset := (time.Now().Unix() - firstTimer) % protocol.EpochInterval
-	offset /= protocol.ProducerInterval
+	offset /= protocol.BlockInterval
 
 	offset %= int64(producerSize)
 	return producers[offset], nil
@@ -382,7 +382,7 @@ func (dc *DposContext) GetCurrentNowProducer(firstTimer int64, now int64) (commo
 	}
 
 	offset := (now - firstTimer) % protocol.EpochInterval
-	offset /= protocol.ProducerInterval
+	offset /= protocol.BlockInterval
 
 	offset %= int64(producerSize)
 	return producers[offset], nil
@@ -400,7 +400,7 @@ func (dc *DposContext) GetLastProducer(indexOffset int, firstTimer int64) (commo
 	}
 
 	offset := (time.Now().Unix() - firstTimer) % protocol.EpochInterval
-	offset /= protocol.ProducerInterval
+	offset /= protocol.BlockInterval
 
 	offset %= int64(producerSize)
 
@@ -416,12 +416,12 @@ func (dc *DposContext) GetProducer(now int64, firstTimer int64) (producer common
 
 	producer = common.Address{}
 	offset := (now - firstTimer) % protocol.EpochInterval
-	if offset%protocol.ProducerInterval != 0 {
+	if offset%protocol.BlockInterval != 0 {
 
-		log.Info("GetProducer", "offset", offset%protocol.ProducerInterval)
+		log.Info("GetProducer", "offset", offset%protocol.BlockInterval)
 		return common.Address{}, protocol.ErrInvalidProducerTime
 	}
-	offset /= protocol.ProducerInterval
+	offset /= protocol.BlockInterval
 
 	//得到验证者数组
 	producers, err := dc.GetEpochTrie()

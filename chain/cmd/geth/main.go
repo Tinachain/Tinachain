@@ -307,7 +307,6 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	bokerChain := boker.New(ethereum.ChainDb())
 	bokerChain.Init(ethereum, block.Header().BokerProto)
 	ethereum.SetBoker(bokerChain)
-	//log.Info("Set BokerChain Pointer", "Number", block.Number(), "GetGasPool", block.BokerCtx().GetGasPool())
 	log.Info("Set BokerChain Pointer", "Number", block.Number())
 
 	//在这里启动worker的createNewWork，由于之前启动有可能ETH还没有启动完成

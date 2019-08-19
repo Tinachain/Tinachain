@@ -890,7 +890,7 @@ func (bc *BlockChain) InsertChain(chain types.Blocks) (int, error) {
 //将区块插入到链中
 func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*types.Log, error) {
 
-	log.Info("****insertChain****")
+	log.Info("(bc *BlockChain) insertChain")
 
 	//进行健全性检查，确保所提供的链实际顺序和已连接的
 	for i := 1; i < len(chain); i++ {

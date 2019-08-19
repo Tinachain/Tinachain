@@ -618,6 +618,18 @@ func (ec *Client) StockUnFrozen(ctx context.Context, address common.Address) (co
 	return txHash, nil
 }
 
+func (ec *Client) StockGasPool(ctx context.Context) (uint64, error) {
+
+	log.Info("(ec *Client) StockGasPool")
+
+	var gasPool uint64
+	err := ec.c.CallContext(ctx, &gasPool, "eth_stockGasPool")
+	if err != nil {
+		return 0, err
+	}
+	return gasPool, nil
+}
+
 //扩展
 func (ec *Client) SetWord(ctx context.Context, word string) (common.Hash, error) {
 

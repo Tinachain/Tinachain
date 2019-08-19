@@ -254,9 +254,4 @@ contract BokerNodeData is BokerManaged {
             }
         }
     }
-
-    function tickTimeout() external{
-        
-        //Todo
-    }
 }

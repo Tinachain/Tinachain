@@ -52,11 +52,6 @@ contract BokerInterfaceBase is BokerManaged{
         return INode(contractAddress(ContractNode)).getBlacks();
     }
 
-    function tickTimeout(uint256 nowTimer) external{
-
-        return INode(contractAddress(ContractNode)).tickTimeout(nowTimer);
-    }
-
     function rotateVote(uint256 nowTimer) external {
 
         return INode(contractAddress(ContractNode)).rotateVote(nowTimer);

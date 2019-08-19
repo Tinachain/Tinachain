@@ -378,13 +378,6 @@ func (st *StateTransition) NormalTransitionDb(dposContext *types.DposContext,
 
 	//退还Gas
 	st.refundGas()
-	/*if boker != nil {
-
-		addGas := (new(big.Int).Mul(st.gasUsed(), st.gasPrice)).Uint64()
-
-		log.Info("(st *StateTransition) NormalTransitionDb", "addGas", addGas)
-		bokerContext.AddGasPool(addGas)
-	}*/
 
 	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
 }
@@ -499,9 +492,62 @@ func (st *StateTransition) ExtraTransitionDb(dposContext *types.DposContext,
 	requiredGas = new(big.Int).Set(st.gasUsed())
 	st.refundGas()
 
-	//bokerContext.AddGasPool((new(big.Int).Mul(st.gasUsed(), st.gasPrice)).Uint64())
-
 	return ret, requiredGas, st.gasUsed(), vmerr != nil, err
+}
+
+func (st *StateTransition) bokerAssignGas(operation common.Address, now *big.Int, dposContext *types.DposContext, bokerContext *types.BokerContext) (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
+
+	log.Info("(st *StateTransition) bokerAssignGas", "operation", operation.String(), "now", now.Int64())
+
+	address, err := dposContext.GetCurrentNowProducer(0, now.Int64())
+	if err != nil {
+
+		log.Error("(st *StateTransition) bokerAssignGas", "err", err)
+		return []byte(""), new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, err
+	}
+
+	if address != operation {
+
+		log.Error("Operation Account Is not Producer", "operation", operation.String(), "producer", address.String())
+		return []byte(""), new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, errors.New("Operation Account Is not Producer")
+	}
+
+	//得到当前股权池中的Gas
+	gas := bokerContext.GetGasPool()
+	if gas <= 0 {
+
+		log.Info("(st *StateTransition) bokerAssignGas Gas is Zero")
+		return []byte(""), new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, nil
+	}
+
+	//得到总股权数量
+	var totalStock uint64 = 0
+	stocks := bokerContext.GetStocks()
+	for _, v := range stocks {
+
+		if v.State != protocol.Frozen {
+			totalStock = totalStock + v.Number
+		}
+	}
+
+	//得到每个股份应该分配的数量
+	singleGas := gas / totalStock
+
+	//开始分币
+	var curGas uint64 = 0
+	for _, v := range stocks {
+
+		userGas := singleGas * v.Number
+		totalGas := curGas + userGas
+		if totalGas > gas {
+			userGas = gas - curGas
+		}
+		curGas = curGas + userGas
+
+		//给用户加钱
+		st.state.AddBalance(v.Account, new(big.Int).SetUint64(userGas))
+	}
+	return []byte(""), new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, nil
 }
 
 func (st *StateTransition) StockTransitionDb(txMajor protocol.TxMajor,
@@ -536,6 +582,9 @@ func (st *StateTransition) StockTransitionDb(txMajor protocol.TxMajor,
 	} else if txMinor == protocol.StockUnFrozen {
 
 		bokerContext.UnFrozenStock(sender.Address(), *st.msg.To())
+	} else if txMinor == protocol.StockAssignGas {
+
+		st.bokerAssignGas(sender.Address(), timer, dposContext, bokerContext)
 	} else {
 		return []byte(""), new(big.Int).SetInt64(0), new(big.Int).SetInt64(0), false, errors.New("not know protocol type")
 	}
