@@ -559,6 +559,18 @@ func (ec *Client) StockSet(ctx context.Context, address common.Address, number u
 	return txHash, nil
 }
 
+func (ec *Client) GetStocks(ctx context.Context) (*protocol.StocksAccount, error) {
+
+	log.Info("(ec *Client) GetStock")
+
+	var stocks *protocol.StocksAccount
+	err := ec.c.CallContext(ctx, &stocks, "eth_stocksGet")
+	if err != nil {
+		return stocks, err
+	}
+	return stocks, nil
+}
+
 func (ec *Client) GetStock(ctx context.Context, address common.Address) (*protocol.StockAccount, error) {
 
 	log.Info("(ec *Client) GetStock", "address", address.String())

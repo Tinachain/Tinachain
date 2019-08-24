@@ -11,32 +11,38 @@ import (
 
 //****************Stock Interface
 type stocksResponse struct {
-	Number uint64 `json:"number"`
-	Timer  uint64 `json:"timer"`
+	Account []string `json:"accounts"`
+	Number  []uint64 `json:"numbers"`
+	State   []uint64 `json:"states"`
 }
 
 func StockgetStocks(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	log4plus.Info("blockRouter.go BlockgetBlockNumber")
+	log4plus.Info("blockRouter.go StockgetStocks")
 
 	if business.ChainClient == nil {
-		log4plus.Error("blockRouter.go BlockgetBlockNumber Failed chainclient is nil")
+		log4plus.Error("stockRouter.go StockgetStocks Failed chainclient is nil")
 	}
 
-	log4plus.Info("blockRouter.go BlockgetBlockNumber chainclient GetBlockNumber")
-	block, err := business.ChainClient.GetBlockNumber()
+	log4plus.Info("stockRouter.go StockgetStocks chainclient GetStocks")
+	stocks, err := business.ChainClient.GetStocks()
 	if err != nil {
 
-		log4plus.Error("blockRouter.go BlockgetBlockNumber chainclient GetBlockNumber is Failed")
+		log4plus.Error("stockRouter.go StockgetStocks chainclient GetStocks is Failed")
 		bytes, _ := json.Marshal(&ResponseCommon{0, ""})
 		w.Write(bytes)
 	}
 
-	log4plus.Info("blockRouter.go BlockgetBlockNumber response GetBlockNumber")
-	resp := &blockNumberResponse{}
-	resp.Number = block.Number
-	resp.Timer = block.Timer
+	log4plus.Info("stockRouter.go StockgetStocks response GetStocks")
+	resp := &stocksResponse{}
+
+	for _, v := range stocks.Stock {
+
+		resp.Account = append(resp.Account, v.Account.String())
+		resp.Number = append(resp.Number, v.Number)
+		resp.State = append(resp.State, uint64(v.State))
+	}
 
 	bytes, _ := json.Marshal(resp)
 	w.Write(bytes)
@@ -103,7 +109,7 @@ func StockgetOwner(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log4plus.Info("stockRouter.go StockgetOwner chainclient GetOwner")
-	block, err := business.ChainClient.GetOwner()
+	address, err := business.ChainClient.GetOwner()
 	if err != nil {
 
 		log4plus.Error("stockRouter.go StockgetOwner chainclient GetOwner is Failed")
@@ -113,8 +119,7 @@ func StockgetOwner(w http.ResponseWriter, r *http.Request) {
 
 	log4plus.Info("stockRouter.go StockgetOwner response GetOwner")
 	resp := &ownerResponse{}
-	resp.Owner = block.Number
-	resp.Timer = block.Timer
+	resp.Owner = address.String()
 
 	bytes, _ := json.Marshal(resp)
 	w.Write(bytes)

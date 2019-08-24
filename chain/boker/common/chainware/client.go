@@ -278,6 +278,20 @@ func (client *Client) GetTx(hash string) (tx *types.Transaction, pinding bool, e
 
 //*********************Stock Interface
 
+func (client *Client) GetStocks() (stocks *protocol.StocksAccount, err error) {
+
+	if nil == client.EthClient {
+		return nil, fmt.Errorf("interface not specified, call AtInterface first!")
+	}
+
+	stocks, err = client.EthClient.GetStocks(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	return stocks, nil
+}
+
 func (client *Client) GetStock(address string) (stock *protocol.StockAccount, err error) {
 
 	if nil == client.EthClient {
@@ -290,4 +304,18 @@ func (client *Client) GetStock(address string) (stock *protocol.StockAccount, er
 	}
 
 	return stock, nil
+}
+
+func (client *Client) GetOwner() (address ethcommon.Address, err error) {
+
+	if nil == client.EthClient {
+		return ethcommon.Address{}, fmt.Errorf("interface not specified, call AtInterface first!")
+	}
+
+	address, err = client.EthClient.GetStockManager(context.Background())
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+
+	return address, nil
 }

@@ -216,6 +216,10 @@ type StockAccount struct {
 	State   StockState
 }
 
+type StocksAccount struct {
+	Stock []*StockAccount
+}
+
 //设置Tina链配置
 type BokerConfig struct {
 	Address common.Address

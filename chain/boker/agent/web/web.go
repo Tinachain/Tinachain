@@ -51,15 +51,17 @@ func (b *Web) startWeb(listenString string) {
 
 	//****************Node Interface
 	// View
-	m.Handle("/node/getCandidates", b.handlerWrap(http.HandlerFunc(UsergetCandidates)))
-	m.Handle("/node/getCandidate", b.handlerWrap(http.HandlerFunc(UsergetCandidate)))
+	m.Handle("/node/candidates", b.handlerWrap(http.HandlerFunc(UsergetCandidates)))
+	m.Handle("/node/candidate", b.handlerWrap(http.HandlerFunc(UsergetCandidate)))
 
 	//****************Block Interface
-	m.Handle("/block/getBlockNumber", b.handlerWrap(http.HandlerFunc(BlockgetBlockNumber)))
-	m.Handle("/block/getTxFromHash", b.handlerWrap(http.HandlerFunc(BlockgetTx)))
+	m.Handle("/block/blockNumber", b.handlerWrap(http.HandlerFunc(BlockgetBlockNumber)))
+	m.Handle("/block/txFromHash", b.handlerWrap(http.HandlerFunc(BlockgetTx)))
 
 	//****************Stock Interface
-	m.Handle("/stock/getBlockNumber", b.handlerWrap(http.HandlerFunc(BlockgetBlockNumber)))
+	m.Handle("/stock/stocks", b.handlerWrap(http.HandlerFunc(StockgetStocks)))
+	m.Handle("/stock/stock", b.handlerWrap(http.HandlerFunc(StockgetStock)))
+	m.Handle("/stock/stockManager", b.handlerWrap(http.HandlerFunc(StockgetOwner)))
 
 	n := negroni.Classic()
 	n.UseHandler(m)

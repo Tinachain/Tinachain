@@ -474,6 +474,11 @@ web3._extend({
 			params: 2,
 		}),
 		new web3._extend.Method({
+			name: 'stocksGet',
+			call: 'eth_stocksGet',
+			params: 0,
+		}),
+		new web3._extend.Method({
 			name: 'stockGet',
 			call: 'eth_stockGet',
 			params: 1,

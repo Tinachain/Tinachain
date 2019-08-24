@@ -736,6 +736,30 @@ func (s *PublicBlockChainAPI) StockGet(ctx context.Context, address common.Addre
 	return stockAccount, nil
 }
 
+func (s *PublicBlockChainAPI) StocksGet(ctx context.Context) (*protocol.StocksAccount, error) {
+
+	log.Info("(s *PublicBlockChainAPI) StocksGet")
+
+	stocksAccount := s.b.CurrentBlock().BokerCtx().GetStocks()
+	if stocksAccount == nil {
+		return nil, nil
+	}
+
+	var stocks *protocol.StocksAccount
+	for _, v := range stocksAccount {
+
+		singleStock := &protocol.StockAccount{
+			Account: v.Account,
+			Number:  v.Number,
+			State:   v.State,
+		}
+
+		stocks.Stock = append(stocks.Stock, singleStock)
+	}
+
+	return stocks, nil
+}
+
 func (s *PublicBlockChainAPI) StockTransfer(ctx context.Context, from common.Address, to common.Address, number uint64) (common.Hash, error) {
 
 	log.Info("(s *PublicBlockChainAPI) StockTransfer", "from", from.String(), "to", to.String(), "number", number)
