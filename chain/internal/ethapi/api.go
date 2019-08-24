@@ -724,16 +724,16 @@ func (s *PublicBlockChainAPI) StockSet(ctx context.Context, address common.Addre
 	return tx.Hash(), nil
 }
 
-func (s *PublicBlockChainAPI) StockGet(ctx context.Context, address common.Address) (uint64, error) {
+func (s *PublicBlockChainAPI) StockGet(ctx context.Context, address common.Address) (*protocol.StockAccount, error) {
 
 	log.Info("(s *PublicBlockChainAPI) StockGet", "address", address.String())
 
 	stockAccount := s.b.CurrentBlock().BokerCtx().GetStock(address)
 	if stockAccount == nil {
-		return 0, nil
+		return nil, nil
 	}
 
-	return stockAccount.Number, nil
+	return stockAccount, nil
 }
 
 func (s *PublicBlockChainAPI) StockTransfer(ctx context.Context, from common.Address, to common.Address, number uint64) (common.Hash, error) {

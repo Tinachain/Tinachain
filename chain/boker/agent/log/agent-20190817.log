@@ -1,0 +1,60 @@
+2019/08/17 23:24:04 [ INFO] <main.go:103> main.go current dir=/root/go/src/github.com/Chainware/chain/boker/agent
+2019/08/17 23:24:04 [ INFO] <main.go:55> main.go New config Listen=0.0.0.0:9999 RPC=http://39.98.194.132:8545 Keystore=keystore.json Password=123456 ManagerAddress=0xA493639227dD5504D3Ff21FCa5efF4110A416383 InterfaceAddress=0xd9645A028c4e5f2Fd64F7D96E61531e419F0cA6e
+2019/08/17 23:24:04 [ INFO] <main.go:108> main.go initchain
+2019/08/17 23:24:05 [ INFO] <main.go:118> main.go web.New
+2019/08/17 23:24:05 [ INFO] <web.go:74> Server.Run...
+2019/08/17 23:24:05 [DEBUG] <web.go:68> startWeb listen=0.0.0.0:9999
+2019/08/17 23:24:54 [ INFO] <userRouter.go:143> cmdRouter.go UsergetCandidates
+2019/08/17 23:24:54 [ INFO] <userRouter.go:149> cmdRouter.go UsergetCandidates chainclient GetCandidates
+2019/08/17 23:24:55 [ INFO] <userRouter.go:158> cmdRouter.go UsergetCandidates len(address)=0 len(tickets)=0
+2019/08/17 23:24:55 [ INFO] <userRouter.go:165> cmdRouter.go UsergetCandidates response candidates
+2019/08/17 23:31:01 [ INFO] <main.go:103> main.go current dir=/root/go/src/github.com/Chainware/chain/boker/agent
+2019/08/17 23:31:01 [ INFO] <main.go:55> main.go New config Listen=0.0.0.0:9999 RPC=http://39.98.194.132:8545 Keystore=keystore.json Password=123456 ManagerAddress=0xA493639227dD5504D3Ff21FCa5efF4110A416383 InterfaceAddress=0xd9645A028c4e5f2Fd64F7D96E61531e419F0cA6e
+2019/08/17 23:31:01 [ INFO] <main.go:108> main.go initchain
+2019/08/17 23:31:02 [ INFO] <main.go:118> main.go web.New
+2019/08/17 23:31:02 [ INFO] <web.go:74> Server.Run...
+2019/08/17 23:31:02 [DEBUG] <web.go:68> startWeb listen=0.0.0.0:9999
+2019/08/17 23:31:07 [ INFO] <userRouter.go:31> cmdRouter.go UserregisterCandidate
+2019/08/17 23:31:07 [DEBUG] <userRouter.go:42> cmdRouter.go UserregisterCandidate address=0x72b2b3a49f6996d492312f3327fdc97685cb281e Description=this is a test Team=chainware Name=chainware Tickets=10000
+2019/08/17 23:31:07 [ INFO] <userRouter.go:55> cmdRouter.go UserregisterCandidate RegisterCandidate hash=0x0000000000000000000000000000000000000000000000000000000000000000
+2019/08/17 23:32:16 [ INFO] <userRouter.go:31> cmdRouter.go UserregisterCandidate
+2019/08/17 23:32:16 [DEBUG] <userRouter.go:42> cmdRouter.go UserregisterCandidate address=0x72b2b3a49f6996d492312f3327fdc97685cb281e Description=this is a test Team=chainware Name=chainware Tickets=10000
+2019/08/17 23:32:18 [ INFO] <userRouter.go:55> cmdRouter.go UserregisterCandidate RegisterCandidate hash=0x0000000000000000000000000000000000000000000000000000000000000000
+2019/08/17 23:34:44 [ INFO] <main.go:103> main.go current dir=/root/go/src/github.com/Chainware/chain/boker/agent
+2019/08/17 23:34:44 [ INFO] <main.go:55> main.go New config Listen=0.0.0.0:9999 RPC=http://39.98.194.132:8545 Keystore=keystore.json Password=123456 ManagerAddress=0xA493639227dD5504D3Ff21FCa5efF4110A416383 InterfaceAddress=0xd9645A028c4e5f2Fd64F7D96E61531e419F0cA6e
+2019/08/17 23:34:44 [ INFO] <main.go:108> main.go initchain
+2019/08/17 23:34:45 [ INFO] <main.go:118> main.go web.New
+2019/08/17 23:34:45 [ INFO] <web.go:74> Server.Run...
+2019/08/17 23:34:45 [DEBUG] <web.go:68> startWeb listen=0.0.0.0:9999
+2019/08/17 23:34:56 [ INFO] <userRouter.go:31> cmdRouter.go UserregisterCandidate
+2019/08/17 23:34:56 [DEBUG] <userRouter.go:42> cmdRouter.go UserregisterCandidate address=0x72b2b3a49f6996d492312f3327fdc97685cb281e Description=this is a test Team=chainware Name=chainware Tickets=10000
+2019/08/17 23:34:57 [ INFO] <userRouter.go:55> cmdRouter.go UserregisterCandidate RegisterCandidate hash=0xcb5351e3c82abecc2464e6685a8aad554041f38e407c4ee77c615f0674d522a9
+2019/08/17 23:36:49 [ INFO] <main.go:103> main.go current dir=/root/go/src/github.com/Chainware/chain/boker/agent
+2019/08/17 23:36:49 [ INFO] <main.go:55> main.go New config Listen=0.0.0.0:9999 RPC=http://39.98.194.132:8545 Keystore=keystore.json Password=123456 ManagerAddress=0xA493639227dD5504D3Ff21FCa5efF4110A416383 InterfaceAddress=0xd9645A028c4e5f2Fd64F7D96E61531e419F0cA6e
+2019/08/17 23:36:49 [ INFO] <main.go:108> main.go initchain
+2019/08/17 23:36:50 [ INFO] <main.go:118> main.go web.New
+2019/08/17 23:36:50 [ INFO] <web.go:74> Server.Run...
+2019/08/17 23:36:50 [DEBUG] <web.go:68> startWeb listen=0.0.0.0:9999
+2019/08/17 23:36:58 [ INFO] <userRouter.go:31> cmdRouter.go UserregisterCandidate
+2019/08/17 23:36:58 [DEBUG] <userRouter.go:42> cmdRouter.go UserregisterCandidate address=0x72b2b3a49f6996d492312f3327fdc97685cb281e Description=this is a test Team=chainware Name=chainware Tickets=10000
+2019/08/17 23:36:59 [ INFO] <userRouter.go:55> cmdRouter.go UserregisterCandidate RegisterCandidate hash=0x8b8aae06330e9e705c7021416c725567008254e6122dccee57523bbd1a3d3413
+2019/08/17 23:43:40 [ INFO] <main.go:103> main.go current dir=/root/go/src/github.com/Chainware/chain/boker/agent
+2019/08/17 23:43:40 [ INFO] <main.go:55> main.go New config Listen=0.0.0.0:9999 RPC=http://39.98.194.132:8545 Keystore=keystore.json Password=123456 ManagerAddress=0xA493639227dD5504D3Ff21FCa5efF4110A416383 InterfaceAddress=0xd9645A028c4e5f2Fd64F7D96E61531e419F0cA6e
+2019/08/17 23:43:40 [ INFO] <main.go:108> main.go initchain
+2019/08/17 23:43:42 [ INFO] <main.go:118> main.go web.New
+2019/08/17 23:43:42 [ INFO] <web.go:74> Server.Run...
+2019/08/17 23:43:42 [DEBUG] <web.go:68> startWeb listen=0.0.0.0:9999
+2019/08/17 23:43:48 [ INFO] <userRouter.go:73> cmdRouter.go Uservote
+2019/08/17 23:43:48 [ERROR] <userRouter.go:80> cmdRouter.go Uservote err=invalid character '}' looking for beginning of object key string
+2019/08/17 23:44:08 [ INFO] <userRouter.go:73> cmdRouter.go Uservote
+2019/08/17 23:44:08 [DEBUG] <userRouter.go:84> cmdRouter.go Uservote addrvoter=0x72b2b3a49f6996d492312f3327fdc97685cb281e addrcandidate=0x72b2b3a49f6996d492312f3327fdc97685cb281e tokens=100000
+2019/08/17 23:44:09 [ INFO] <userRouter.go:95> cmdRouter.go Uservote Vote hash=0x0000000000000000000000000000000000000000000000000000000000000000
+2019/08/17 23:45:21 [ INFO] <main.go:103> main.go current dir=/root/go/src/github.com/Chainware/chain/boker/agent
+2019/08/17 23:45:21 [ INFO] <main.go:55> main.go New config Listen=0.0.0.0:9999 RPC=http://39.98.194.132:8545 Keystore=keystore.json Password=123456 ManagerAddress=0xA493639227dD5504D3Ff21FCa5efF4110A416383 InterfaceAddress=0xd9645A028c4e5f2Fd64F7D96E61531e419F0cA6e
+2019/08/17 23:45:21 [ INFO] <main.go:108> main.go initchain
+2019/08/17 23:45:22 [ INFO] <main.go:118> main.go web.New
+2019/08/17 23:45:22 [ INFO] <web.go:74> Server.Run...
+2019/08/17 23:45:22 [DEBUG] <web.go:68> startWeb listen=0.0.0.0:9999
+2019/08/17 23:45:29 [ INFO] <userRouter.go:73> cmdRouter.go Uservote
+2019/08/17 23:45:29 [DEBUG] <userRouter.go:84> cmdRouter.go Uservote addrvoter=0x72b2b3a49f6996d492312f3327fdc97685cb281e addrcandidate=0x72b2b3a49f6996d492312f3327fdc97685cb281e tokens=100000
+2019/08/17 23:45:30 [ INFO] <userRouter.go:95> cmdRouter.go Uservote Vote hash=0x0000000000000000000000000000000000000000000000000000000000000000

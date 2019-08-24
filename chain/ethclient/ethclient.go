@@ -8,6 +8,7 @@ import (
 	"math/big"
 
 	"github.com/Tinachain/Tina/chain"
+	"github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/common/hexutil"
 	"github.com/Tinachain/Tina/chain/core/types"
@@ -558,16 +559,16 @@ func (ec *Client) StockSet(ctx context.Context, address common.Address, number u
 	return txHash, nil
 }
 
-func (ec *Client) GetStock(ctx context.Context, address common.Address) (uint64, error) {
+func (ec *Client) GetStock(ctx context.Context, address common.Address) (*protocol.StockAccount, error) {
 
 	log.Info("(ec *Client) GetStock", "address", address.String())
 
-	var number uint64
-	err := ec.c.CallContext(ctx, &number, "eth_stockGet", address)
+	var stock *protocol.StockAccount
+	err := ec.c.CallContext(ctx, &stock, "eth_stockGet", address)
 	if err != nil {
-		return 0, err
+		return stock, err
 	}
-	return number, nil
+	return stock, nil
 }
 
 func (ec *Client) StockTransfer(ctx context.Context, from common.Address, to common.Address, number uint64) (common.Hash, error) {

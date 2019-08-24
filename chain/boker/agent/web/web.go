@@ -49,15 +49,17 @@ func (b *Web) startWeb(listenString string) {
 	//用户路由;
 	m := mux.NewRouter()
 
-	//****************Chainware Node Interface
-	// Transaction
-	//	m.Handle("/interface/registerCandidate", b.handlerWrap(http.HandlerFunc(UserregisterCandidate)))
-	//	m.Handle("/interface/vote", b.handlerWrap(http.HandlerFunc(Uservote)))
-	//	m.Handle("/interface/cancelAllVotes", b.handlerWrap(http.HandlerFunc(UsercancelAllVotes)))
-
+	//****************Node Interface
 	// View
-	m.Handle("/interface/getCandidates", b.handlerWrap(http.HandlerFunc(UsergetCandidates)))
-	m.Handle("/interface/getCandidate", b.handlerWrap(http.HandlerFunc(UsergetCandidate)))
+	m.Handle("/node/getCandidates", b.handlerWrap(http.HandlerFunc(UsergetCandidates)))
+	m.Handle("/node/getCandidate", b.handlerWrap(http.HandlerFunc(UsergetCandidate)))
+
+	//****************Block Interface
+	m.Handle("/block/getBlockNumber", b.handlerWrap(http.HandlerFunc(BlockgetBlockNumber)))
+	m.Handle("/block/getTxFromHash", b.handlerWrap(http.HandlerFunc(BlockgetTx)))
+
+	//****************Stock Interface
+	m.Handle("/stock/getBlockNumber", b.handlerWrap(http.HandlerFunc(BlockgetBlockNumber)))
 
 	n := negroni.Classic()
 	n.UseHandler(m)

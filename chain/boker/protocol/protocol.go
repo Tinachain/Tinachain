@@ -214,7 +214,6 @@ type StockAccount struct {
 	Account common.Address
 	Number  uint64
 	State   StockState
-	//Rewards []StockRewards
 }
 
 //设置Tina链配置

@@ -7,8 +7,10 @@ import (
 	"strings"
 
 	"github.com/Tinachain/Tina/chain/accounts/abi/bind"
+	"github.com/Tinachain/Tina/chain/boker/protocol"
 	ethcommon "github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/contracts/boker_interface"
+	"github.com/Tinachain/Tina/chain/core/types"
 	"github.com/Tinachain/Tina/chain/ethclient"
 )
 
@@ -186,49 +188,7 @@ func (client *Client) GetContractSize() (int64, error) {
 	return sz.Int64(), nil
 }
 
-//*********************Chainware Node Interface
-
-func (client *Client) RegisterCandidate(description, team, name string, tickets *big.Int) (ethcommon.Hash, error) {
-
-	if nil == client.ContractInterface {
-		return ethcommon.Hash{}, fmt.Errorf("interface not specified, call AtInterface first!")
-	}
-
-	opts := client.NewOpts()
-	tx, err := client.ContractInterface.RegisterCandidate(opts, description, team, name, tickets)
-	if err != nil {
-		return ethcommon.Hash{}, err
-	}
-	return tx.Hash(), nil
-}
-
-/*func (client *Client) Vote(addrvoter, addrcandidate ethcommon.Address, tokens int64) (ethcommon.Hash, error) {
-
-	if nil == client.ContractInterface {
-		return ethcommon.Hash{}, fmt.Errorf("interface not specified, call AtInterface first!")
-	}
-
-	opts := client.NewOpts()
-	tx, err := client.ContractInterface.Vote(opts, addrvoter, addrcandidate, new(big.Int).SetInt64(tokens))
-	if err != nil {
-		return ethcommon.Hash{}, err
-	}
-	return tx.Hash(), nil
-}*/
-
-func (client *Client) CancelAllVotes(address ethcommon.Address) (ethcommon.Hash, error) {
-
-	if nil == client.ContractInterface {
-		return ethcommon.Hash{}, fmt.Errorf("interface not specified, call AtInterface first!")
-	}
-
-	opts := client.NewOpts()
-	tx, err := client.ContractInterface.CancelAllVotes(opts)
-	if err != nil {
-		return ethcommon.Hash{}, err
-	}
-	return tx.Hash(), nil
-}
+//*********************Node Interface
 
 func (client *Client) GetCandidates() (struct {
 	Addresses []ethcommon.Address
@@ -278,4 +238,56 @@ func (client *Client) GetCandidate(address ethcommon.Address) (struct {
 		return ret, err
 	}
 	return candidate, nil
+}
+
+func (client *Client) GetBlockNumber() (struct {
+	Number uint64
+	Timer  uint64
+}, error) {
+
+	var ret struct {
+		Number uint64
+		Timer  uint64
+	}
+
+	if nil == client.EthClient {
+		return ret, fmt.Errorf("interface not specified, call AtInterface first!")
+	}
+
+	block, err := client.EthClient.BlockByNumber(context.Background(), nil)
+	if err != nil {
+		return ret, err
+	}
+	ret.Number = block.Number().Uint64()
+	ret.Timer = block.Time().Uint64()
+	return ret, nil
+}
+
+func (client *Client) GetTx(hash string) (tx *types.Transaction, pinding bool, err error) {
+
+	if nil == client.EthClient {
+		return nil, false, fmt.Errorf("interface not specified, call AtInterface first!")
+	}
+
+	tx, pinding, err = client.EthClient.TransactionByHash(context.Background(), ethcommon.StringToHash(hash))
+	if err != nil {
+		return nil, false, err
+	}
+	return tx, pinding, nil
+}
+
+//*********************Stock Interface
+
+func (client *Client) GetStock(address string) (stock *protocol.StockAccount, err error) {
+
+	if nil == client.EthClient {
+		return nil, fmt.Errorf("interface not specified, call AtInterface first!")
+	}
+
+	stock, err = client.EthClient.GetStock(context.Background(), ethcommon.StringToAddress(address))
+	if err != nil {
+		return nil, err
+	}
+
+	return stock, nil
 }

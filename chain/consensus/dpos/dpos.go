@@ -403,9 +403,7 @@ func getRewards(header *types.Header) (minerParam, stockParam *big.Int) {
 	} else {
 
 		year := time.Unix(header.Time.Int64(), 0).Year()
-		//postion := int(math.Floor((year - genesisYear) / 4))
 		postion := (year - genesisYear) / 4
-
 		minerParam = MinerRewards[postion]
 		stockParam = StockRewards[postion]
 		return minerParam, stockParam

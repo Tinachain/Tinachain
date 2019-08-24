@@ -1,0 +1,6 @@
+2019/08/23 00:06:49 [ INFO] <main.go:103> main.go current dir=/root/go/src/github.com/Chainware/chain/boker/agent
+2019/08/23 00:06:49 [ INFO] <main.go:55> main.go New config Listen=0.0.0.0:9999 RPC=http://39.98.194.132:8545 Keystore=keystore.json Password=123456 ManagerAddress=0xA493639227dD5504D3Ff21FCa5efF4110A416383 InterfaceAddress=0xd9645A028c4e5f2Fd64F7D96E61531e419F0cA6e
+2019/08/23 00:06:49 [ INFO] <main.go:108> main.go initchain
+2019/08/23 00:06:50 [ INFO] <main.go:120> main.go web.New
+2019/08/23 00:06:50 [ INFO] <main.go:122> main.go web.Run
+2019/08/23 00:06:50 [DEBUG] <web.go:96> (b *Web) startWeb listen=0.0.0.0:9999
