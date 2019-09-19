@@ -30,7 +30,7 @@ cd /usr/local/nginx/conf
 vi nginx.conf
 
 server {
-        listen      9001 ;
+        listen      9001;
         location / {
                 proxy_pass   http://127.0.0.1:8545;
                 add_header 'Access-Control-Allow-Credentials' 'true';
@@ -40,7 +40,18 @@ server {
     }
 	
 	
+server {
+        listen      9002;
+        location / {
+                proxy_pass   http://127.0.0.1:8546;
+                add_header 'Access-Control-Allow-Credentials' 'true';
+                add_header Access-Control-Allow-Origin *;
+                add_header Access-Control-Allow-Headers *;
+        }
+    }
+	
 	
 Æô¶¯nginx
-
+cd /usr/local/nginx/sbin
+./nginx -s reload
 	

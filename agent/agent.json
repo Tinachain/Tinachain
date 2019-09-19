@@ -1,0 +1,8 @@
+{
+	"listen": "0.0.0.0:9999",
+	"rpc": "http://39.98.194.132:8545",
+	"keystore": "keystore.json",
+	"password": "123456",
+	"manageraddress": "0xA493639227dD5504D3Ff21FCa5efF4110A416383",
+	"interfaceaddress": "0xd9645A028c4e5f2Fd64F7D96E61531e419F0cA6e"
+}

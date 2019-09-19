@@ -1,0 +1,12 @@
+{
+    "LogLevel" : "debug",
+
+    "FileWriter" : {
+        "LogPath" : "log/agent-%Y%M%D.log",
+        "On": true
+    },
+
+    "ConsoleWriter" : {
+        "On" : true
+    }
+}
