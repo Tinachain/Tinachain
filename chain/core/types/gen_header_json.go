@@ -9,6 +9,7 @@ import (
 
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/common/hexutil"
+	"github.com/Tinachain/Tina/chain/log"
 )
 
 var _ = (*headerMarshaling)(nil)
@@ -24,7 +25,7 @@ func (h Header) MarshalJSON() ([]byte, error) {
 		TxHash      common.Hash        `json:"transactionsRoot" gencodec:"required"`
 		ReceiptHash common.Hash        `json:"receiptsRoot"     gencodec:"required"`
 		DposProto   *DposContextProto  `json:"dposContext"      gencodec:"required"`
-		BokerProto  *BokerBackendProto `json:"bokerBackend"      gencodec:"required"`
+		BokerProto  *BokerBackendProto `json:"bokerBackend"     gencodec:"required"`
 		Bloom       Bloom              `json:"logsBloom"        gencodec:"required"`
 		Difficulty  *hexutil.Big       `json:"difficulty"       gencodec:"required"`
 		Number      *hexutil.Big       `json:"number"           gencodec:"required"`
@@ -81,6 +82,7 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		MixDigest   *common.Hash       `json:"mixHash"          gencodec:"required"`
 		Nonce       *BlockNonce        `json:"nonce"            gencodec:"required"`
 	}
+
 	var dec Header
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
@@ -113,16 +115,6 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'receiptsRoot' for Header")
 	}
 	h.ReceiptHash = *dec.ReceiptHash
-
-	if dec.DposProto == nil {
-		return errors.New("missing required field 'dposProto' for Header")
-	}
-	h.DposProto = dec.DposProto
-
-	if dec.BokerProto == nil {
-		return errors.New("missing required field 'bokerProto' for Header")
-	}
-	h.BokerProto = dec.BokerProto
 
 	if dec.Bloom == nil {
 		return errors.New("missing required field 'logsBloom' for Header")
@@ -160,5 +152,18 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'nonce' for Header")
 	}
 	h.Nonce = *dec.Nonce
+
+	log.Debug("(h *Header) UnmarshalJSON", "Number", h.Number.Int64())
+
+	/*if dec.DposProto == nil {
+		return errors.New("missing required field 'dposProto' for Header")
+	}*/
+	h.DposProto = dec.DposProto
+
+	/*if dec.BokerProto == nil {
+		return errors.New("missing required field 'bokerProto' for Header")
+	}*/
+	h.BokerProto = dec.BokerProto
+
 	return nil
 }

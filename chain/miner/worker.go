@@ -231,7 +231,7 @@ func (self *worker) mintBlock(now int64) {
 			}
 
 			//对区块进行封包处理
-			result, err := self.engine.Seal(self.chain, work.Block, self.quitCh)
+			result, err := self.engine.Seal(self.chain, work.Block, now, self.quitCh)
 			if err != nil {
 				log.Error("Failed to seal the block", "err", err)
 				return
@@ -275,7 +275,7 @@ func (self *worker) mintBlock(now int64) {
 			return
 		}
 		//对区块进行封包处理
-		result, err := self.engine.Seal(self.chain, work.Block, self.quitCh)
+		result, err := self.engine.Seal(self.chain, work.Block, now, self.quitCh)
 		if err != nil {
 			log.Error("Failed to seal the block", "err", err)
 			return
@@ -582,7 +582,7 @@ func (self *worker) createNewWork() (*Work, error) {
 		log.Info("createNewWork check eth is nil")
 	}
 
-	log.Info("createNewWork self.engine.Finalize")
+	//log.Info("createNewWork self.engine.Finalize")
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts, work.dposContext, work.bokerContext, self.eth.Boker()); err != nil {
 		return nil, fmt.Errorf("got error when finalize block for sealing, err: %s", err)
 	}

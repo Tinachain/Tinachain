@@ -418,20 +418,20 @@ func AccumulateRewards(config *params.ChainConfig,
 	bokerContext *types.BokerContext,
 	boker bokerapi.Api) {
 
-	log.Info("dpos.go AccumulateRewards", "Number", header.Number.String(), "Time", header.Time)
+	//log.Info("dpos.go AccumulateRewards", "Number", header.Number.String(), "Time", header.Time)
 	minerParam, stockParam := getRewards(header)
 
 	//给出块节点的报酬
 	minerReward := big.NewInt(1)
 	minerReward.Mul(protocol.TinaUnit, minerParam)
 	state.AddBalance(header.Coinbase, new(big.Int).Set(minerReward))
-	log.Info("dpos.go AccumulateRewards Miner Award", "Coinbase", header.Coinbase, "reward", new(big.Int).Set(minerReward))
+	//log.Info("dpos.go AccumulateRewards Miner Award", "Coinbase", header.Coinbase, "reward", new(big.Int).Set(minerReward))
 
 	//将其它部分放入到股权gas池中,等待分配
 	stockReward := big.NewInt(1)
 	stockReward.Mul(protocol.TinaUnit, stockParam)
 	bokerContext.AddGasPool(new(big.Int).Set(stockReward).Uint64())
-	log.Info("dpos.go AccumulateRewards Stock Award", "reward", new(big.Int).Set(stockReward))
+	//log.Info("dpos.go AccumulateRewards Stock Award", "reward", new(big.Int).Set(stockReward))
 }
 
 //将交易放入到区块中
@@ -444,8 +444,6 @@ func (d *Dpos) Finalize(chain consensus.ChainReader,
 	dposContext *types.DposContext,
 	bokerContext *types.BokerContext,
 	boker bokerapi.Api) (*types.Block, error) {
-
-	log.Info("(d *Dpos) Finalize", "Number", header.Number.String())
 
 	if header.Number.Uint64() != firstNumber {
 		AccumulateRewards(chain.Config(), state, header, uncles, txs, bokerContext, boker)
@@ -554,14 +552,14 @@ func (d *Dpos) GetProducerSize(lastBlock *types.Block, producer common.Address) 
 }
 
 //封装区块
-func (d *Dpos) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+func (d *Dpos) Seal(chain consensus.ChainReader, block *types.Block, now int64, stop <-chan struct{}) (*types.Block, error) {
 
 	header := block.Header()
 	number := header.Number.Uint64()
 	if number == 0 {
 		return nil, protocol.ErrUnknownBlock
 	}
-	now := time.Now().Unix()
+	log.Info("(d *Dpos) Seal", "now", now)
 
 	firstHeader := chain.GetHeaderByNumber(0)
 
@@ -574,7 +572,14 @@ func (d *Dpos) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan
 		case <-time.After(time.Duration(delay) * time.Second):
 		}
 	}
-	block.Header().Time.SetInt64(time.Now().Unix())
+
+	//这里用来验证时间是否一致（有可能header中的时间和now时间不一致，这种情况尤其在虚拟机中会出现）
+	log.Info("(d *Dpos) Seal", "Number", header.Number, "header.Time", header.Time.Int64(), "now", now)
+	if header.Time.Int64() != now {
+
+		log.Error("(d *Dpos) Seal Time Inconsistency", "header.Time", header.Time.Int64(), "now", now)
+		header.Time.SetInt64(now)
+	}
 
 	//对区块进行签名
 	sighash, err := d.signFn(accounts.Account{Address: d.signer}, sigHash(header).Bytes())

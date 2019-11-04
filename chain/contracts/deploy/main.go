@@ -118,7 +118,7 @@ func LoadChainwareConfig() *ChainwareConfig {
 
 func Deploy() {
 
-	Log("Deploy Contracts to Chainware")
+	Log("Deploy Contracts to Tinachain")
 
 	client, err := tinachain.NewClient(config.GetInstance().BokerchainRpc)
 	if err != nil {
@@ -132,7 +132,7 @@ func Deploy() {
 		return
 	}
 
-	Log("Deploy Program connected to Chainware account %s\n", config.GetInstance().BokerchainAdminKeystore)
+	Log("Deploy Program connected to Tinachain account %s\n", config.GetInstance().BokerchainAdminKeystore)
 
 	fJs, err := os.Create("contract.js")
 	if err != nil {

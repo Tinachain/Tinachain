@@ -84,7 +84,7 @@ func NewGasPoolTrie(root common.Hash, db ethdb.Database) (*trie.Trie, error) {
 
 func NewBokerContext(db ethdb.Database) (*BokerContext, error) {
 
-	log.Info("Create Tinachain Single Stock Trie")
+	//log.Info("Create Tinachain Single Stock Trie")
 	singleContractsTrie, err := NewSingleContractTrie(common.Hash{}, db)
 	if err != nil {
 		log.Error("Create Tinachain Single Stock Trie", "err", err)
@@ -97,21 +97,21 @@ func NewBokerContext(db ethdb.Database) (*BokerContext, error) {
 		return nil, err
 	}
 
-	log.Info("Create Tinachain Single Stock Trie")
+	//log.Info("Create Tinachain Single Stock Trie")
 	singleStockTrie, err := NewSingleStockTrie(common.Hash{}, db)
 	if err != nil {
 		log.Error("Create Tinachain Single Stock Trie", "err", err)
 		return nil, err
 	}
 
-	log.Info("Create Tinachain Stocks Trie")
+	//log.Info("Create Tinachain Stocks Trie")
 	stocksTrie, err := NewStocksTrie(common.Hash{}, db)
 	if err != nil {
 		log.Error("Create Tinachain Stocks Trie", "err", err)
 		return nil, err
 	}
 
-	log.Info("Create Tinachain Owner Trie")
+	//log.Info("Create Tinachain Owner Trie")
 	ownerTrie, err := NewOwnerTrie(common.Hash{}, db)
 	if err != nil {
 		log.Error("Create Tinachain Owner Trie", "err", err)
@@ -138,7 +138,7 @@ func NewBokerContext(db ethdb.Database) (*BokerContext, error) {
 
 func NewBokerContextFromProto(db ethdb.Database, ctxProto *BokerBackendProto) (*BokerContext, error) {
 
-	log.Info("Create Tinachain Single Stock Trie")
+	//log.Info("Create Tinachain Single Stock Trie")
 	singleContractsTrie, err := NewSingleContractTrie(ctxProto.SingleHash, db)
 	if err != nil {
 		log.Error("Create Tinachain Single Stock Trie", "err", err)
@@ -151,28 +151,28 @@ func NewBokerContextFromProto(db ethdb.Database, ctxProto *BokerBackendProto) (*
 		return nil, err
 	}
 
-	log.Info("Create Tinachain Single Stock Trie", "Hash", ctxProto.SingleStockHash.String())
+	//log.Info("Create Tinachain Single Stock Trie", "Hash", ctxProto.SingleStockHash.String())
 	singleStockTrie, err := NewSingleStockTrie(ctxProto.SingleStockHash, db)
 	if err != nil {
 		log.Error("Create Tinachain Single Stock Trie", "err", err)
 		return nil, err
 	}
 
-	log.Info("Create Tinachain Stocks Trie", "Hash", ctxProto.StocksHash.String())
+	//log.Info("Create Tinachain Stocks Trie", "Hash", ctxProto.StocksHash.String())
 	stocksTrie, err := NewStocksTrie(ctxProto.StocksHash, db)
 	if err != nil {
 		log.Error("Create Tinachain Stocks Trie", "err", err)
 		return nil, err
 	}
 
-	log.Info("Create Tinachain Owner Trie", "Hash", ctxProto.OwnerHash.String())
+	//log.Info("Create Tinachain Owner Trie", "Hash", ctxProto.OwnerHash.String())
 	ownerTrie, err := NewOwnerTrie(ctxProto.OwnerHash, db)
 	if err != nil {
 		log.Error("Create Tinachain Owner Trie", "err", err)
 		return nil, err
 	}
 
-	log.Info("Create Tinachain Gas Pool Trie", "Hash", ctxProto.GasPoolHash.String())
+	//log.Info("Create Tinachain Gas Pool Trie", "Hash", ctxProto.GasPoolHash.String())
 	gasPoolTrie, err := NewGasPoolTrie(ctxProto.GasPoolHash, db)
 	if err != nil {
 		log.Error("Create Tinachain Gas Pool Trie", "err", err)
@@ -323,22 +323,21 @@ func (s *BokerContext) CommitTo(dbw trie.DatabaseWriter) (*BokerBackendProto, er
 	}, nil
 }
 
-func (s *BokerContext) SingleContractsTrie() *trie.Trie { return s.singleContractsTrie }
-func (s *BokerContext) ContractsTrie() *trie.Trie       { return s.contractsTrie }
-func (s *BokerContext) SingleStockTrie() *trie.Trie     { return s.singleStockTrie }
-func (s *BokerContext) StocksTrie() *trie.Trie          { return s.stocksTrie }
-func (s *BokerContext) OwnerTrie() *trie.Trie           { return s.ownerTrie }
-func (s *BokerContext) GasPoolTrie() *trie.Trie         { return s.gasPoolTrie }
-
-func (s *BokerContext) SetSingleContracts(singleContractsTrie *trie.Trie) {
-	s.singleContractsTrie = singleContractsTrie
-}
+func (s *BokerContext) SingleContractsTrie() *trie.Trie           { return s.singleContractsTrie }
+func (s *BokerContext) ContractsTrie() *trie.Trie                 { return s.contractsTrie }
+func (s *BokerContext) SingleStockTrie() *trie.Trie               { return s.singleStockTrie }
+func (s *BokerContext) StocksTrie() *trie.Trie                    { return s.stocksTrie }
+func (s *BokerContext) OwnerTrie() *trie.Trie                     { return s.ownerTrie }
+func (s *BokerContext) GasPoolTrie() *trie.Trie                   { return s.gasPoolTrie }
 func (s *BokerContext) SetContracts(contractsTrie *trie.Trie)     { s.contractsTrie = contractsTrie }
 func (s *BokerContext) SetSingleStock(singleStockTrie *trie.Trie) { s.singleStockTrie = singleStockTrie }
 func (s *BokerContext) SetStocks(stocksTrie *trie.Trie)           { s.stocksTrie = stocksTrie }
 func (s *BokerContext) SetOwner(ownerTrie *trie.Trie)             { s.ownerTrie = ownerTrie }
 func (s *BokerContext) SetGasPool(gasPoolTrie *trie.Trie)         { s.gasPoolTrie = gasPoolTrie }
 func (s *BokerContext) DB() ethdb.Database                        { return s.db }
+func (s *BokerContext) SetSingleContracts(singleContractsTrie *trie.Trie) {
+	s.singleContractsTrie = singleContractsTrie
+}
 
 //Trie
 func (s *BokerContext) setContractsTrie(address []common.Address) error {
@@ -561,7 +560,7 @@ func (s *BokerContext) deleteSingleStockTrie(address common.Address) error {
 
 func (s *BokerContext) setGasPoolTrie(gasPool uint64) error {
 
-	log.Info("(s *BokerContext) SetGasPoolTrie", "gasPool", gasPool)
+	//log.Info("(s *BokerContext) SetGasPoolTrie", "gasPool", gasPool)
 
 	gasPoolRLP, err := rlp.EncodeToBytes(new(big.Int).SetUint64(gasPool))
 	if err != nil {
@@ -572,13 +571,13 @@ func (s *BokerContext) setGasPoolTrie(gasPool uint64) error {
 	s.gasPoolTrie.Update(protocol.GasPoolPrefix, gasPoolRLP)
 	s.gasPoolTrie.Commit()
 
-	gas, getErr := s.getGasPoolTrie()
+	_, getErr := s.getGasPoolTrie()
 	if getErr != nil {
 
 		log.Error("failed to encode gasPoolRLP to rlp", "error", err)
 		return err
 	}
-	log.Info("(s *BokerContext) SetGasPoolTrie Get Current Gas Pool", "gas", gas)
+	//log.Info("(s *BokerContext) SetGasPoolTrie Get Current Gas Pool", "gas", gas)
 
 	return nil
 }
@@ -663,7 +662,7 @@ func (s *BokerContext) AddGasPool(gas uint64) uint64 {
 	gasPool := s.GetGasPool() + gas
 	s.setGasPoolTrie(gasPool)
 
-	log.Info("(s *BokerContext) AddGasPool", "gas", gas, "gasPool", gasPool)
+	//log.Info("(s *BokerContext) AddGasPool", "gas", gas, "gasPool", gasPool)
 
 	return gasPool
 }

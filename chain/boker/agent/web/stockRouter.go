@@ -124,3 +124,33 @@ func StockgetOwner(w http.ResponseWriter, r *http.Request) {
 	bytes, _ := json.Marshal(resp)
 	w.Write(bytes)
 }
+
+type gasResponse struct {
+	Gas uint64 `json:"gas"`
+}
+
+func StockgetGas(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	log4plus.Info("stockRouter.go StockgetGas")
+
+	if business.ChainClient == nil {
+		log4plus.Error("stockRouter.go StockgetGas Failed chainclient is nil")
+	}
+
+	log4plus.Info("stockRouter.go StockgetGas chainclient GetGas")
+	gas, err := business.ChainClient.GetGas()
+	if err != nil {
+
+		log4plus.Error("stockRouter.go StockgetGas chainclient GetGas is Failed")
+		bytes, _ := json.Marshal(&ResponseCommon{0, ""})
+		w.Write(bytes)
+	}
+
+	log4plus.Info("stockRouter.go StockgetGas response GetGas")
+	resp := &gasResponse{}
+	resp.Gas = gas
+
+	bytes, _ := json.Marshal(resp)
+	w.Write(bytes)
+}

@@ -55,6 +55,8 @@ type rpcBlock struct {
 }
 
 func (ec *Client) getBlock(ctx context.Context, method string, args ...interface{}) (*types.Block, error) {
+
+	fmt.Println("(ec *Client) getBlock method=%s", method)
 	var raw json.RawMessage
 	err := ec.c.CallContext(ctx, &raw, method, args...)
 	if err != nil {
@@ -62,13 +64,18 @@ func (ec *Client) getBlock(ctx context.Context, method string, args ...interface
 	} else if len(raw) == 0 {
 		return nil, ethereum.NotFound
 	}
+	fmt.Println("ec.c.CallContext", "raw", string(raw))
 
 	//解码交易头和交易体
 	var head *types.Header
 	var body rpcBlock
 	if err := json.Unmarshal(raw, &head); err != nil {
+
+		fmt.Println("ec.c.CallContext json.Unmarshal failed err=%s", err.Error())
 		return nil, err
 	}
+	//fmt.Println("ec.c.CallContext", "header", head)
+
 	if err := json.Unmarshal(raw, &body); err != nil {
 		return nil, err
 	}

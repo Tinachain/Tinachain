@@ -26,7 +26,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Tinachain/Tina/chain/boker/protocol"
+	_ "github.com/Tinachain/Tina/chain/boker/protocol"
 	"github.com/Tinachain/Tina/chain/common"
 	"github.com/Tinachain/Tina/chain/common/hexutil"
 	"github.com/Tinachain/Tina/chain/crypto/sha3"
@@ -87,7 +87,7 @@ type Header struct {
 	Extra       []byte             `json:"extraData"        gencodec:"required"`  //区块相关的附加信息
 	MixDigest   common.Hash        `json:"mixHash"          gencodec:"required"`  //该哈希值与Nonce值一起能够证明在该区块上已经进行了足够的计算（用于验证该区块挖矿成功与否的Hash值）
 	Nonce       BlockNonce         `json:"nonce"            gencodec:"required"`  //该哈希值与MixDigest值一起能够证明在该区块上已经进行了足够的计算（用于验证该区块挖矿成功与否的Hash值）
-	Ip          []byte             `json:"blockIp"        gencodec:"required"`    //区块的打包IP(为了让交易和打包信息更加透明，因此添加了区块打包IP和交易提交IP两个信息)
+	//Ip          []byte             `json:"blockIp"        gencodec:"required"`    //区块的打包IP(为了让交易和打包信息更加透明，因此添加了区块打包IP和交易提交IP两个信息)
 }
 
 // field type overrides for gencodec
@@ -233,13 +233,13 @@ func NewBlock(header *Header, txs []*Transaction, uncles []*Header, receipts []*
 	}
 
 	//得到当前生成区块的公网IP
-	var Ip string = ""
+	/*var Ip string = ""
 	if b.header.Number.Uint64() != 0 {
 		Ip = protocol.GetExternalIp()
 	}
 	b.header.Ip = b.header.Ip[:0]
 	b.header.Ip = append(b.header.Ip, Ip...)
-
+	*/
 	return b
 }
 
@@ -273,10 +273,10 @@ func CopyHeader(h *Header) *Header {
 		cpy.Extra = make([]byte, len(h.Extra))
 		copy(cpy.Extra, h.Extra)
 	}
-	if len(h.Ip) > 0 {
+	/*if len(h.Ip) > 0 {
 		cpy.Ip = make([]byte, len(h.Ip))
 		copy(cpy.Ip, h.Ip)
-	}
+	}*/
 
 	// add dposContextProto to header
 	cpy.DposProto = &DposContextProto{}
@@ -327,7 +327,6 @@ func (b *StorageBlock) DecodeRLP(s *rlp.Stream) error {
 
 func (b *Block) Uncles() []*Header          { return b.uncles }
 func (b *Block) Transactions() Transactions { return b.transactions }
-
 func (b *Block) Transaction(hash common.Hash) *Transaction {
 	for _, transaction := range b.transactions {
 		if transaction.Hash() == hash {
@@ -337,13 +336,12 @@ func (b *Block) Transaction(hash common.Hash) *Transaction {
 	return nil
 }
 
-func (b *Block) Header() *Header      { return CopyHeader(b.header) }
-func (b *Block) Number() *big.Int     { return new(big.Int).Set(b.header.Number) }
-func (b *Block) GasLimit() *big.Int   { return new(big.Int).Set(b.header.GasLimit) }
-func (b *Block) GasUsed() *big.Int    { return new(big.Int).Set(b.header.GasUsed) }
-func (b *Block) Difficulty() *big.Int { return new(big.Int).Set(b.header.Difficulty) }
-func (b *Block) Time() *big.Int       { return new(big.Int).Set(b.header.Time) }
-
+func (b *Block) Header() *Header           { return CopyHeader(b.header) }
+func (b *Block) Number() *big.Int          { return new(big.Int).Set(b.header.Number) }
+func (b *Block) GasLimit() *big.Int        { return new(big.Int).Set(b.header.GasLimit) }
+func (b *Block) GasUsed() *big.Int         { return new(big.Int).Set(b.header.GasUsed) }
+func (b *Block) Difficulty() *big.Int      { return new(big.Int).Set(b.header.Difficulty) }
+func (b *Block) Time() *big.Int            { return new(big.Int).Set(b.header.Time) }
 func (b *Block) NumberU64() uint64         { return b.header.Number.Uint64() }
 func (b *Block) MixDigest() common.Hash    { return b.header.MixDigest }
 func (b *Block) Nonce() uint64             { return binary.BigEndian.Uint64(b.header.Nonce[:]) }
@@ -356,17 +354,12 @@ func (b *Block) TxHash() common.Hash       { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash  { return b.header.ReceiptHash }
 func (b *Block) UncleHash() common.Hash    { return b.header.UncleHash }
 func (b *Block) Extra() []byte             { return common.CopyBytes(b.header.Extra) }
-func (b *Block) IP() []byte                { return common.CopyBytes(b.header.Ip) }
 
-// Body returns the non-header content of the block.
-func (b *Block) Body() *Body { return &Body{b.transactions, b.uncles} }
-
-func (b *Block) DposCtx() *DposContext   { return b.DposContext }
-func (b *Block) BokerCtx() *BokerContext { return b.BokerContext }
-
-func (b *Block) HashNoNonce() common.Hash {
-	return b.header.HashNoNonce()
-}
+//func (b *Block) IP() []byte                { return common.CopyBytes(b.header.Ip) }
+func (b *Block) Body() *Body              { return &Body{b.transactions, b.uncles} }
+func (b *Block) DposCtx() *DposContext    { return b.DposContext }
+func (b *Block) BokerCtx() *BokerContext  { return b.BokerContext }
+func (b *Block) HashNoNonce() common.Hash { return b.header.HashNoNonce() }
 
 func (b *Block) Size() common.StorageSize {
 	if size := b.size.Load(); size != nil {
@@ -464,7 +457,6 @@ func (h *Header) String() string {
 	Extra:		    %s
 	MixDigest:      %x
 	Nonce:		    %x
-	Ip:				%s
 ]`, h.Hash(),
 		h.ParentHash,
 		h.UncleHash,
@@ -483,8 +475,7 @@ func (h *Header) String() string {
 		h.Time,
 		h.Extra,
 		h.MixDigest,
-		h.Nonce,
-		h.Ip)
+		h.Nonce)
 }
 
 type Blocks []*Block

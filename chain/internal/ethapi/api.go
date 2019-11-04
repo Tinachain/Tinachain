@@ -470,6 +470,7 @@ func (s *PublicBlockChainAPI) GetBalance(ctx context.Context, address common.Add
 //返回请求的块，当blockNr为-1时，返回链头。 当fullTx为真时全部完整详细地返回块中的交易，否则仅返回交易哈希。
 func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.BlockNumber, fullTx bool) (map[string]interface{}, error) {
 
+	log.Info("(s *PublicBlockChainAPI) GetBlockByNumber", "blockNr", blockNr.Int64())
 	block, err := s.b.BlockByNumber(ctx, blockNr)
 	if block != nil {
 		response, err := s.rpcOutputBlock(block, true, fullTx)
@@ -479,6 +480,8 @@ func (s *PublicBlockChainAPI) GetBlockByNumber(ctx context.Context, blockNr rpc.
 				response[field] = nil
 			}
 		}
+		log.Info("(s *PublicBlockChainAPI) GetBlockByNumber", "dposProto", response["dposProto"], "bokerProto", response["bokerProto"])
+
 		return response, err
 	}
 	return nil, err
@@ -593,10 +596,10 @@ func (s *PublicBlockChainAPI) SetSystemBaseContracts(ctx context.Context, addres
 
 	log.Info("(s *PublicBlockChainAPI) SetSystemBaseContracts", "address", address.String())
 
-	if err := s.checkOwner(); err != nil {
+	/*if err := s.checkOwner(); err != nil {
 		log.Error("SetSystemBaseContracts checkOwner", "err", err)
 		return common.Hash{}, err
-	}
+	}*/
 
 	from, err := s.b.Coinbase()
 	if err != nil {
@@ -629,10 +632,10 @@ func (s *PublicBlockChainAPI) SetUserBaseContracts(ctx context.Context, address 
 
 	log.Info("(s *PublicBlockChainAPI) SetUserBaseContracts", "address", address.String())
 
-	if err := s.checkOwner(); err != nil {
+	/*if err := s.checkOwner(); err != nil {
 		log.Error("SetUserBaseContracts checkOwner", "err", err)
 		return common.Hash{}, err
-	}
+	}*/
 
 	from, err := s.b.Coinbase()
 	if err != nil {
@@ -665,10 +668,10 @@ func (s *PublicBlockChainAPI) CancelUserBaseContracts(ctx context.Context, addre
 
 	log.Info("(s *PublicBlockChainAPI) CancelUserBaseContracts", "address", address.String())
 
-	if err := s.checkOwner(); err != nil {
+	/*if err := s.checkOwner(); err != nil {
 		log.Error("CancelUserBaseContracts checkOwner", "err", err)
 		return common.Hash{}, err
-	}
+	}*/
 
 	from, err := s.b.Coinbase()
 	if err != nil {
@@ -1377,9 +1380,6 @@ func FormatLogs(logs []vm.StructLog) []StructLogRes {
 	return formatted
 }
 
-// rpcOutputBlock converts the given block to the RPC output which depends on fullTx. If inclTx is true transactions are
-// returned. When fullTx is true the returned block contains full transaction details, otherwise it will only contain
-// transaction hashes.
 func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
 
 	head := b.Header()
@@ -1396,16 +1396,15 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		"coinbase":         head.Coinbase,
 		"difficulty":       (*hexutil.Big)(head.Difficulty),
 		"totalDifficulty":  (*hexutil.Big)(s.b.GetTd(b.Hash())),
-		"extraData":        hexutil.Bytes(head.Extra),
-		"validatorIp":      string(head.Ip[:]),
 		"size":             hexutil.Uint64(uint64(b.Size().Int64())),
 		"gasLimit":         (*hexutil.Big)(head.GasLimit),
 		"gasUsed":          (*hexutil.Big)(head.GasUsed),
 		"timestamp":        (*hexutil.Big)(head.Time),
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
-		"dposProto":        head.DposProto.Root().String(),
-		"bokerProto":       head.BokerProto.Root().String(),
+		"dposContext":      head.DposProto,
+		"bokerBackend":     head.BokerProto,
+		"extraData":        hexutil.Bytes(head.Extra),
 	}
 
 	if inclTx {
@@ -1436,6 +1435,8 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		uncleHashes[i] = uncle.Hash()
 	}
 	fields["uncles"] = uncleHashes
+
+	log.Info("(s *PublicBlockChainAPI) rpcOutputBlock", "dposProto", fields["dposProto"], "bokerProto", fields["bokerProto"])
 
 	return fields, nil
 }

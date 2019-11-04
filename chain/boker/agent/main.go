@@ -116,7 +116,7 @@ func main() {
 			return
 		}
 
-		w := web.New()
+		w := web.New(chainware.config.RPC)
 		log4plus.Info("main.go web.New")
 		w.Run(chainware.config.Listen)
 		log4plus.Info("main.go web.Run")

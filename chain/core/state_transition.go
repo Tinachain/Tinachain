@@ -337,7 +337,7 @@ func (st *StateTransition) preCheck() error {
 func (st *StateTransition) NormalTransitionDb(dposContext *types.DposContext,
 	bokerContext *types.BokerContext, boker bokerapi.Api) (ret []byte, requiredGas, usedGas *big.Int, failed bool, err error) {
 
-	log.Info("(st *StateTransition) NormalTransitionDb")
+	//log.Info("(st *StateTransition) NormalTransitionDb")
 	if err = st.preCheck(); err != nil {
 		return
 	}

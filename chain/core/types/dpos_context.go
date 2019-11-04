@@ -18,8 +18,8 @@ import (
 )
 
 type DposContext struct {
-	epochTrie     *trie.Trie //记录每个周期的验证人Hash树
-	validatorTrie *trie.Trie //验证人以及对应投票人Hash树
+	epochTrie     *trie.Trie
+	validatorTrie *trie.Trie
 	voteTrie      *trie.Trie
 	db            ethdb.Database
 }

@@ -243,11 +243,13 @@ func (client *Client) GetCandidate(address ethcommon.Address) (struct {
 func (client *Client) GetBlockNumber() (struct {
 	Number uint64
 	Timer  uint64
+	Hash   string
 }, error) {
 
 	var ret struct {
 		Number uint64
 		Timer  uint64
+		Hash   string
 	}
 
 	if nil == client.EthClient {
@@ -256,11 +258,29 @@ func (client *Client) GetBlockNumber() (struct {
 
 	block, err := client.EthClient.BlockByNumber(context.Background(), nil)
 	if err != nil {
+
+		fmt.Println("(client *Client) GetBlockNumber err=%s", err.Error())
 		return ret, err
 	}
 	ret.Number = block.Number().Uint64()
 	ret.Timer = block.Time().Uint64()
+	ret.Hash = block.Hash().String()
 	return ret, nil
+}
+
+func (client *Client) GetBlock(number uint64) (*types.Block, error) {
+
+	if nil == client.EthClient {
+		return nil, fmt.Errorf("interface not specified, call AtInterface first!")
+	}
+
+	block, err := client.EthClient.BlockByNumber(context.Background(), new(big.Int).SetUint64(number))
+	if err != nil {
+
+		fmt.Println("(client *Client) GetBlockNumber err=%s", err.Error())
+		return nil, err
+	}
+	return block, nil
 }
 
 func (client *Client) GetTx(hash string) (tx *types.Transaction, pinding bool, err error) {
@@ -274,6 +294,25 @@ func (client *Client) GetTx(hash string) (tx *types.Transaction, pinding bool, e
 		return nil, false, err
 	}
 	return tx, pinding, nil
+}
+
+func (client *Client) GetTx2(number uint64, index uint) (tx *types.Transaction, err error) {
+
+	if nil == client.EthClient {
+		return nil, fmt.Errorf("interface not specified, call AtInterface first!")
+	}
+
+	var block *types.Block
+	block, err = client.EthClient.BlockByNumber(context.Background(), new(big.Int).SetUint64(number))
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err = client.EthClient.TransactionInBlock(context.Background(), block.Hash(), index)
+	if err != nil {
+		return nil, err
+	}
+	return tx, nil
 }
 
 //*********************Stock Interface
@@ -318,4 +357,17 @@ func (client *Client) GetOwner() (address ethcommon.Address, err error) {
 	}
 
 	return address, nil
+}
+
+func (client *Client) GetGas() (gas uint64, err error) {
+
+	if nil == client.EthClient {
+		return 0, fmt.Errorf("interface not specified, call AtInterface first!")
+	}
+
+	gas, err = client.EthClient.StockGasPool(context.Background())
+	if err != nil {
+		return 0, err
+	}
+	return gas, nil
 }

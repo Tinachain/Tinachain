@@ -599,7 +599,7 @@ func (c *Clique) Authorize(signer common.Address, signFn SignerFn) {
 
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
-func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
+func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, now int64, stop <-chan struct{}) (*types.Block, error) {
 	header := block.Header()
 
 	// Sealing the genesis block is not supported

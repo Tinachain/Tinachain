@@ -55,7 +55,7 @@ type Engine interface {
 		bokerContext *types.BokerContext,
 		boker bokerapi.Api) (*types.Block, error)
 
-	Seal(chain ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error)
+	Seal(chain ChainReader, block *types.Block, now int64, stop <-chan struct{}) (*types.Block, error)
 	APIs(chain ChainReader) []rpc.API
 }
 

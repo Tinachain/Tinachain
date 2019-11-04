@@ -4,9 +4,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	_ "io/ioutil"
 	"math/big"
-	"net/http"
+	_ "net/http"
 	"reflect"
 	"strings"
 	"time"
@@ -495,13 +495,15 @@ func DecodeAbi(abiJson string, name string, payload string) (MethodJson, error) 
 	return json, nil
 }
 
+//此处需要注意，由于使用了IP地址，所以会造成创世区块的Hash每个节点计算的结果不一致，从而造成无法进行互联的情况。
 func GetExternalIp() string {
 
-	resp, err := http.Get("http://myexternalip.com/raw")
+	/*resp, err := http.Get("http://myexternalip.com/raw")
 	if err != nil {
 		return ""
 	}
 	defer resp.Body.Close()
 	content, _ := ioutil.ReadAll(resp.Body)
-	return string(content)
+	return string(content)*/
+	return ""
 }

@@ -5299,7 +5299,7 @@ var methods = function () {
         call: blockCall,
         params: 2,
         inputFormatter: [formatters.inputBlockNumberFormatter, function (val) { return !!val; }],
-        outputFormatter: formatters.outputBlockFormatter
+		outputFormatter: formatters.outputBlockFormatter,
     });
 
     var getUncle = new Method({

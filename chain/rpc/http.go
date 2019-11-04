@@ -30,6 +30,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Tinachain/Tina/chain/log"
 	"github.com/rs/cors"
 )
 
@@ -91,6 +92,9 @@ func (c *Client) sendHTTP(ctx context.Context, op *requestOp, msg interface{}) e
 	if err := json.NewDecoder(respBody).Decode(&respmsg); err != nil {
 		return err
 	}
+
+	log.Info("(c *Client) sendHTTP", "Method", respmsg.Method, "Params", respmsg.Params, "Result", respmsg.Result)
+
 	op.resp <- &respmsg
 	return nil
 }
