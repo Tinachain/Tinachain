@@ -47,6 +47,7 @@ eth.addValidator(eth.accounts[0], 10000)
 miner.start()
 
 eth.blockNumber
+eth.getBalance(eth.accounts[0])
 
 µÚ¾Å²½£ºÖÕÖ¹ÍÚ¿ó
 miner.stop()
